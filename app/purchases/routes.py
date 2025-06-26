@@ -19,6 +19,7 @@ from sqlalchemy import and_, or_, desc, func
 from datetime import datetime, timedelta
 import json
 import pytz
+from decimal import Decimal, InvalidOperation # Import Decimal
 
 # Import du blueprint depuis __init__.py
 from . import bp as purchases
@@ -74,7 +75,7 @@ def list_purchases():
     # Pagination et tri
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('PURCHASES_PER_PAGE', 20)
-    purchases = query.order_by(desc(Purchase.created_at)).paginate(
+    purchases_list = query.order_by(desc(Purchase.created_at)).paginate(
         page=page, per_page=per_page, error_out=False
     )
 
@@ -96,117 +97,119 @@ def list_purchases():
     return render_template(
         'purchases/list_purchases.html',
         title="Gestion des Achats",
-        purchases=purchases,
+        purchases=purchases_list,
         form=form,
         stats=stats,
         total_purchases=stats['total_purchases'],
         pending_purchases=stats['pending_approval'],
-        unpaid_purchases=stats['unpaid_purchases'], # ✅ NOUVEAU
-        paid_purchases=stats['paid_purchases'], # ✅ NOUVEAU
+        unpaid_purchases=stats['unpaid_purchases'],
+        paid_purchases=stats['paid_purchases'],
         total_amount_month=0,
         suppliers_count=len(suppliers_list),
         suppliers_list=suppliers_list,
-        pagination=purchases,
-        current_payment_filter=payment_filter # ✅ NOUVEAU
+        pagination=purchases_list,
+        current_payment_filter=payment_filter
     )
 
+# ### DEBUT DE LA MODIFICATION ###
 @purchases.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_purchase():
-    """Création d'un nouveau bon d'achat avec PMP et gestion des consommables."""
+    """Création d'un nouveau bon d'achat avec PMP, gestion des consommables, calculs en Decimal et atomicité."""
     Product, User, Unit = get_main_models()
-
-    if request.method == 'POST':
-        form = PurchaseForm(request.form)
-    else:
-        form = PurchaseForm()
+    # Le formulaire est instancié au début pour être disponible en cas d'erreur de validation
+    form = PurchaseForm(request.form) if request.method == 'POST' else PurchaseForm()
 
     if form.validate_on_submit():
-        # ... (le début de la fonction reste identique)
-        local_tz = pytz.timezone('Europe/Paris')
-        naive_date = form.requested_date.data
-        aware_date = local_tz.localize(naive_date)
-        purchase = Purchase(
-            # ... (tous les champs de l'objet Purchase)
-            supplier_name=form.supplier_name.data,
-            supplier_contact=form.supplier_contact.data,
-            supplier_phone=form.supplier_phone.data,
-            supplier_email=form.supplier_email.data,
-            supplier_address=form.supplier_address.data,
-            expected_delivery_date=form.expected_delivery_date.data,
-            urgency=PurchaseUrgency(form.urgency.data),
-            payment_terms=form.payment_terms.data,
-            shipping_cost=form.shipping_cost.data or 0.0,
-            tax_amount=form.tax_amount.data or 0.0,
-            notes=form.notes.data,
-            internal_notes=form.internal_notes.data,
-            terms_conditions=form.terms_conditions.data,
-            requested_date=aware_date,
-            requested_by_id=current_user.id,
-            is_paid=False,
-            status=PurchaseStatus.RECEIVED
-        )
-        db.session.add(purchase)
-        db.session.flush()
+        try:
+            # Création de l'objet Purchase (sans le commit)
+            local_tz = pytz.timezone('Europe/Paris')
+            # La date n'a pas d'importance pour le PMP, on se base sur l'ordre de la DB
+            naive_date = form.requested_date.data
+            aware_date = local_tz.localize(naive_date)
+            
+            purchase = Purchase(
+                supplier_name=form.supplier_name.data,
+                supplier_contact=form.supplier_contact.data,
+                supplier_phone=form.supplier_phone.data,
+                supplier_email=form.supplier_email.data,
+                supplier_address=form.supplier_address.data,
+                expected_delivery_date=form.expected_delivery_date.data,
+                urgency=PurchaseUrgency(form.urgency.data),
+                payment_terms=form.payment_terms.data,
+                shipping_cost=Decimal(form.shipping_cost.data or '0.0'),
+                tax_amount=Decimal(form.tax_amount.data or '0.0'),
+                notes=form.notes.data,
+                internal_notes=form.internal_notes.data,
+                terms_conditions=form.terms_conditions.data,
+                requested_date=aware_date,
+                requested_by_id=current_user.id,
+                is_paid=False,
+                status=PurchaseStatus.RECEIVED
+            )
+            db.session.add(purchase)
+            db.session.flush() # Flush pour obtenir l'ID de l'achat pour les items
 
-        items_added = 0
-        product_ids = request.form.getlist('items[][product_id]')
-        quantities = request.form.getlist('items[][quantity_ordered]')
-        prices = request.form.getlist('items[][unit_price]')
-        unit_ids = request.form.getlist('items[][unit]')
-        stock_locations = request.form.getlist('items[][stock_location]')
-        
-        for i in range(len(product_ids)):
-            try:
+            # Traitement des items
+            items_added = 0
+            product_ids = request.form.getlist('items[][product_id]')
+            quantities = request.form.getlist('items[][quantity_ordered]')
+            prices = request.form.getlist('items[][unit_price]')
+            unit_ids = request.form.getlist('items[][unit]')
+            stock_locations = request.form.getlist('items[][stock_location]')
+            
+            for i in range(len(product_ids)):
+                if not product_ids[i] or not quantities[i] or not prices[i] or not unit_ids[i]:
+                    continue
+
                 product_id = int(product_ids[i])
                 product = Product.query.get(product_id)
-                quantity = float(quantities[i])
-                price_per_unit_achat = float(prices[i])
-                unit_id = int(unit_ids[i])
                 
-                if not (product and quantity > 0 and price_per_unit_achat >= 0 and unit_id):
-                    continue
-                
-                unit_object = Unit.query.get(unit_id)
-                if not unit_object:
-                    continue
+                if not product:
+                     raise ValueError(f"Produit avec l'ID {product_id} non trouvé.")
 
-                quantity_in_base_unit = unit_object.to_base_unit(quantity)
+                if product.product_type not in ['ingredient', 'consommable']:
+                    raise ValueError(f"Le produit '{product.name}' n'est pas un type achetable (ingrédient ou consommable).")
+
+                quantity_ordered = Decimal(quantities[i])
+                price_per_unit_achat = Decimal(prices[i])
+                unit_id = int(unit_ids[i])
+                unit_object = Unit.query.get(unit_id)
+
+                if not unit_object or quantity_ordered <= 0 or price_per_unit_achat < 0:
+                    raise ValueError(f"Données invalides pour la ligne du produit {product.name}.")
+
+                quantity_in_base_unit = float(quantity_ordered * unit_object.conversion_factor)
                 
-                # ### DEBUT DE LA CORRECTION POUR CONSOMMABLES ###
-                
-                # Si c'est un consommable, on le met dans le bon stock et on ne calcule pas le PMP.
                 if product.product_type == 'consommable':
                     stock_location = 'consommables'
                     product.update_stock_by_location(stock_location, quantity_in_base_unit)
-                    print(f"CONSOMMABLE: Ajout de {quantity_in_base_unit} de {product.name} au stock consommables.")
                 
-                # Si c'est un ingrédient, on fait le calcul PMP.
                 elif product.product_type == 'ingredient':
                     stock_location = stock_locations[i]
-                    price_per_base_unit = price_per_unit_achat / float(unit_object.conversion_factor) if unit_object.conversion_factor > 0 else 0
-                    purchase_value = quantity_in_base_unit * price_per_base_unit
+                    conversion_factor = Decimal(unit_object.conversion_factor)
+                    
+                    if conversion_factor == 0:
+                        raise ValueError(f"Le facteur de conversion pour l'unité '{unit_object.name}' ne peut pas être zéro.")
+                        
+                    price_per_base_unit = price_per_unit_achat / conversion_factor
+                    purchase_value = Decimal(quantity_in_base_unit) * price_per_base_unit
 
-                    product.total_stock_value = float(product.total_stock_value or 0.0) + purchase_value
+                    product.total_stock_value = (product.total_stock_value or Decimal('0.0')) + purchase_value
                     product.update_stock_by_location(stock_location, quantity_in_base_unit)
                     
-                    new_total_stock_qty = product.total_stock_all_locations
+                    new_total_stock_qty = Decimal(product.total_stock_all_locations)
                     if new_total_stock_qty > 0:
                         product.cost_price = product.total_stock_value / new_total_stock_qty
-                    else:
+                    else: # Premier achat
                         product.cost_price = price_per_base_unit
-                    
-                    print(f"INGREDIENT: {product.name} - Nouveau PMP: {product.cost_price}")
 
-                # ### FIN DE LA CORRECTION ###
-
-                # On crée l'item d'achat dans tous les cas pour l'historique
                 purchase_item = PurchaseItem(
                     purchase_id=purchase.id,
                     product_id=product.id,
-                    quantity_ordered=quantity_in_base_unit,
-                    unit_price=price_per_unit_achat / float(unit_object.conversion_factor) if unit_object.conversion_factor > 0 else 0,
-                    original_quantity=quantity,
+                    quantity_ordered=Decimal(quantity_in_base_unit),
+                    unit_price=price_per_base_unit,
+                    original_quantity=quantity_ordered,
                     original_unit_id=unit_id,
                     original_unit_price=price_per_unit_achat,
                     stock_location=stock_location
@@ -214,27 +217,26 @@ def new_purchase():
                 db.session.add(purchase_item)
                 items_added += 1
 
-            except (ValueError, IndexError, TypeError) as e:
-                current_app.logger.error(f"Erreur traitement item PMP: {e}", exc_info=True)
-                continue
+            if items_added == 0:
+                raise ValueError("Le bon d'achat doit contenir au moins un article valide.")
 
-        # ... (le reste de la fonction reste identique)
-        if items_added == 0:
+            purchase.calculate_totals()
+            db.session.commit()
+            
+            flash(f'Bon d\'achat {purchase.reference} créé avec succès. Le stock et le coût moyen pondéré ont été mis à jour.', 'success')
+            return redirect(url_for('purchases.view_purchase', id=purchase.id))
+
+        except (ValueError, InvalidOperation, IndexError, TypeError) as e:
             db.session.rollback()
-            flash('Aucun article valide. Le bon d\'achat a été annulé.', 'danger')
-            return redirect(url_for('purchases.new_purchase'))
-
-        purchase.calculate_totals()
-        db.session.commit()
-        
-        flash(f'Bon d\'achat {purchase.reference} créé. Le stock et le coût moyen pondéré ont été mis à jour.', 'success')
-        return redirect(url_for('purchases.view_purchase', id=purchase.id))
+            current_app.logger.error(f"Erreur lors de la création de l'achat : {e}", exc_info=True)
+            flash(f"ECHEC : Le bon d'achat n'a pas été créé. Une erreur est survenue. Veuillez vérifier toutes les lignes. ({e})", 'danger')
 
     available_products = Product.query.filter(Product.product_type.in_(['ingredient', 'consommable'])).all()
     available_units = Unit.query.filter_by(is_active=True).order_by(Unit.display_order).all()
 
     return render_template('purchases/new_purchase.html', form=form, title='Nouveau Bon d\'Achat',
                            available_products=available_products, available_units=available_units)
+# ### FIN DE LA MODIFICATION ###
 
 @purchases.route('/<int:id>')
 @login_required
@@ -297,6 +299,8 @@ def cancel_purchase(id):
         flash('Ce bon d\'achat est déjà annulé.', 'info')
         return redirect(url_for('purchases.view_purchase', id=id))
 
+    # NOTE : La logique ici est incomplète et sera traitée dans la Tâche 3.
+    # Elle ne gère pas la valeur du stock ni le recalcul du PMP.
     if purchase.status == PurchaseStatus.RECEIVED:
         stock_reversions = []
         for item in purchase.items:
@@ -330,6 +334,9 @@ def cancel_purchase(id):
     flash(f'Bon d\'achat {purchase.reference} annulé avec succès.', 'success')
     return redirect(url_for('purchases.view_purchase', id=id))
 
+
+# NOTE: Cette fonction nécessite une refactorisation similaire à `new_purchase`
+# pour garantir l'atomicité et l'utilisation de Decimal. Elle reste en l'état pour le moment.
 @purchases.route('/<int:id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_purchase(id):
@@ -348,11 +355,7 @@ def edit_purchase(id):
     form = PurchaseForm(obj=purchase)
     
     if form.validate_on_submit():
-        # ### DEBUT DE LA CORRECTION ###
-        # Mise à jour de la date à partir des données du formulaire.
-        # Le bloc défectueux 'request.form.get('purchase_date')' a été supprimé.
         purchase.requested_date = form.requested_date.data
-        # ### FIN DE LA CORRECTION ###
 
         old_stock_updates = []
         if purchase.status == PurchaseStatus.RECEIVED:
