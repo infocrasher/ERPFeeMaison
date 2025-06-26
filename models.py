@@ -61,7 +61,9 @@ class Product(db.Model):
     product_type = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text)
     price = db.Column(db.Numeric(10, 2))
-    cost_price = db.Column(db.Numeric(10, 2)) # Ce champ deviendra notre PMP
+    # ### DEBUT DE LA MODIFICATION ###
+    cost_price = db.Column(db.Numeric(10, 4)) # Ce champ deviendra notre PMP avec 4 décimales de précision
+    # ### FIN DE LA MODIFICATION ###
     unit = db.Column(db.String(20), nullable=False)
     sku = db.Column(db.String(50), unique=True, nullable=True)
     quantity_in_stock = db.Column(db.Float, default=0.0)
@@ -74,10 +76,8 @@ class Product(db.Model):
     stock_ingredients_magasin = db.Column(db.Float, default=0.0, nullable=False)
     stock_consommables = db.Column(db.Float, default=0.0, nullable=False)
     
-    # ### DEBUT DE LA MODIFICATION ###
     # Nouveau champ pour stocker la valeur monétaire totale du stock de ce produit
     total_stock_value = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
-    # ### FIN DE LA MODIFICATION ###
 
     # Seuils d'alerte par stock
     seuil_min_comptoir = db.Column(db.Float, default=0.0)
@@ -148,7 +148,6 @@ class Product(db.Model):
         }
         return names.get(location_type, location_type.title())
 
-    # ### DEBUT DES MÉTHODES AJOUTÉES/MODIFIÉES ###
     def update_stock_location(self, location_type, quantity_change):
         """
         Méthode conservée pour compatibilité. Appelle la nouvelle logique.
@@ -177,7 +176,6 @@ class Product(db.Model):
             self.last_stock_update = datetime.utcnow()
             return True
         return False
-    # ### FIN DES MÉTHODES AJOUTÉES/MODIFIÉES ###
 
     def get_stock_display(self, location_type='total'):
         stock_value = 0
@@ -217,8 +215,6 @@ class Product(db.Model):
     def __repr__(self):
         return f'<Product {self.name}>'
 
-# ### DEBUT DE LA MODIFICATION ###
-# AJOUT DE LA CLASSE MANQUANTE
 class RecipeIngredient(db.Model):
     __tablename__ = 'recipe_ingredients'
     
@@ -264,7 +260,6 @@ class RecipeIngredient(db.Model):
     
     def __repr__(self):
         return f'<RecipeIngredient {self.recipe.name} - {self.product.name}>'
-# ### FIN DE LA MODIFICATION ###
     
 class Recipe(db.Model):
     __tablename__ = 'recipes'
