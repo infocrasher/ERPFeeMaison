@@ -61,34 +61,27 @@ class Product(db.Model):
     product_type = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text)
     price = db.Column(db.Numeric(10, 2))
-    # ### DEBUT DE LA MODIFICATION ###
-    cost_price = db.Column(db.Numeric(10, 4)) # Ce champ deviendra notre PMP avec 4 décimales de précision
-    # ### FIN DE LA MODIFICATION ###
+    cost_price = db.Column(db.Numeric(10, 4))
     unit = db.Column(db.String(20), nullable=False)
     sku = db.Column(db.String(50), unique=True, nullable=True)
     quantity_in_stock = db.Column(db.Float, default=0.0)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # === Gestion 4 Stocks ===
     stock_comptoir = db.Column(db.Float, default=0.0, nullable=False)
     stock_ingredients_local = db.Column(db.Float, default=0.0, nullable=False) 
     stock_ingredients_magasin = db.Column(db.Float, default=0.0, nullable=False)
     stock_consommables = db.Column(db.Float, default=0.0, nullable=False)
     
-    # Nouveau champ pour stocker la valeur monétaire totale du stock de ce produit
     total_stock_value = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
 
-    # Seuils d'alerte par stock
     seuil_min_comptoir = db.Column(db.Float, default=0.0)
     seuil_min_ingredients_local = db.Column(db.Float, default=0.0)
     seuil_min_ingredients_magasin = db.Column(db.Float, default=0.0)
     seuil_min_consommables = db.Column(db.Float, default=0.0)
     
-    # Date dernière mise à jour stock
     last_stock_update = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relations
     order_items = db.relationship('OrderItem', backref='product', lazy='dynamic')
 
     @property
@@ -149,26 +142,12 @@ class Product(db.Model):
         return names.get(location_type, location_type.title())
 
     def update_stock_location(self, location_type, quantity_change):
-        """
-        Méthode conservée pour compatibilité. Appelle la nouvelle logique.
-        """
         return self.update_stock_by_location(location_type, quantity_change)
 
     def get_stock_by_location(self, location_key: str) -> float:
-        """
-        Récupère le stock pour un emplacement donné.
-        :param location_key: Le nom de la colonne (ex: 'ingredients_magasin').
-        :return: La valeur du stock.
-        """
         return getattr(self, location_key, 0.0)
 
     def update_stock_by_location(self, location_key: str, quantity_change: float) -> bool:
-        """
-        Met à jour le stock pour un emplacement donné.
-        :param location_key: Le nom de la colonne (ex: 'ingredients_magasin').
-        :param quantity_change: La quantité à ajouter (valeur positive) ou à retirer (valeur négative).
-        :return: True si la mise à jour a réussi, False sinon.
-        """
         if hasattr(self, location_key):
             current_value = getattr(self, location_key, 0.0)
             new_value = max(0, current_value + quantity_change)
@@ -183,24 +162,18 @@ class Product(db.Model):
             stock_value = self.total_stock_all_locations
         else:
             stock_value = self.get_stock_by_location_type(location_type)
-
         display_unit = self.unit.lower()
         base_unit = self.base_unit_for_recipes()
-        
         if stock_value == 0:
             return f"0 {display_unit.upper()}"
-
         try:
             if display_unit == 'kg' and base_unit == 'g':
                 display_value = stock_value / 1000
                 return f"{display_value:,.3f} kg".replace(",", " ").replace(".", ",")
-            
             if display_unit == 'l' and base_unit == 'ml':
                 display_value = stock_value / 1000
                 return f"{display_value:,.3f} L".replace(",", " ").replace(".", ",")
-
             return f"{int(stock_value)} {display_unit}"
-
         except Exception:
             return f"{stock_value} {base_unit} (brut)"
 
@@ -226,7 +199,6 @@ class RecipeIngredient(db.Model):
     notes = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relations
     product = db.relationship('Product', backref='recipe_uses')
     
     def _convert_unit_cost(self):
@@ -282,7 +254,6 @@ class Recipe(db.Model):
         server_default='ingredients_magasin'
     )
     
-    # Relations
     ingredients = db.relationship('RecipeIngredient', backref='recipe', lazy='dynamic', cascade='all, delete-orphan')
     finished_product = db.relationship('Product', foreign_keys=[product_id], backref=db.backref('recipe_definition', uselist=False))
     
@@ -314,7 +285,6 @@ class Order(db.Model):
     total_amount = db.Column(db.Numeric(10, 2), default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relations
     items = db.relationship('OrderItem', backref='order', lazy='dynamic', cascade='all, delete-orphan')
     produced_by = db.relationship('Employee', secondary=order_employees, back_populates='orders_produced')
     
@@ -410,16 +380,18 @@ class Order(db.Model):
     def mark_as_received_at_shop(self):
         if self.status == 'in_production':
             self.status = 'ready_at_shop'
-            self._increment_shop_stock()
+            self._increment_shop_stock_with_value()
             return True
         return False
     
+    # ### DEBUT DE LA MODIFICATION ###
     def mark_as_delivered(self):
         if self.status == 'ready_at_shop':
             self.status = 'delivered'
-            self._decrement_shop_stock()
+            self._decrement_stock_with_value_on_delivery() # Appel de la nouvelle méthode robuste
             return True
         return False
+    # ### FIN DE LA MODIFICATION ###
     
     def _increment_shop_stock(self):
         """Méthode dépréciée. Utiliser _increment_shop_stock_with_value."""
@@ -429,35 +401,43 @@ class Order(db.Model):
                 item.product.update_stock_by_location('comptoir', float(item.quantity))
 
     def _increment_shop_stock_with_value(self):
-        """
-        Incrémente le stock de vente (comptoir) pour le produit fini,
-        et met à jour sa valeur en se basant sur le coût de sa recette.
-        """
         for item in self.items:
             product_fini = item.product
             if product_fini and product_fini.recipe_definition:
-                # 1. On incrémente la quantité
                 product_fini.update_stock_by_location('comptoir', float(item.quantity))
                 
-                # 2. On calcule la valeur de ce qui a été produit
-                cost_per_unit = float(product_fini.recipe_definition.cost_per_unit)
-                value_to_increment = cost_per_unit * float(item.quantity)
+                cost_per_unit = product_fini.recipe_definition.cost_per_unit
+                value_to_increment = cost_per_unit * item.quantity
                 
-                # 3. On met à jour la valeur totale du stock du produit fini
-                product_fini.total_stock_value = float(product_fini.total_stock_value or 0.0) + value_to_increment
+                product_fini.total_stock_value = (product_fini.total_stock_value or Decimal('0.0')) + value_to_increment
 
-                # 4. On recalcule le PMP du produit fini lui-même
-                new_total_stock_qty = product_fini.total_stock_all_locations
+                new_total_stock_qty = Decimal(product_fini.total_stock_all_locations)
                 if new_total_stock_qty > 0:
                     product_fini.cost_price = product_fini.total_stock_value / new_total_stock_qty
-                
-                print(f"INCREMENT: Stock de '{product_fini.name}' augmenté de {item.quantity}. Nouvelle valeur: {product_fini.total_stock_value:.2f} DA. Nouveau PMP: {product_fini.cost_price}")
     
-    def _decrement_shop_stock(self):
+    # ### DEBUT DE LA MODIFICATION ###
+    def _decrement_stock_with_value_on_delivery(self):
+        """
+        Décrémente le stock de vente (comptoir) ET sa valeur correspondante lors d'une vente.
+        """
         for item in self.items:
-            if item.product:
-                item.product.update_stock_location('comptoir', -float(item.quantity))
-                print(f"📦 Stock comptoir décrémenté: {item.product.name} -{item.quantity}")
+            product_fini = item.product
+            if product_fini:
+                # 1. On décrémente la quantité en stock
+                quantity_to_decrement = float(item.quantity)
+                product_fini.update_stock_by_location('comptoir', -quantity_to_decrement)
+
+                # 2. On calcule la valeur de ce qui a été vendu en se basant sur le PMP du produit fini
+                pmp_produit_fini = product_fini.cost_price or Decimal('0.0')
+                value_to_decrement = Decimal(quantity_to_decrement) * pmp_produit_fini
+
+                # 3. On décrémente la valeur totale du stock du produit
+                product_fini.total_stock_value = (product_fini.total_stock_value or Decimal('0.0')) - value_to_decrement
+
+                # Le PMP du produit fini ne change pas lors d'une sortie de stock.
+    
+    # La méthode _decrement_shop_stock est maintenant supprimée car remplacée.
+    # ### FIN DE LA MODIFICATION ###
     
     def calculate_total_amount(self):
         items_total = Decimal('0.0')
