@@ -48,14 +48,12 @@ def list_purchases():
     # Construction de la requête de base
     query = Purchase.query
     
-    # ✅ NOUVEAU : Filtre par statut de paiement
     payment_filter = request.args.get('payment_status', 'all')
     if payment_filter == 'unpaid':
         query = query.filter(Purchase.is_paid == False)
     elif payment_filter == 'paid':
         query = query.filter(Purchase.is_paid == True)
 
-    # Filtres existants
     if form.validate_on_submit():
         if form.search_term.data:
             search = f"%{form.search_term.data}%"
@@ -72,14 +70,12 @@ def list_purchases():
             supplier_search = f"%{form.supplier_filter.data}%"
             query = query.filter(Purchase.supplier_name.ilike(supplier_search))
 
-    # Pagination et tri
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('PURCHASES_PER_PAGE', 20)
     purchases_list = query.order_by(desc(Purchase.created_at)).paginate(
         page=page, per_page=per_page, error_out=False
     )
 
-    # ✅ NOUVEAU : Statistiques avec paiements
     stats = {
         'total_purchases': Purchase.query.count(),
         'pending_approval': Purchase.query.filter(
@@ -90,7 +86,6 @@ def list_purchases():
         'overdue': len([p for p in Purchase.query.all() if p.is_overdue()])
     }
 
-    # Variables pour le template
     suppliers_list = db.session.query(Purchase.supplier_name).distinct().all()
     suppliers_list = [s[0] for s in suppliers_list if s[0]]
 
@@ -111,20 +106,16 @@ def list_purchases():
         current_payment_filter=payment_filter
     )
 
-# ### DEBUT DE LA MODIFICATION ###
 @purchases.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_purchase():
     """Création d'un nouveau bon d'achat avec PMP, gestion des consommables, calculs en Decimal et atomicité."""
     Product, User, Unit = get_main_models()
-    # Le formulaire est instancié au début pour être disponible en cas d'erreur de validation
     form = PurchaseForm(request.form) if request.method == 'POST' else PurchaseForm()
 
     if form.validate_on_submit():
         try:
-            # Création de l'objet Purchase (sans le commit)
             local_tz = pytz.timezone('Europe/Paris')
-            # La date n'a pas d'importance pour le PMP, on se base sur l'ordre de la DB
             naive_date = form.requested_date.data
             aware_date = local_tz.localize(naive_date)
             
@@ -148,9 +139,8 @@ def new_purchase():
                 status=PurchaseStatus.RECEIVED
             )
             db.session.add(purchase)
-            db.session.flush() # Flush pour obtenir l'ID de l'achat pour les items
+            db.session.flush()
 
-            # Traitement des items
             items_added = 0
             product_ids = request.form.getlist('items[][product_id]')
             quantities = request.form.getlist('items[][quantity_ordered]')
@@ -201,7 +191,7 @@ def new_purchase():
                     new_total_stock_qty = Decimal(product.total_stock_all_locations)
                     if new_total_stock_qty > 0:
                         product.cost_price = product.total_stock_value / new_total_stock_qty
-                    else: # Premier achat
+                    else:
                         product.cost_price = price_per_base_unit
 
                 purchase_item = PurchaseItem(
@@ -236,7 +226,6 @@ def new_purchase():
 
     return render_template('purchases/new_purchase.html', form=form, title='Nouveau Bon d\'Achat',
                            available_products=available_products, available_units=available_units)
-# ### FIN DE LA MODIFICATION ###
 
 @purchases.route('/<int:id>')
 @login_required
@@ -289,50 +278,68 @@ def mark_as_unpaid(id):
     flash(f'Bon d\'achat {purchase.reference} marqué comme non payé.', 'success')
     return redirect(url_for('purchases.view_purchase', id=id))
 
+# ### DEBUT DE LA MODIFICATION ###
 @purchases.route('/<int:id>/cancel', methods=['POST'])
 @login_required
 @admin_required
 def cancel_purchase(id):
-    """Annuler un bon d'achat et reverser le stock"""
+    """Annuler un bon d'achat et réaliser la contre-passation exacte du stock et de sa valeur."""
     purchase = Purchase.query.get_or_404(id)
     if purchase.status == PurchaseStatus.CANCELLED:
         flash('Ce bon d\'achat est déjà annulé.', 'info')
         return redirect(url_for('purchases.view_purchase', id=id))
 
-    # NOTE : La logique ici est incomplète et sera traitée dans la Tâche 3.
-    # Elle ne gère pas la valeur du stock ni le recalcul du PMP.
-    if purchase.status == PurchaseStatus.RECEIVED:
-        stock_reversions = []
+    if purchase.status != PurchaseStatus.RECEIVED:
+        flash(f"Un achat avec le statut '{purchase.status.value}' ne peut être annulé de cette manière car il n'a pas impacté le stock.", 'warning')
+        # On peut simplement changer le statut pour les autres cas.
+        purchase.status = PurchaseStatus.CANCELLED
+        db.session.commit()
+        flash(f'Bon d\'achat {purchase.reference} annulé.', 'success')
+        return redirect(url_for('purchases.view_purchase', id=id))
+
+    try:
         for item in purchase.items:
-            if item.product:
-                if item.stock_location == 'ingredients_magasin':
-                    item.product.stock_ingredients_magasin -= float(item.quantity_ordered)
-                    stock_location_display = "Stock Magasin"
-                elif item.stock_location == 'ingredients_local':
-                    item.product.stock_ingredients_local -= float(item.quantity_ordered)
-                    stock_location_display = "Stock Local"
-                elif item.stock_location == 'comptoir':
-                    item.product.stock_comptoir -= float(item.quantity_ordered)
-                    stock_location_display = "Stock Comptoir"
-                elif item.stock_location == 'consommables':
-                    item.product.stock_consommables -= float(item.quantity_ordered)
-                    stock_location_display = "Stock Consommables"
+            product = item.product
+            if not product:
+                continue
+
+            quantity_to_reverse = float(item.quantity_ordered)
+            
+            if product.product_type == 'consommable':
+                product.update_stock_by_location('consommables', -quantity_to_reverse)
+
+            elif product.product_type == 'ingredient':
+                # Soustraire la quantité
+                product.update_stock_by_location(item.stock_location, -quantity_to_reverse)
+
+                # Soustraire la valeur
+                value_to_reverse = item.quantity_ordered * item.unit_price
+                product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_to_reverse
                 
-                if item.original_quantity and item.original_unit:
-                    display_quantity = f"{item.original_quantity} × {item.original_unit.name}"
+                # Recalculer le PMP
+                new_total_stock_qty = Decimal(product.total_stock_all_locations)
+                if new_total_stock_qty > 0:
+                    # Pour éviter la division par zéro et les valeurs négatives absurdes
+                    if product.total_stock_value < 0:
+                        product.total_stock_value = Decimal('0.0')
+                    product.cost_price = product.total_stock_value / new_total_stock_qty
                 else:
-                    display_quantity = f"{item.quantity_ordered}"
-                stock_reversions.append(f"{item.product.name}: -{display_quantity} du {stock_location_display}")
+                    # Si le stock est à zéro, la valeur et le PMP doivent être à zéro
+                    product.total_stock_value = Decimal('0.0')
+                    product.cost_price = Decimal('0.0')
+        
+        # Mettre à jour le statut de l'achat
+        purchase.status = PurchaseStatus.CANCELLED
+        db.session.commit()
+        flash(f'Bon d\'achat {purchase.reference} annulé. Le stock et sa valeur ont été corrigés.', 'success')
 
-        if stock_reversions:
-            flash(f'Stocks reversés automatiquement :', 'warning')
-            for reversion in stock_reversions:
-                flash(f'📦 {reversion}', 'info')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur lors de l'annulation de l'achat {id}: {e}", exc_info=True)
+        flash(f"ECHEC de l'annulation. Une erreur est survenue: {e}", "danger")
 
-    purchase.status = PurchaseStatus.CANCELLED
-    db.session.commit()
-    flash(f'Bon d\'achat {purchase.reference} annulé avec succès.', 'success')
     return redirect(url_for('purchases.view_purchase', id=id))
+# ### FIN DE LA MODIFICATION ###
 
 
 # NOTE: Cette fonction nécessite une refactorisation similaire à `new_purchase`
