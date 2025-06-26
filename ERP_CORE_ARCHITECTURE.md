@@ -196,9 +196,11 @@ ERP complet et autonome pour Fée Maison avec toutes les fonctionnalités métie
   - models.py
   - __init__.py
   - forms.py
+  - stock_manager.py
   - routes.py
   - __pycache__/
     - models.cpython-313.pyc
+    - stock_manager.cpython-313.pyc
     - routes.cpython-313.pyc
     - forms.cpython-313.pyc
     - __init__.cpython-313.pyc
@@ -239,12 +241,12 @@ ERP complet et autonome pour Fée Maison avec toutes les fonctionnalités métie
 - `GET,POST` /admin/products/new (endpoint: `products.new_product`, blueprint: `products`)
 - `GET,POST` /admin/products/<int:product_id>/edit (endpoint: `products.edit_product`, blueprint: `products`)
 - `POST` /admin/products/<int:product_id>/delete (endpoint: `products.delete_product`, blueprint: `products`)
+- `GET,POST` /admin/orders/customer/new (endpoint: `orders.new_customer_order`, blueprint: `orders`)
+- `GET,POST` /admin/orders/production/new (endpoint: `orders.new_production_order`, blueprint: `orders`)
 - `GET` /admin/orders/ (endpoint: `orders.list_orders`, blueprint: `orders`)
 - `GET` /admin/orders/customer (endpoint: `orders.list_customer_orders`, blueprint: `orders`)
 - `GET` /admin/orders/production (endpoint: `orders.list_production_orders`, blueprint: `orders`)
 - `GET` /admin/orders/api/products (endpoint: `orders.api_products`, blueprint: `orders`)
-- `GET,POST` /admin/orders/customer/new (endpoint: `orders.new_customer_order`, blueprint: `orders`)
-- `GET,POST` /admin/orders/production/new (endpoint: `orders.new_production_order`, blueprint: `orders`)
 - `GET,POST` /admin/orders/new (endpoint: `orders.new_order`, blueprint: `orders`)
 - `GET` /admin/orders/<int:order_id> (endpoint: `orders.view_order`, blueprint: `orders`)
 - `GET,POST` /admin/orders/<int:order_id>/edit (endpoint: `orders.edit_order`, blueprint: `orders`)
@@ -285,7 +287,7 @@ ERP complet et autonome pour Fée Maison avec toutes les fonctionnalités métie
 - `GET` /admin/purchases/ (endpoint: `purchases.list_purchases`, blueprint: `purchases`)
     - Liste de tous les achats avec filtres et statut paiement
 - `GET,POST` /admin/purchases/new (endpoint: `purchases.new_purchase`, blueprint: `purchases`)
-    - Création d'un nouveau bon d'achat avec traitement manuel des items et mise à jour stock automatique
+    - Création d'un nouveau bon d'achat avec PMP et gestion des consommables.
 - `GET` /admin/purchases/<int:id> (endpoint: `purchases.view_purchase`, blueprint: `purchases`)
     - Affichage détaillé d'un bon d'achat avec unités et paiement
 - `GET,POST` /admin/purchases/<int:id>/mark_paid (endpoint: `purchases.mark_as_paid`, blueprint: `purchases`)
@@ -305,27 +307,19 @@ ERP complet et autonome pour Fée Maison avec toutes les fonctionnalités métie
 - `GET` /dashboard/production (endpoint: `dashboard.production_dashboard`, blueprint: `dashboard`)
     - Dashboard de production pour Rayan
 - `GET` /dashboard/shop (endpoint: `dashboard.shop_dashboard`, blueprint: `dashboard`)
-    - Dashboard magasin pour Yasmine - Gestion des commandes reçues
 - `GET` /dashboard/ingredients-alerts (endpoint: `dashboard.ingredients_alerts`, blueprint: `dashboard`)
-    - Dashboard alertes ingrédients pour Amel - Gestion des achats
 - `GET` /dashboard/admin (endpoint: `dashboard.admin_dashboard`, blueprint: `dashboard`)
-    - Dashboard administrateur principal
 - `GET` /dashboard/sales (endpoint: `dashboard.sales_dashboard`, blueprint: `dashboard`)
-    - Dashboard des ventes
 - `GET` /dashboard/api/orders-stats (endpoint: `dashboard.orders_stats_api`, blueprint: `dashboard`)
-    - API pour statistiques des commandes en temps réel
 - `POST` /orders/<int:order_id>/change-status-to-ready (endpoint: `status.change_status_to_ready`, blueprint: `status`)
-    - Change le statut de 'in_production' à 'ready_at_shop' avec sélection employé
+    - Traite la finalisation de la production.
+Change le statut, décrémente la quantité ET la valeur des ingrédients, 
+et incrémente la quantité ET la valeur du stock du produit fini.
 - `POST` /orders/<int:order_id>/change-status-to-delivered (endpoint: `status.change_status_to_delivered`, blueprint: `status`)
-    - Change le statut de 'ready_at_shop' à 'delivered' pour commandes client
 - `GET` /orders/<int:order_id>/select-employees/<string:new_status> (endpoint: `status.select_employees_for_status_change`, blueprint: `status`)
-    - Formulaire de sélection des employés pour changement de statut
 - `GET,POST` /orders/<int:order_id>/manual-status-change (endpoint: `status.manual_status_change`, blueprint: `status`)
-    - Changement de statut manuel pour cas spéciaux
 - `GET` /orders/api/active-employees (endpoint: `status.get_active_employees`, blueprint: `status`)
-    - API pour récupérer la liste des employés actifs
 - `GET` /orders/<int:order_id>/test-employees/<string:new_status> (endpoint: `status.test_employees_no_decorators`, blueprint: `status`)
-    - Test sans décorateurs pour isoler le problème
 - `GET` /orders/<int:order_id>/test-login/<string:new_status> (endpoint: `status.test_login_only`, blueprint: `status`)
 - `GET` /orders/<int:order_id>/test-admin/<string:new_status> (endpoint: `status.test_admin_only`, blueprint: `status`)
 - `GET` /orders/<int:order_id>/test-both/<string:new_status> (endpoint: `status.test_both_decorators`, blueprint: `status`)
@@ -370,6 +364,8 @@ ERP complet et autonome pour Fée Maison avec toutes les fonctionnalités métie
 - action
 - active_employees
 - adjustments_this_month
+- available_products
+- available_units
 - categories
 - category
 - critical_consommables
