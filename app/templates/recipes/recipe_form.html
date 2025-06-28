@@ -61,15 +61,12 @@
                     <!-- ### DEBUT DE LA MODIFICATION HTML ### -->
                     {% for ingredient_form in form.ingredients %}
                     <div class="row ingredient-form-row mb-2 align-items-center gx-2">
-                        {{ ingredient_form.id }}
-                        {{ ingredient_form.product_id(class="ingredient-id-input") }}
+                    {{ ingredient_form.id() }} {# Appel du champ comme une fonction pour rendre le tag #}
+                    {{ ingredient_form.product_id(class="ingredient-id-input") }}
                         <div class="col-md-4">
-                            {{ render_field(ingredient_form.product_search, label_visible=false, class="form-control ingredient-search-field") }}
-                        </div>
-                        <div class="col-md-2">{{ render_field(ingredient_form.quantity_needed, label_visible=false, class="form-control quantity-input", placeholder="Qté", type="number", attrs={'step': 'any', 'min': '0'}) }}</div>
-                        <div class="col-md-2">{{ render_field(ingredient_form.unit, label_visible=false, class="form-control unit-input", placeholder="Unité") }}</div>
-                        <div class="col-md-3"><span class="ingredient-cost fw-bold ps-2">0.00 DA</span></div>
-                        <div class="col-md-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger remove-ingredient-btn" title="Supprimer">X</button></div>
+                        {{ render_field(ingredient_form.product_search, label_visible=false, class="form-control ingredient-search-field") }}
+                       </div>
+                            ...
                     </div>
                     {% endfor %}
                     <!-- ### FIN DE LA MODIFICATION HTML ### -->
