@@ -19,22 +19,17 @@ from sqlalchemy import and_, or_, desc, func
 from datetime import datetime, timedelta
 import json
 import pytz
-from decimal import Decimal, InvalidOperation # Import Decimal
+from decimal import Decimal, InvalidOperation
+
+# ### DEBUT DE LA MODIFICATION ###
+# Import direct des modèles en haut du fichier pour la clarté et la robustesse.
+# La fonction `get_main_models` a été supprimée.
+from models import Product, Unit
+# ### FIN DE LA MODIFICATION ###
 
 # Import du blueprint depuis __init__.py
 from . import bp as purchases
 
-# Fonction helper pour récupérer les modèles principaux sans circularité
-def get_main_models():
-    """Fonction helper pour importer Product, User et Unit sans circularité"""
-    import sys
-    if 'models' in sys.modules:
-        models_module = sys.modules['models']
-        return models_module.Product, models_module.User, models_module.Unit
-    else:
-        # Fallback import si nécessaire
-        from models import Product, User, Unit
-        return Product, User, Unit
 
 # ==================== ROUTES PRINCIPALES CRUD ====================
 
@@ -42,7 +37,6 @@ def get_main_models():
 @login_required
 def list_purchases():
     """Liste de tous les achats avec filtres et statut paiement"""
-    Product, User, Unit = get_main_models()
     form = PurchaseSearchForm()
     
     # Construction de la requête de base
@@ -110,7 +104,6 @@ def list_purchases():
 @login_required
 def new_purchase():
     """Création d'un nouveau bon d'achat avec PMP, gestion des consommables, calculs en Decimal et atomicité."""
-    Product, User, Unit = get_main_models()
     form = PurchaseForm(request.form) if request.method == 'POST' else PurchaseForm()
 
     if form.validate_on_submit():
@@ -230,7 +223,6 @@ def new_purchase():
 @purchases.route('/<int:id>')
 @login_required
 def view_purchase(id):
-    """Affichage détaillé d'un bon d'achat avec unités et paiement"""
     purchase = Purchase.query.get_or_404(id)
     if not current_user.is_admin and purchase.requested_by_id != current_user.id:
         flash('Vous n\'avez pas l\'autorisation de voir ce bon d\'achat.', 'danger')
@@ -245,7 +237,6 @@ def view_purchase(id):
 @login_required
 @admin_required
 def mark_as_paid(id):
-    """Marquer un bon d'achat comme payé"""
     purchase = Purchase.query.get_or_404(id)
     if purchase.is_paid:
         flash('Ce bon d\'achat est déjà marqué comme payé.', 'info')
@@ -270,7 +261,6 @@ def mark_as_paid(id):
 @login_required
 @admin_required
 def mark_as_unpaid(id):
-    """Marquer un bon d'achat comme non payé"""
     purchase = Purchase.query.get_or_404(id)
     purchase.is_paid = False
     purchase.payment_date = None
@@ -278,12 +268,10 @@ def mark_as_unpaid(id):
     flash(f'Bon d\'achat {purchase.reference} marqué comme non payé.', 'success')
     return redirect(url_for('purchases.view_purchase', id=id))
 
-# ### DEBUT DE LA MODIFICATION ###
 @purchases.route('/<int:id>/cancel', methods=['POST'])
 @login_required
 @admin_required
 def cancel_purchase(id):
-    """Annuler un bon d'achat et réaliser la contre-passation exacte du stock et de sa valeur."""
     purchase = Purchase.query.get_or_404(id)
     if purchase.status == PurchaseStatus.CANCELLED:
         flash('Ce bon d\'achat est déjà annulé.', 'info')
@@ -291,7 +279,6 @@ def cancel_purchase(id):
 
     if purchase.status != PurchaseStatus.RECEIVED:
         flash(f"Un achat avec le statut '{purchase.status.value}' ne peut être annulé de cette manière car il n'a pas impacté le stock.", 'warning')
-        # On peut simplement changer le statut pour les autres cas.
         purchase.status = PurchaseStatus.CANCELLED
         db.session.commit()
         flash(f'Bon d\'achat {purchase.reference} annulé.', 'success')
@@ -309,26 +296,19 @@ def cancel_purchase(id):
                 product.update_stock_by_location('consommables', -quantity_to_reverse)
 
             elif product.product_type == 'ingredient':
-                # Soustraire la quantité
                 product.update_stock_by_location(item.stock_location, -quantity_to_reverse)
-
-                # Soustraire la valeur
                 value_to_reverse = item.quantity_ordered * item.unit_price
                 product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_to_reverse
                 
-                # Recalculer le PMP
                 new_total_stock_qty = Decimal(product.total_stock_all_locations)
                 if new_total_stock_qty > 0:
-                    # Pour éviter la division par zéro et les valeurs négatives absurdes
                     if product.total_stock_value < 0:
                         product.total_stock_value = Decimal('0.0')
                     product.cost_price = product.total_stock_value / new_total_stock_qty
                 else:
-                    # Si le stock est à zéro, la valeur et le PMP doivent être à zéro
                     product.total_stock_value = Decimal('0.0')
                     product.cost_price = Decimal('0.0')
         
-        # Mettre à jour le statut de l'achat
         purchase.status = PurchaseStatus.CANCELLED
         db.session.commit()
         flash(f'Bon d\'achat {purchase.reference} annulé. Le stock et sa valeur ont été corrigés.', 'success')
@@ -339,16 +319,11 @@ def cancel_purchase(id):
         flash(f"ECHEC de l'annulation. Une erreur est survenue: {e}", "danger")
 
     return redirect(url_for('purchases.view_purchase', id=id))
-# ### FIN DE LA MODIFICATION ###
 
-
-# NOTE: Cette fonction nécessite une refactorisation similaire à `new_purchase`
-# pour garantir l'atomicité et l'utilisation de Decimal. Elle reste en l'état pour le moment.
 @purchases.route('/<int:id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_purchase(id):
     """Modification d'un bon d'achat avec support des unités"""
-    Product, User, Unit = get_main_models()
     purchase = Purchase.query.get_or_404(id)
 
     if not current_user.is_admin and purchase.requested_by_id != current_user.id:
@@ -502,7 +477,6 @@ def edit_purchase(id):
 @login_required
 def api_products_search():
     """API de recherche de produits pour l'auto-complétion"""
-    Product, User, Unit = get_main_models()
     search_term = request.args.get('q', '')
     if len(search_term) < 2:
         return jsonify([])
@@ -540,7 +514,6 @@ def api_pending_count():
 @login_required
 def api_product_units(product_id):
     """API pour récupérer les unités disponibles pour un produit"""
-    Product, User, Unit = get_main_models()
     product = Product.query.get_or_404(product_id)
     units = Unit.query.filter_by(is_active=True).order_by(Unit.display_order).all()
     
