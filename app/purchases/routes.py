@@ -1,11 +1,9 @@
 """
-
 Routes pour la gestion des achats fournisseurs avec système d'unités et paiement
 
 Module: app/purchases/routes.py
 
 Auteur: ERP Fée Maison
-
 """
 
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, abort
@@ -13,23 +11,20 @@ from flask_login import login_required, current_user
 from extensions import db
 from .models import Purchase, PurchaseItem, PurchaseStatus, PurchaseUrgency
 from .forms import (PurchaseForm, MarkAsPaidForm, PurchaseApprovalForm, PurchaseReceiptForm,
-PurchaseSearchForm, QuickPurchaseForm, PurchaseReceiptItemForm)
+                   PurchaseSearchForm, QuickPurchaseForm, PurchaseReceiptItemForm)
 from decorators import admin_required
 from sqlalchemy import and_, or_, desc, func
+from sqlalchemy.orm.attributes import flag_modified  # ✅ AJOUT CRITIQUE
 from datetime import datetime, timedelta
 import json
 import pytz
 from decimal import Decimal, InvalidOperation
 
-# ### DEBUT DE LA MODIFICATION ###
-# Import direct des modèles en haut du fichier pour la clarté et la robustesse.
-# La fonction `get_main_models` a été supprimée.
+# Import direct des modèles
 from models import Product, Unit
-# ### FIN DE LA MODIFICATION ###
 
 # Import du blueprint depuis __init__.py
 from . import bp as purchases
-
 
 # ==================== ROUTES PRINCIPALES CRUD ====================
 
@@ -47,7 +42,7 @@ def list_purchases():
         query = query.filter(Purchase.is_paid == False)
     elif payment_filter == 'paid':
         query = query.filter(Purchase.is_paid == True)
-
+    
     if form.validate_on_submit():
         if form.search_term.data:
             search = f"%{form.search_term.data}%"
@@ -56,20 +51,24 @@ def list_purchases():
                 Purchase.supplier_name.ilike(search),
                 Purchase.notes.ilike(search)
             ))
+        
         if form.status_filter.data != 'all':
             query = query.filter(Purchase.status == PurchaseStatus(form.status_filter.data))
+        
         if form.urgency_filter.data != 'all':
             query = query.filter(Purchase.urgency == PurchaseUrgency(form.urgency_filter.data))
+        
         if form.supplier_filter.data:
             supplier_search = f"%{form.supplier_filter.data}%"
             query = query.filter(Purchase.supplier_name.ilike(supplier_search))
-
+    
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('PURCHASES_PER_PAGE', 20)
+    
     purchases_list = query.order_by(desc(Purchase.created_at)).paginate(
         page=page, per_page=per_page, error_out=False
     )
-
+    
     stats = {
         'total_purchases': Purchase.query.count(),
         'pending_approval': Purchase.query.filter(
@@ -79,10 +78,10 @@ def list_purchases():
         'paid_purchases': Purchase.query.filter(Purchase.is_paid == True).count(),
         'overdue': len([p for p in Purchase.query.all() if p.is_overdue()])
     }
-
+    
     suppliers_list = db.session.query(Purchase.supplier_name).distinct().all()
     suppliers_list = [s[0] for s in suppliers_list if s[0]]
-
+    
     return render_template(
         'purchases/list_purchases.html',
         title="Gestion des Achats",
@@ -105,13 +104,15 @@ def list_purchases():
 def new_purchase():
     """Création d'un nouveau bon d'achat avec PMP, gestion des consommables, calculs en Decimal et atomicité."""
     form = PurchaseForm(request.form) if request.method == 'POST' else PurchaseForm()
-
+    
     if form.validate_on_submit():
         try:
+            # ✅ AMÉLIORATION : Gestion timezone plus robuste
             local_tz = pytz.timezone('Europe/Paris')
             naive_date = form.requested_date.data
             aware_date = local_tz.localize(naive_date)
             
+            # ✅ AMÉLIORATION : Création de l'objet Purchase
             purchase = Purchase(
                 supplier_name=form.supplier_name.data,
                 supplier_contact=form.supplier_contact.data,
@@ -131,10 +132,15 @@ def new_purchase():
                 is_paid=False,
                 status=PurchaseStatus.RECEIVED
             )
+            
             db.session.add(purchase)
-            db.session.flush()
-
+            db.session.flush()  # Pour obtenir l'ID
+            
+            # ✅ CORRECTION CRITIQUE : Collecte des produits modifiés pour persistance
+            modified_products = set()
             items_added = 0
+            
+            # Récupération des données du formulaire
             product_ids = request.form.getlist('items[][product_id]')
             quantities = request.form.getlist('items[][quantity_ordered]')
             prices = request.form.getlist('items[][unit_price]')
@@ -144,49 +150,75 @@ def new_purchase():
             for i in range(len(product_ids)):
                 if not product_ids[i] or not quantities[i] or not prices[i] or not unit_ids[i]:
                     continue
-
-                product_id = int(product_ids[i])
-                product = Product.query.get(product_id)
                 
+                product_id = int(product_ids[i])
+                
+                # ✅ AMÉLIORATION : Récupération avec vérification d'existence
+                product = Product.query.get(product_id)
                 if not product:
-                     raise ValueError(f"Produit avec l'ID {product_id} non trouvé.")
-
+                    raise ValueError(f"Produit avec l'ID {product_id} non trouvé.")
+                
                 if product.product_type not in ['ingredient', 'consommable']:
                     raise ValueError(f"Le produit '{product.name}' n'est pas un type achetable (ingrédient ou consommable).")
-
+                
+                # Validation et conversion des données
                 quantity_ordered = Decimal(quantities[i])
                 price_per_unit_achat = Decimal(prices[i])
                 unit_id = int(unit_ids[i])
+                
                 unit_object = Unit.query.get(unit_id)
-
                 if not unit_object or quantity_ordered <= 0 or price_per_unit_achat < 0:
                     raise ValueError(f"Données invalides pour la ligne du produit {product.name}.")
-
+                
+                # Calcul des quantités en unité de base
                 quantity_in_base_unit = float(quantity_ordered * unit_object.conversion_factor)
                 
+                # ✅ CORRECTION CRITIQUE : Gestion distincte par type de produit
                 if product.product_type == 'consommable':
                     stock_location = 'consommables'
+                    
+                    # Mise à jour du stock consommable
                     product.update_stock_by_location(stock_location, quantity_in_base_unit)
-                
+                    
+                    # ✅ SOLUTION PRINCIPALE : Marquer explicitement comme modifié
+                    flag_modified(product, 'stock_consommables')
+                    flag_modified(product, 'last_stock_update')
+                    
                 elif product.product_type == 'ingredient':
                     stock_location = stock_locations[i]
-                    conversion_factor = Decimal(unit_object.conversion_factor)
                     
+                    # Calculs financiers avec Decimal
+                    conversion_factor = Decimal(unit_object.conversion_factor)
                     if conversion_factor == 0:
                         raise ValueError(f"Le facteur de conversion pour l'unité '{unit_object.name}' ne peut pas être zéro.")
-                        
+                    
                     price_per_base_unit = price_per_unit_achat / conversion_factor
                     purchase_value = Decimal(quantity_in_base_unit) * price_per_base_unit
-
+                    
+                    # ✅ CORRECTION CRITIQUE : Mise à jour de la valeur totale du stock
                     product.total_stock_value = (product.total_stock_value or Decimal('0.0')) + purchase_value
+                    
+                    # Mise à jour du stock par emplacement
                     product.update_stock_by_location(stock_location, quantity_in_base_unit)
                     
+                    # Recalcul du coût moyen pondéré (PMP)
                     new_total_stock_qty = Decimal(product.total_stock_all_locations)
                     if new_total_stock_qty > 0:
                         product.cost_price = product.total_stock_value / new_total_stock_qty
                     else:
                         product.cost_price = price_per_base_unit
-
+                    
+                    # ✅ SOLUTION PRINCIPALE : Marquer tous les champs modifiés
+                    flag_modified(product, 'total_stock_value')
+                    flag_modified(product, 'cost_price')
+                    flag_modified(product, f'stock_{stock_location}')
+                    flag_modified(product, 'last_stock_update')
+                
+                # ✅ CORRECTION CRITIQUE : Ajouter le produit à la session
+                db.session.add(product)
+                modified_products.add(product)
+                
+                # Création de l'item du bon d'achat
                 purchase_item = PurchaseItem(
                     purchase_id=purchase.id,
                     product_id=product.id,
@@ -197,36 +229,50 @@ def new_purchase():
                     original_unit_price=price_per_unit_achat,
                     stock_location=stock_location
                 )
+                
                 db.session.add(purchase_item)
                 items_added += 1
-
+            
             if items_added == 0:
                 raise ValueError("Le bon d'achat doit contenir au moins un article valide.")
-
+            
+            # ✅ VÉRIFICATION FINALE : S'assurer que tous les produits modifiés sont en session
+            for product in modified_products:
+                db.session.merge(product)  # Force le merge pour garantir la persistance
+            
+            # Calcul des totaux et commit final
             purchase.calculate_totals()
+            
+            # ✅ DIAGNOSTIC : Log avant commit (optionnel, pour debug)
+            current_app.logger.info(f"Commit du bon d'achat {purchase.reference} avec {len(modified_products)} produits modifiés")
+            
             db.session.commit()
             
             flash(f'Bon d\'achat {purchase.reference} créé avec succès. Le stock et le coût moyen pondéré ont été mis à jour.', 'success')
             return redirect(url_for('purchases.view_purchase', id=purchase.id))
-
+            
         except (ValueError, InvalidOperation, IndexError, TypeError) as e:
             db.session.rollback()
             current_app.logger.error(f"Erreur lors de la création de l'achat : {e}", exc_info=True)
             flash(f"ECHEC : Le bon d'achat n'a pas été créé. Une erreur est survenue. Veuillez vérifier toutes les lignes. ({e})", 'danger')
-
+    
+    # Rendu du template pour GET ou en cas d'erreur
     available_products = Product.query.filter(Product.product_type.in_(['ingredient', 'consommable'])).all()
     available_units = Unit.query.filter_by(is_active=True).order_by(Unit.display_order).all()
-
+    
     return render_template('purchases/new_purchase.html', form=form, title='Nouveau Bon d\'Achat',
-                           available_products=available_products, available_units=available_units)
+                         available_products=available_products, available_units=available_units)
 
 @purchases.route('/<int:id>')
 @login_required
 def view_purchase(id):
+    """Affichage détaillé d'un bon d'achat"""
     purchase = Purchase.query.get_or_404(id)
+    
     if not current_user.is_admin and purchase.requested_by_id != current_user.id:
         flash('Vous n\'avez pas l\'autorisation de voir ce bon d\'achat.', 'danger')
         return redirect(url_for('purchases.list_purchases'))
+    
     return render_template(
         'purchases/view_purchase.html',
         title=f"Bon d'Achat {purchase.reference}",
@@ -237,16 +283,20 @@ def view_purchase(id):
 @login_required
 @admin_required
 def mark_as_paid(id):
+    """Marquer un bon d'achat comme payé"""
     purchase = Purchase.query.get_or_404(id)
+    
     if purchase.is_paid:
         flash('Ce bon d\'achat est déjà marqué comme payé.', 'info')
         return redirect(url_for('purchases.view_purchase', id=id))
-
+    
     form = MarkAsPaidForm()
+    
     if form.validate_on_submit():
         purchase.is_paid = True
         purchase.payment_date = form.payment_date.data
         db.session.commit()
+        
         flash(f'Bon d\'achat {purchase.reference} marqué comme payé le {form.payment_date.data.strftime("%d/%m/%Y")}.', 'success')
         return redirect(url_for('purchases.view_purchase', id=id))
     
@@ -261,10 +311,13 @@ def mark_as_paid(id):
 @login_required
 @admin_required
 def mark_as_unpaid(id):
+    """Marquer un bon d'achat comme non payé"""
     purchase = Purchase.query.get_or_404(id)
+    
     purchase.is_paid = False
     purchase.payment_date = None
     db.session.commit()
+    
     flash(f'Bon d\'achat {purchase.reference} marqué comme non payé.', 'success')
     return redirect(url_for('purchases.view_purchase', id=id))
 
@@ -272,34 +325,44 @@ def mark_as_unpaid(id):
 @login_required
 @admin_required
 def cancel_purchase(id):
+    """Annuler un bon d'achat et reverser le stock"""
     purchase = Purchase.query.get_or_404(id)
+    
     if purchase.status == PurchaseStatus.CANCELLED:
         flash('Ce bon d\'achat est déjà annulé.', 'info')
         return redirect(url_for('purchases.view_purchase', id=id))
-
+    
     if purchase.status != PurchaseStatus.RECEIVED:
         flash(f"Un achat avec le statut '{purchase.status.value}' ne peut être annulé de cette manière car il n'a pas impacté le stock.", 'warning')
         purchase.status = PurchaseStatus.CANCELLED
         db.session.commit()
         flash(f'Bon d\'achat {purchase.reference} annulé.', 'success')
         return redirect(url_for('purchases.view_purchase', id=id))
-
+    
     try:
+        # ✅ CORRECTION : Même logique de persistance pour l'annulation
+        modified_products = set()
+        
         for item in purchase.items:
             product = item.product
             if not product:
                 continue
-
+            
             quantity_to_reverse = float(item.quantity_ordered)
             
             if product.product_type == 'consommable':
                 product.update_stock_by_location('consommables', -quantity_to_reverse)
-
+                flag_modified(product, 'stock_consommables')
+                
             elif product.product_type == 'ingredient':
                 product.update_stock_by_location(item.stock_location, -quantity_to_reverse)
+                flag_modified(product, f'stock_{item.stock_location}')
+                
+                # Reversion de la valeur
                 value_to_reverse = item.quantity_ordered * item.unit_price
                 product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_to_reverse
                 
+                # Recalcul du PMP
                 new_total_stock_qty = Decimal(product.total_stock_all_locations)
                 if new_total_stock_qty > 0:
                     if product.total_stock_value < 0:
@@ -308,16 +371,28 @@ def cancel_purchase(id):
                 else:
                     product.total_stock_value = Decimal('0.0')
                     product.cost_price = Decimal('0.0')
+                
+                flag_modified(product, 'total_stock_value')
+                flag_modified(product, 'cost_price')
+            
+            flag_modified(product, 'last_stock_update')
+            db.session.add(product)
+            modified_products.add(product)
+        
+        # ✅ VÉRIFICATION FINALE
+        for product in modified_products:
+            db.session.merge(product)
         
         purchase.status = PurchaseStatus.CANCELLED
         db.session.commit()
+        
         flash(f'Bon d\'achat {purchase.reference} annulé. Le stock et sa valeur ont été corrigés.', 'success')
-
+        
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erreur lors de l'annulation de l'achat {id}: {e}", exc_info=True)
         flash(f"ECHEC de l'annulation. Une erreur est survenue: {e}", "danger")
-
+    
     return redirect(url_for('purchases.view_purchase', id=id))
 
 @purchases.route('/<int:id>/edit', methods=['GET', 'POST'])
@@ -325,142 +400,179 @@ def cancel_purchase(id):
 def edit_purchase(id):
     """Modification d'un bon d'achat avec support des unités"""
     purchase = Purchase.query.get_or_404(id)
-
+    
     if not current_user.is_admin and purchase.requested_by_id != current_user.id:
         flash('Vous n\'avez pas l\'autorisation de modifier ce bon d\'achat.', 'danger')
         return redirect(url_for('purchases.list_purchases'))
-
+    
     if purchase.status not in [PurchaseStatus.DRAFT, PurchaseStatus.REQUESTED, PurchaseStatus.RECEIVED]:
         flash('Ce bon d\'achat ne peut plus être modifié dans son état actuel.', 'warning')
         return redirect(url_for('purchases.view_purchase', id=id))
-
+    
     form = PurchaseForm(obj=purchase)
     
     if form.validate_on_submit():
-        purchase.requested_date = form.requested_date.data
-
-        old_stock_updates = []
-        if purchase.status == PurchaseStatus.RECEIVED:
-            for item in purchase.items:
-                if item.product:
-                    old_stock_updates.append({
-                        'product': item.product,
-                        'location': item.stock_location,
-                        'quantity': float(item.quantity_ordered)
-                    })
-        
-        purchase.supplier_name = form.supplier_name.data
-        purchase.supplier_contact = form.supplier_contact.data
-        purchase.supplier_phone = form.supplier_phone.data
-        purchase.supplier_email = form.supplier_email.data
-        purchase.supplier_address = form.supplier_address.data
-        purchase.expected_delivery_date = form.expected_delivery_date.data
-        purchase.urgency = PurchaseUrgency(form.urgency.data)
-        purchase.payment_terms = form.payment_terms.data
-        purchase.shipping_cost = form.shipping_cost.data or 0.0
-        purchase.tax_amount = form.tax_amount.data or 0.0
-        purchase.notes = form.notes.data
-        purchase.internal_notes = form.internal_notes.data
-        purchase.terms_conditions = form.terms_conditions.data
-
-        for old_update in old_stock_updates:
-            product = old_update['product']
-            location = old_update['location']
-            quantity = old_update['quantity']
-            if location == 'ingredients_magasin':
-                product.stock_ingredients_magasin -= quantity
-            elif location == 'ingredients_local':
-                product.stock_ingredients_local -= quantity
-            elif location == 'comptoir':
-                product.stock_comptoir -= quantity
-            elif location == 'consommables':
-                product.stock_consommables -= quantity
-
-        PurchaseItem.query.filter_by(purchase_id=purchase.id).delete()
-
-        items_added = 0
-        product_ids = request.form.getlist('items[][product_id]')
-        quantities = request.form.getlist('items[][quantity_ordered]')
-        prices = request.form.getlist('items[][unit_price]')
-        units = request.form.getlist('items[][unit]')
-        stock_locations = request.form.getlist('items[][stock_location]') 
-
-        for i in range(len(product_ids)):
-            try:
-                product_id = int(product_ids[i]) if product_ids[i] else None
-                quantity = float(quantities[i]) if quantities[i] else 0
-                price = float(prices[i]) if prices[i] else 0
-                unit_id = int(units[i]) if units[i] else None
-                stock_location = stock_locations[i] if i < len(stock_locations) else 'ingredients_magasin' 
-
-                if product_id and quantity > 0 and price > 0:
-                    final_quantity = quantity
-                    final_unit_price = price
-                    original_quantity = None
-                    original_unit_id = None
-                    original_unit_price = None
-                    description_with_unit = f"{quantity} unités"
-                    if unit_id:
-                        try:
-                            unit = Unit.query.get(unit_id)
-                            if unit and unit.conversion_factor > 0:
-                                final_quantity = unit.to_base_unit(quantity)
-                                final_unit_price = price / float(unit.conversion_factor)
-                                original_quantity = quantity
-                                original_unit_id = unit.id
-                                original_unit_price = price
-                                description_with_unit = f"{quantity} × {unit.name}"
-                        except (ValueError, TypeError):
-                            pass
+        try:
+            # ✅ CORRECTION : Même logique de persistance pour l'édition
+            purchase.requested_date = form.requested_date.data
+            
+            # Sauvegarde des anciens stocks pour reversion
+            old_stock_updates = []
+            modified_products = set()
+            
+            if purchase.status == PurchaseStatus.RECEIVED:
+                for item in purchase.items:
+                    if item.product:
+                        old_stock_updates.append({
+                            'product': item.product,
+                            'location': item.stock_location,
+                            'quantity': float(item.quantity_ordered),
+                            'value': item.quantity_ordered * item.unit_price
+                        })
+            
+            # Mise à jour des informations principales
+            purchase.supplier_name = form.supplier_name.data
+            purchase.supplier_contact = form.supplier_contact.data
+            purchase.supplier_phone = form.supplier_phone.data
+            purchase.supplier_email = form.supplier_email.data
+            purchase.supplier_address = form.supplier_address.data
+            purchase.expected_delivery_date = form.expected_delivery_date.data
+            purchase.urgency = PurchaseUrgency(form.urgency.data)
+            purchase.payment_terms = form.payment_terms.data
+            purchase.shipping_cost = form.shipping_cost.data or 0.0
+            purchase.tax_amount = form.tax_amount.data or 0.0
+            purchase.notes = form.notes.data
+            purchase.internal_notes = form.internal_notes.data
+            purchase.terms_conditions = form.terms_conditions.data
+            
+            # Reversion des anciens stocks
+            for old_update in old_stock_updates:
+                product = old_update['product']
+                location = old_update['location']
+                quantity = old_update['quantity']
+                value = old_update['value']
+                
+                # Reversion du stock
+                product.update_stock_by_location(location, -quantity)
+                flag_modified(product, f'stock_{location}')
+                
+                # Reversion de la valeur si ingredient
+                if product.product_type == 'ingredient':
+                    product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value
+                    flag_modified(product, 'total_stock_value')
+                
+                flag_modified(product, 'last_stock_update')
+                db.session.add(product)
+                modified_products.add(product)
+            
+            # Suppression des anciennes lignes
+            PurchaseItem.query.filter_by(purchase_id=purchase.id).delete()
+            
+            # Traitement des nouvelles lignes (même logique que new_purchase)
+            items_added = 0
+            product_ids = request.form.getlist('items[][product_id]')
+            quantities = request.form.getlist('items[][quantity_ordered]')
+            prices = request.form.getlist('items[][unit_price]')
+            units = request.form.getlist('items[][unit]')
+            stock_locations = request.form.getlist('items[][stock_location]')
+            
+            for i in range(len(product_ids)):
+                try:
+                    product_id = int(product_ids[i]) if product_ids[i] else None
+                    quantity = float(quantities[i]) if quantities[i] else 0
+                    price = float(prices[i]) if prices[i] else 0
+                    unit_id = int(units[i]) if units[i] else None
+                    stock_location = stock_locations[i] if i < len(stock_locations) else 'ingredients_magasin'
                     
-                    purchase_item = PurchaseItem(
-                        purchase_id=purchase.id,
-                        product_id=product_id,
-                        quantity_ordered=final_quantity,
-                        unit_price=final_unit_price,
-                        original_quantity=original_quantity,
-                        original_unit_id=original_unit_id,
-                        original_unit_price=original_unit_price,
-                        stock_location=stock_location,
-                        description_override=description_with_unit
-                    )
-                    db.session.add(purchase_item)
-                    items_added += 1
-            except (ValueError, IndexError, TypeError) as e:
-                print(f"Erreur traitement item {i}: {e}")
-                continue
-
-        if items_added == 0:
-            flash('Aucun article valide n\'a été ajouté au bon d\'achat.', 'danger')
-            available_products = Product.query.filter(
-                Product.product_type.in_(['ingredient', 'consommable'])
-            ).all()
-            available_units = Unit.query.filter_by(is_active=True).order_by(Unit.display_order).all()
-            return render_template('purchases/edit_purchase.html', form=form, purchase=purchase,
-                                title='Modifier Bon d\'Achat', available_products=available_products,
-                                available_units=available_units)
-        
-        if purchase.status == PurchaseStatus.RECEIVED:
-            for item in purchase.items:
-                if item.product:
-                    if item.stock_location == 'ingredients_magasin':
-                        item.product.stock_ingredients_magasin += float(item.quantity_ordered)
-                    elif item.stock_location == 'ingredients_local':
-                        item.product.stock_ingredients_local += float(item.quantity_ordered)
-                    elif item.stock_location == 'comptoir':
-                        item.product.stock_comptoir += float(item.quantity_ordered)
-                    elif item.stock_location == 'consommables':
-                        item.product.stock_consommables += float(item.quantity_ordered)
-
-        purchase.calculate_totals()
-        db.session.commit()
-        flash(f'Bon d\'achat {purchase.reference} modifié avec succès.', 'success')
-        return redirect(url_for('purchases.view_purchase', id=purchase.id))
-
+                    if product_id and quantity > 0 and price > 0:
+                        product = Product.query.get(product_id)
+                        if not product:
+                            continue
+                        
+                        final_quantity = quantity
+                        final_unit_price = price
+                        original_quantity = None
+                        original_unit_id = None
+                        original_unit_price = None
+                        description_with_unit = f"{quantity} unités"
+                        
+                        if unit_id:
+                            try:
+                                unit = Unit.query.get(unit_id)
+                                if unit and unit.conversion_factor > 0:
+                                    final_quantity = unit.to_base_unit(quantity)
+                                    final_unit_price = price / float(unit.conversion_factor)
+                                    original_quantity = quantity
+                                    original_unit_id = unit.id
+                                    original_unit_price = price
+                                    description_with_unit = f"{quantity} × {unit.name}"
+                            except (ValueError, TypeError):
+                                pass
+                        
+                        # Mise à jour du stock (même logique que new_purchase)
+                        if product.product_type == 'ingredient':
+                            purchase_value = Decimal(final_quantity) * Decimal(final_unit_price)
+                            product.total_stock_value = (product.total_stock_value or Decimal('0.0')) + purchase_value
+                            product.update_stock_by_location(stock_location, final_quantity)
+                            
+                            new_total_stock_qty = Decimal(product.total_stock_all_locations)
+                            if new_total_stock_qty > 0:
+                                product.cost_price = product.total_stock_value / new_total_stock_qty
+                            
+                            flag_modified(product, 'total_stock_value')
+                            flag_modified(product, 'cost_price')
+                            flag_modified(product, f'stock_{stock_location}')
+                        
+                        elif product.product_type == 'consommable':
+                            product.update_stock_by_location('consommables', final_quantity)
+                            flag_modified(product, 'stock_consommables')
+                        
+                        flag_modified(product, 'last_stock_update')
+                        db.session.add(product)
+                        modified_products.add(product)
+                        
+                        purchase_item = PurchaseItem(
+                            purchase_id=purchase.id,
+                            product_id=product_id,
+                            quantity_ordered=final_quantity,
+                            unit_price=final_unit_price,
+                            original_quantity=original_quantity,
+                            original_unit_id=original_unit_id,
+                            original_unit_price=original_unit_price,
+                            stock_location=stock_location,
+                            description_override=description_with_unit
+                        )
+                        
+                        db.session.add(purchase_item)
+                        items_added += 1
+                        
+                except (ValueError, IndexError, TypeError) as e:
+                    print(f"Erreur traitement item {i}: {e}")
+                    continue
+            
+            if items_added == 0:
+                raise ValueError('Aucun article valide n\'a été ajouté au bon d\'achat.')
+            
+            # ✅ VÉRIFICATION FINALE
+            for product in modified_products:
+                db.session.merge(product)
+            
+            purchase.calculate_totals()
+            db.session.commit()
+            
+            flash(f'Bon d\'achat {purchase.reference} modifié avec succès.', 'success')
+            return redirect(url_for('purchases.view_purchase', id=purchase.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Erreur lors de la modification de l'achat {id}: {e}", exc_info=True)
+            flash(f"Erreur lors de la modification: {e}", 'danger')
+    
     available_products = Product.query.filter(
         Product.product_type.in_(['ingredient', 'consommable'])
     ).all()
     available_units = Unit.query.filter_by(is_active=True).order_by(Unit.display_order).all()
+    
     return render_template(
         'purchases/edit_purchase.html',
         form=form,
@@ -469,7 +581,6 @@ def edit_purchase(id):
         available_products=available_products,
         available_units=available_units
     )
-
 
 # ==================== ROUTES API/AJAX ====================
 
@@ -487,7 +598,7 @@ def api_products_search():
             Product.product_type.in_(['ingredient', 'consommable'])
         )
     ).limit(20).all()
-
+    
     results = []
     for product in products:
         results.append({
@@ -498,6 +609,7 @@ def api_products_search():
             'stock_magasin': product.stock_ingredients_magasin,
             'stock_local': product.stock_ingredients_local
         })
+    
     return jsonify(results)
 
 @purchases.route('/api/pending_count')
@@ -508,6 +620,7 @@ def api_pending_count():
     count = Purchase.query.filter(
         Purchase.status.in_([PurchaseStatus.DRAFT, PurchaseStatus.REQUESTED])
     ).count()
+    
     return jsonify({'count': count})
 
 @purchases.route('/api/products/<int:product_id>/units')
@@ -515,6 +628,7 @@ def api_pending_count():
 def api_product_units(product_id):
     """API pour récupérer les unités disponibles pour un produit"""
     product = Product.query.get_or_404(product_id)
+    
     units = Unit.query.filter_by(is_active=True).order_by(Unit.display_order).all()
     
     results = []
@@ -526,4 +640,5 @@ def api_product_units(product_id):
             'conversion_factor': float(unit.conversion_factor),
             'unit_type': unit.unit_type
         })
+    
     return jsonify(results)
