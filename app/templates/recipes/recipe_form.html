@@ -58,18 +58,21 @@
                         <div class="col-md-1"></div>
                     </div>
                     
-                    <!-- ### DEBUT DE LA MODIFICATION HTML ### -->
                     {% for ingredient_form in form.ingredients %}
                     <div class="row ingredient-form-row mb-2 align-items-center gx-2">
-                    {{ ingredient_form.id() }} {# Appel du champ comme une fonction pour rendre le tag #}
-                    {{ ingredient_form.product_id(class="ingredient-id-input") }}
+                        <!-- ### DEBUT DE LA CORRECTION ### -->
+                        {{ ingredient_form.id() }}
+                        {{ ingredient_form.product_id(class="ingredient-id-input") }}
+                        <!-- ### FIN DE LA CORRECTION ### -->
                         <div class="col-md-4">
-                        {{ render_field(ingredient_form.product_search, label_visible=false, class="form-control ingredient-search-field") }}
-                       </div>
-                            ...
+                            {{ render_field(ingredient_form.product_search, label_visible=false, class="form-control ingredient-search-field") }}
+                        </div>
+                        <div class="col-md-2">{{ render_field(ingredient_form.quantity_needed, label_visible=false, class="form-control quantity-input", placeholder="Qté", type="number", attrs={'step': 'any', 'min': '0'}) }}</div>
+                        <div class="col-md-2">{{ render_field(ingredient_form.unit, label_visible=false, class="form-control unit-input", placeholder="Unité", readonly=True) }}</div>
+                        <div class="col-md-3"><span class="ingredient-cost fw-bold ps-2">0.00 DA</span></div>
+                        <div class="col-md-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger remove-ingredient-btn" title="Supprimer">X</button></div>
                     </div>
                     {% endfor %}
-                    <!-- ### FIN DE LA MODIFICATION HTML ### -->
                 </div>
                 <button type="button" id="add-ingredient-btn" class="btn btn-success btn-sm mt-2"><i class="bi bi-plus-circle"></i> Ajouter un ingrédient</button>
             </div>
@@ -81,7 +84,6 @@
 <!-- TEMPLATE JAVASCRIPT POUR LES NOUVELLES LIGNES                    -->
 <!-- ================================================================== -->
 <template id="ingredient-form-template">
-    <!-- ### DEBUT DE LA MODIFICATION HTML ### -->
     <div class="row ingredient-form-row mb-2 align-items-center gx-2">
         <input type="hidden" name="ingredients-__INDEX__-id" value="">
         <input type="hidden" name="ingredients-__INDEX__-product_id" class="ingredient-id-input" value="">
@@ -93,10 +95,8 @@
         <div class="col-md-3"><span class="ingredient-cost fw-bold ps-2">0.00 DA</span></div>
         <div class="col-md-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger remove-ingredient-btn" title="Supprimer">X</button></div>
     </div>
-    <!-- ### FIN DE LA MODIFICATION HTML ### -->
 </template>
 
-<!-- L'ancienne div #ingredients-data a été supprimée -->
 {% endblock %}
 
 {% block scripts %}
@@ -166,11 +166,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = e.params.data;
             const row = $(this).closest('.ingredient-form-row');
             
-            // Mettre à jour les champs du formulaire
             row.find('.ingredient-id-input').val(data.id);
             row.find('.unit-input').val(data.unit);
             
-            // Stocker le PMP pour le calcul
             $(this).data('cost-price', data.cost_price);
             
             calculateAllCosts();
@@ -180,11 +178,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialiser les champs Select2 existants au chargement de la page
     $('.ingredient-search-field').each(function() {
         initializeSelect2(this);
-        // Pour les formulaires en mode édition, nous devons stocker le PMP initial
         const row = $(this).closest('.ingredient-form-row');
         const ingredientId = row.find('.ingredient-id-input').val();
-        // NOTE: Une amélioration serait de passer le PMP depuis le back-end
-        // pour éviter un appel API par ligne au chargement. Pour l'instant, on se base sur le recalcul.
     });
 
     // Gestion de l'ajout d'une nouvelle ligne
@@ -200,21 +195,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Gestion de la suppression et des écouteurs d'événements
-    function setupRowListeners(row) {
-         $(row).on('click', '.remove-ingredient-btn', function() {
-            $(this).closest('.ingredient-form-row').remove();
-            updateIndices();
-            calculateAllCosts();
-        });
-        
-        $(row).on('input', '.quantity-input', calculateAllCosts);
-    }
-    
-    // Attacher les écouteurs aux lignes existantes et futures
-    $('#ingredient-list').on('focus', '.ingredient-search-field', function() {
-        // Pour s'assurer que les listeners sont bien attachés
+    $('#ingredient-list').on('click', '.remove-ingredient-btn', function() {
+        $(this).closest('.ingredient-form-row').remove();
+        updateIndices();
+        calculateAllCosts();
     });
-    setupRowListeners(document);
+    $('#ingredient-list').on('input', '.quantity-input', calculateAllCosts);
     $(yieldQuantityInput).on('input', calculateAllCosts);
 
     // Mettre à jour les indices des champs du formulaire
@@ -229,9 +215,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Calcul initial au chargement de la page
-    // Un petit délai pour s'assurer que tout est chargé
-    setTimeout(calculateAllCosts, 100);
+    setTimeout(calculateAllCosts, 250);
 });
 </script>
 {% endblock %}
