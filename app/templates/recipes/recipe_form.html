@@ -63,7 +63,6 @@
         color: #28a745;
     }
     
-    /* ✅ CORRECTION : Masquer les champs cachés */
     .ingredient-id-hidden {
         display: none !important;
     }
@@ -109,6 +108,12 @@
             </div>
         </div>
     </div>
+
+    <!-- ✅ CORRECTION : Données pour JavaScript -->
+    <div id="recipeData" 
+         data-initial-ingredient-count="{{ form.ingredients|length }}" 
+         data-api-url="{{ url_for('recipes.api_ingredients_search') }}" 
+         style="display: none;"></div>
 
     <form method="POST" id="recipeForm">
         {{ form.hidden_tag() }}
@@ -161,7 +166,6 @@
                             {% for ingredient in form.ingredients %}
                             <div class="ingredient-row mb-3" data-ingredient-index="{{ loop.index0 }}">
                                 <div class="row align-items-center">
-                                    <!-- ✅ CORRECTION : Masquer les champs cachés -->
                                     <div style="display: none;">
                                         {{ ingredient.id }}
                                         {{ ingredient.product_id }}
@@ -192,7 +196,6 @@
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
-                                    <!-- ✅ SUPPRESSION : Champ Notes supprimé -->
                                 </div>
                             </div>
                             {% endfor %}
@@ -235,7 +238,6 @@
     </form>
 </div>
 
-<!-- ✅ CORRECTION : Template simplifié sans Notes -->
 <template id="ingredientRowTemplate">
     <div class="ingredient-row mb-3" data-ingredient-index="">
         <div class="row align-items-center">
@@ -275,23 +277,22 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let ingredientIndex = {{ form.ingredients|length }};
+    // ✅ CORRECTION : Récupération des données depuis l'attribut data
+    const recipeData = document.getElementById('recipeData');
+    let ingredientIndex = parseInt(recipeData.getAttribute('data-initial-ingredient-count')) || 0;
+    const apiUrl = recipeData.getAttribute('data-api-url');
+    
     let searchTimeout = {};
     
-    // Initialiser l'autocomplétion pour les lignes existantes
     initializeExistingRows();
-    
-    // Mettre à jour l'affichage initial
     updateCostSummary();
     updateIngredientCount();
     updateYieldDisplay();
     
-    // Ajouter un nouvel ingrédient
     document.getElementById('addIngredientBtn').addEventListener('click', function() {
         addIngredientRow();
     });
     
-    // Écouteurs pour les changements de quantité produite
     const yieldQuantity = document.querySelector('input[name="yield_quantity"]');
     const yieldUnit = document.querySelector('input[name="yield_unit"]');
     
@@ -314,7 +315,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const template = document.getElementById('ingredientRowTemplate');
         const clone = template.content.cloneNode(true);
         
-        // ✅ CORRECTION : Utilisation correcte des template literals
         const templateHTML = clone.querySelector('.ingredient-row').outerHTML;
         const html = templateHTML.replace(/__INDEX__/g, ingredientIndex);
         
@@ -339,12 +339,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantityField = row.querySelector('.ingredient-quantity');
         const removeBtn = row.querySelector('.remove-ingredient-btn');
         
-        // Autocomplétion
         if (searchField && resultsContainer) {
             setupAutocompletion(searchField, resultsContainer, productIdField, unitField, row);
         }
         
-        // Calcul du coût quand la quantité change
         if (quantityField) {
             quantityField.addEventListener('input', function() {
                 calculateLineCost(row);
@@ -352,7 +350,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // Suppression de ligne
         if (removeBtn) {
             removeBtn.addEventListener('click', function() {
                 row.remove();
@@ -375,7 +372,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Debounce
             clearTimeout(searchTimeout[searchField]);
             searchTimeout[searchField] = setTimeout(function() {
                 searchIngredients(query, resultsContainer, searchField, productIdField, unitField, row);
@@ -430,7 +426,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function searchIngredients(query, resultsContainer, searchField, productIdField, unitField, row) {
-        const url = '{{ url_for("recipes.api_ingredients_search") }}?q=' + encodeURIComponent(query);
+        // ✅ CORRECTION : Utilisation de la variable apiUrl
+        const url = apiUrl + '?q=' + encodeURIComponent(query);
         
         fetch(url)
             .then(function(response) { 
@@ -452,7 +449,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // ✅ CORRECTION : Construction du HTML sans template literals
         let html = '';
         ingredients.forEach(function(ingredient) {
             html += '<div class="ingredient-search-item" ' +
@@ -473,7 +469,6 @@ document.addEventListener('DOMContentLoaded', function() {
         resultsContainer.innerHTML = html;
         resultsContainer.style.display = 'block';
         
-        // Ajouter les écouteurs de clic
         resultsContainer.querySelectorAll('.ingredient-search-item').forEach(function(item) {
             item.addEventListener('click', function() {
                 selectIngredient(this, searchField, productIdField, unitField, row);
@@ -492,13 +487,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (productIdField) productIdField.value = id;
             if (unitField) unitField.value = unit || '';
             
-            // Stocker le prix de revient pour le calcul
             searchField.setAttribute('data-cost-price', costPrice || '0');
-            
-            // Masquer les résultats
             item.closest('.ingredient-search-results').style.display = 'none';
             
-            // Recalculer le coût
             calculateLineCost(row);
             updateCostSummary();
         }
@@ -532,10 +523,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Mettre à jour le total
         document.getElementById('totalRecipeCost').textContent = totalCost.toFixed(2) + ' DA';
         
-        // Calculer le coût par unité
         const yieldQuantityField = document.querySelector('input[name="yield_quantity"]');
         const yieldQuantity = parseFloat(yieldQuantityField ? yieldQuantityField.value : '1') || 1;
         const costPerUnit = yieldQuantity > 0 ? totalCost / yieldQuantity : 0;
@@ -568,8 +557,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Initialisation
     showNoIngredientsMessageIfNeeded();
-});
+}); // ✅ CORRECTION : Syntaxe correcte pour la fermeture
 </script>
 {% endblock %}
