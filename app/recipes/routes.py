@@ -5,7 +5,7 @@ from wtforms import SubmitField
 from extensions import db
 from .forms import RecipeForm, ingredient_product_query_factory
 from decorators import admin_required
-from sqlalchemy import or_ # Import or_
+from sqlalchemy import or_, and_ # Import or_ and and_
 
 recipes = Blueprint('recipes', __name__, url_prefix='/admin/recipes')
 
