@@ -5,12 +5,12 @@ from decimal import Decimal
 # Ajoute le répertoire racine du projet au chemin de recherche de Python
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
+# Importe depuis les fichiers à la racine ou dans le paquet 'app'
 from app import create_app
-from app.models import Unit
+from models import Unit  # CORRECTION: Importe depuis models.py à la racine
 from extensions import db
 
 # Crée une instance de l'application Flask pour avoir le contexte
-# Assurez-vous que la configuration par défaut dans config.py pointe vers votre base de données de développement
 config_name = os.getenv('FLASK_ENV') or 'default'
 app = create_app(config_name)
 
