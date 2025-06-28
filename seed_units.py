@@ -1,8 +1,13 @@
+import sys
 import os
+from decimal import Decimal
+
+# Ajoute le répertoire racine du projet au chemin de recherche de Python
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
 from app import create_app
 from app.models import Unit
 from extensions import db
-from decimal import Decimal
 
 # Crée une instance de l'application Flask pour avoir le contexte
 # Assurez-vous que la configuration par défaut dans config.py pointe vers votre base de données de développement
@@ -10,7 +15,6 @@ config_name = os.getenv('FLASK_ENV') or 'default'
 app = create_app(config_name)
 
 # La liste finale des unités que nous avons validée
-# J'ai renommé les unités de base pour plus de clarté
 units_to_seed = [
     # Poids
     {'name': 'Sac 25kg', 'base_unit': 'g', 'conversion_factor': Decimal('25000'), 'unit_type': 'Poids'},
@@ -53,13 +57,11 @@ def seed_db():
         print("Début du seeding des unités...")
         
         for unit_data in units_to_seed:
-            # Vérification de l'existence de l'unité
             existing_unit = Unit.query.filter_by(name=unit_data['name']).first()
             
             if existing_unit:
                 print(f"  -> Ignoré : L'unité '{unit_data['name']}' existe déjà.")
             else:
-                # Création de la nouvelle unité
                 new_unit = Unit(
                     name=unit_data['name'],
                     base_unit=unit_data['base_unit'],
@@ -69,7 +71,6 @@ def seed_db():
                 db.session.add(new_unit)
                 print(f"  -> ✅ Créé : L'unité '{unit_data['name']}' a été ajoutée.")
         
-        # Commit des changements à la base de données
         try:
             db.session.commit()
             print("\nSeeding terminé avec succès !")
