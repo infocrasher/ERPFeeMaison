@@ -62,6 +62,11 @@
         font-weight: bold;
         color: #28a745;
     }
+    
+    /* ✅ CORRECTION : Masquer les champs cachés */
+    .ingredient-id-hidden {
+        display: none !important;
+    }
 </style>
 {% endblock %}
 
@@ -156,11 +161,13 @@
                             {% for ingredient in form.ingredients %}
                             <div class="ingredient-row mb-3" data-ingredient-index="{{ loop.index0 }}">
                                 <div class="row align-items-center">
-                                    <!-- ✅ CORRECTION: Suppression de () pour éviter TypeError -->
-                                    {{ ingredient.id }}
-                                    {{ ingredient.product_id }}
+                                    <!-- ✅ CORRECTION : Masquer les champs cachés -->
+                                    <div style="display: none;">
+                                        {{ ingredient.id }}
+                                        {{ ingredient.product_id }}
+                                    </div>
                                     
-                                    <div class="col-md-4">
+                                    <div class="col-md-5">
                                         <label class="form-label">🔍 Ingrédient</label>
                                         <div class="ingredient-search-container">
                                             {{ ingredient.product_search(class="form-control ingredient-search-field") }}
@@ -185,10 +192,7 @@
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
-                                    <div class="col-md-1">
-                                        <label class="form-label">Notes</label>
-                                        {{ ingredient.notes(class="form-control") }}
-                                    </div>
+                                    <!-- ✅ SUPPRESSION : Champ Notes supprimé -->
                                 </div>
                             </div>
                             {% endfor %}
@@ -222,8 +226,7 @@
                         <small class="text-muted">
                             • Tapez quelques lettres pour rechercher un ingrédient<br>
                             • L'unité et le prix seront remplis automatiquement<br>
-                            • Le coût de la recette se calcule en temps réel<br>
-                            • Utilisez "Notes" pour des précisions (ex: "bien mélanger")
+                            • Le coût de la recette se calcule en temps réel
                         </small>
                     </div>
                 </div>
@@ -232,14 +235,14 @@
     </form>
 </div>
 
-<!-- Template pour nouvelle ligne d'ingrédient -->
+<!-- ✅ CORRECTION : Template simplifié sans Notes -->
 <template id="ingredientRowTemplate">
     <div class="ingredient-row mb-3" data-ingredient-index="">
         <div class="row align-items-center">
             <input type="hidden" name="ingredients-__INDEX__-id" class="ingredient-id-hidden">
             <input type="hidden" name="ingredients-__INDEX__-product_id" class="ingredient-id-input">
             
-            <div class="col-md-4">
+            <div class="col-md-5">
                 <label class="form-label">🔍 Ingrédient</label>
                 <div class="ingredient-search-container">
                     <input type="text" name="ingredients-__INDEX__-product_search" class="form-control ingredient-search-field" placeholder="Tapez pour rechercher...">
@@ -263,10 +266,6 @@
                 <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient-btn">
                     <i class="bi bi-trash"></i>
                 </button>
-            </div>
-            <div class="col-md-1">
-                <label class="form-label">Notes</label>
-                <input type="text" name="ingredients-__INDEX__-notes" class="form-control">
             </div>
         </div>
     </div>
@@ -306,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function initializeExistingRows() {
         const existingRows = document.querySelectorAll('.ingredient-row');
-        existingRows.forEach((row, index) => {
+        existingRows.forEach(function(row, index) {
             setupIngredientRow(row, index);
         });
     }
@@ -315,8 +314,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const template = document.getElementById('ingredientRowTemplate');
         const clone = template.content.cloneNode(true);
         
-        // Remplacer __INDEX__ par l'index actuel
-        const html = clone.querySelector('.ingredient-row').outerHTML.replace(/__INDEX__/g, ingredientIndex);
+        // ✅ CORRECTION : Utilisation correcte des template literals
+        const templateHTML = clone.querySelector('.ingredient-row').outerHTML;
+        const html = templateHTML.replace(/__INDEX__/g, ingredientIndex);
         
         const container = document.getElementById('ingredientsList');
         container.insertAdjacentHTML('beforeend', html);
@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Debounce
             clearTimeout(searchTimeout[searchField]);
-            searchTimeout[searchField] = setTimeout(() => {
+            searchTimeout[searchField] = setTimeout(function() {
                 searchIngredients(query, resultsContainer, searchField, productIdField, unitField, row);
             }, 300);
         });
@@ -404,12 +404,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         searchField.addEventListener('blur', function() {
-            // Délai pour permettre le clic sur un résultat
-            setTimeout(() => hideResults(), 200);
+            setTimeout(function() { 
+                hideResults(); 
+            }, 200);
         });
         
         function updateSelection(items) {
-            items.forEach((item, index) => {
+            items.forEach(function(item, index) {
                 item.classList.toggle('selected', index === selectedIndex);
             });
         }
@@ -429,14 +430,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function searchIngredients(query, resultsContainer, searchField, productIdField, unitField, row) {
-        const url = `{{ url_for('recipes.api_ingredients_search') }}?q=${encodeURIComponent(query)}`;
+        const url = '{{ url_for("recipes.api_ingredients_search") }}?q=' + encodeURIComponent(query);
         
         fetch(url)
-            .then(response => response.json())
-            .then(data => {
+            .then(function(response) { 
+                return response.json(); 
+            })
+            .then(function(data) {
                 displayResults(data, resultsContainer, searchField, productIdField, unitField, row);
             })
-            .catch(error => {
+            .catch(function(error) {
                 console.error('Erreur lors de la recherche:', error);
                 resultsContainer.style.display = 'none';
             });
@@ -449,27 +452,29 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        const html = ingredients.map(ingredient => `
-            <div class="ingredient-search-item" 
-                 data-id="${ingredient.id}" 
-                 data-name="${ingredient.name}"
-                 data-unit="${ingredient.unit}"
-                 data-cost-price="${ingredient.cost_price}">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <strong>${ingredient.name}</strong>
-                        <div class="ingredient-info">Unité: ${ingredient.unit}</div>
-                    </div>
-                    <div class="cost-info">${ingredient.cost_price} DA/${ingredient.unit}</div>
-                </div>
-            </div>
-        `).join('');
+        // ✅ CORRECTION : Construction du HTML sans template literals
+        let html = '';
+        ingredients.forEach(function(ingredient) {
+            html += '<div class="ingredient-search-item" ' +
+                    'data-id="' + ingredient.id + '" ' +
+                    'data-name="' + ingredient.name + '" ' +
+                    'data-unit="' + ingredient.unit + '" ' +
+                    'data-cost-price="' + ingredient.cost_price + '">' +
+                    '<div class="d-flex justify-content-between">' +
+                    '<div>' +
+                    '<strong>' + ingredient.name + '</strong>' +
+                    '<div class="ingredient-info">Unité: ' + ingredient.unit + '</div>' +
+                    '</div>' +
+                    '<div class="cost-info">' + ingredient.cost_price + ' DA/' + ingredient.unit + '</div>' +
+                    '</div>' +
+                    '</div>';
+        });
         
         resultsContainer.innerHTML = html;
         resultsContainer.style.display = 'block';
         
         // Ajouter les écouteurs de clic
-        resultsContainer.querySelectorAll('.ingredient-search-item').forEach(item => {
+        resultsContainer.querySelectorAll('.ingredient-search-item').forEach(function(item) {
             item.addEventListener('click', function() {
                 selectIngredient(this, searchField, productIdField, unitField, row);
             });
@@ -516,7 +521,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateCostSummary() {
         let totalCost = 0;
         
-        document.querySelectorAll('.ingredient-row').forEach(row => {
+        document.querySelectorAll('.ingredient-row').forEach(function(row) {
             const searchField = row.querySelector('.ingredient-search-field');
             const quantityField = row.querySelector('.ingredient-quantity');
             
@@ -531,7 +536,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('totalRecipeCost').textContent = totalCost.toFixed(2) + ' DA';
         
         // Calculer le coût par unité
-        const yieldQuantity = parseFloat(document.querySelector('input[name="yield_quantity"]')?.value || '1');
+        const yieldQuantityField = document.querySelector('input[name="yield_quantity"]');
+        const yieldQuantity = parseFloat(yieldQuantityField ? yieldQuantityField.value : '1') || 1;
         const costPerUnit = yieldQuantity > 0 ? totalCost / yieldQuantity : 0;
         document.getElementById('costPerUnit').textContent = costPerUnit.toFixed(2) + ' DA';
     }
@@ -542,8 +548,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateYieldDisplay() {
-        const quantity = document.querySelector('input[name="yield_quantity"]')?.value || '1';
-        const unit = document.querySelector('input[name="yield_unit"]')?.value || 'pièce(s)';
+        const quantityField = document.querySelector('input[name="yield_quantity"]');
+        const unitField = document.querySelector('input[name="yield_unit"]');
+        const quantity = quantityField ? quantityField.value : '1';
+        const unit = unitField ? unitField.value : 'pièce(s)';
         document.getElementById('yieldDisplay').textContent = quantity + ' ' + unit;
     }
     
