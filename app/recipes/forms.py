@@ -15,10 +15,8 @@ from wtforms.widgets import HiddenInput
 from models import Product, Recipe
 from sqlalchemy import or_
 
-# ### DEBUT DE LA CORRECTION ###
-# On importe notre nouveau manager pour l'utiliser dans le formulaire
+# On importe le manager pour les lieux de production
 from app.stock.stock_manager import StockLocationManager
-# ### FIN DE LA CORRECTION ###
 
 
 def ingredient_product_query_factory():
@@ -27,20 +25,27 @@ def ingredient_product_query_factory():
     """
     return Product.query.filter_by(product_type='ingredient').order_by(Product.name)
 
+# ### DEBUT DE LA MODIFICATION ###
 class IngredientForm(Form):
     """
     Sous-formulaire représentant une seule ligne d'ingrédient dans la recette.
+    Adapté pour l'autocomplétion.
     """
     id = IntegerField(widget=HiddenInput(), validators=[Optional()])
-    product = SelectField('Ingrédient', coerce=int, validators=[DataRequired("Veuillez choisir un ingrédient.")])
+    
+    # Champ caché pour stocker l'ID du produit. La validation se fait sur ce champ.
+    product_id = IntegerField('Product ID', widget=HiddenInput(), validators=[DataRequired("Veuillez choisir un ingrédient valide.")])
+    
+    # Champ visible pour la recherche par l'utilisateur.
+    product_search = StringField('Ingrédient', render_kw={'placeholder': 'Tapez pour rechercher...'})
+    
     quantity_needed = DecimalField('Quantité', validators=[DataRequired("La quantité est requise."), NumberRange(min=0.001)])
-    unit = StringField('Unité', validators=[DataRequired(), Length(max=50)])
+    unit = StringField('Unité', render_kw={'readonly': True}) # L'unité sera remplie par JS
     notes = StringField('Notes', validators=[Optional(), Length(max=200)])
 
-    def __init__(self, *args, **kwargs):
-        super(IngredientForm, self).__init__(*args, **kwargs)
-        self.product.choices = [(p.id, f"{p.name} ({p.unit})") for p in ingredient_product_query_factory().all()]
-        self.product.choices.insert(0, (0, '-- Choisir un ingrédient --'))
+    # L'ancien `__init__` qui peuplait le SelectField est supprimé.
+# ### FIN DE LA MODIFICATION ###
+
 
 class RecipeForm(FlaskForm):
     """
@@ -49,15 +54,11 @@ class RecipeForm(FlaskForm):
     name = StringField('Nom de la recette', validators=[DataRequired("Le nom est requis."), Length(max=100)])
     description = TextAreaField('Description / Instructions', validators=[Optional(), Length(max=5000)])
     
-    # ### DEBUT DE LA CORRECTION ###
-    # Ajout du champ pour sélectionner le lieu de production
     production_location = SelectField(
         'Lieu de Production (Source des Ingrédients)', 
         validators=[DataRequired()],
-        # Les choix sont chargés dynamiquement depuis notre manager
         choices=StockLocationManager.get_production_choices()
     )
-    # ### FIN DE LA CORRECTION ###
 
     yield_quantity = IntegerField(
         'Quantité Produite', 
