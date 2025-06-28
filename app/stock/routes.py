@@ -29,27 +29,34 @@ def overview():
     """Vue d'ensemble globale des 4 stocks"""
     low_stock_threshold = current_app.config.get('LOW_STOCK_THRESHOLD', 5)
     
+    # Récupération de tous les produits
     products = Product.query.all()
     
+    # ✅ CORRECTION : Analyse par localisation avec vrais attributs
     comptoir_low = []
     local_low = []
     magasin_low = []
     consommables_low = []
-    out_of_stock_products = []
+    out_of_stock_products = []  # ✅ AJOUT : Variable manquante
     
     for product in products:
+        # Stock comptoir bas
         if (product.stock_comptoir or 0) <= (product.seuil_min_comptoir or 5):
             comptoir_low.append(product)
         
+        # Stock local bas
         if (product.stock_ingredients_local or 0) <= (product.seuil_min_ingredients_local or 5):
             local_low.append(product)
         
+        # Stock magasin bas
         if (product.stock_ingredients_magasin or 0) <= (product.seuil_min_ingredients_magasin or 5):
             magasin_low.append(product)
         
+        # Stock consommables bas
         if (product.stock_consommables or 0) <= (product.seuil_min_consommables or 5):
             consommables_low.append(product)
         
+        # ✅ AJOUT : Produits en rupture totale (toutes localisations)
         total_stock = ((product.stock_comptoir or 0) + 
                       (product.stock_ingredients_local or 0) + 
                       (product.stock_ingredients_magasin or 0) + 
@@ -57,14 +64,17 @@ def overview():
         if total_stock <= 0:
             out_of_stock_products.append(product)
     
+    # Calcul des valeurs totales par stock
     total_value_comptoir = sum((p.stock_comptoir or 0) * float(p.cost_price or 0) for p in products)
     total_value_local = sum((p.stock_ingredients_local or 0) * float(p.cost_price or 0) for p in products)
     total_value_magasin = sum((p.stock_ingredients_magasin or 0) * float(p.cost_price or 0) for p in products)
     total_value_consommables = sum((p.stock_consommables or 0) * float(p.cost_price or 0) for p in products)
     
+    # Calculs corrigés
     total_stock_value = total_value_comptoir + total_value_local + total_value_magasin + total_value_consommables
     low_stock_products = comptoir_low + local_low + magasin_low + consommables_low
     
+    # Transferts en attente (simulation si table pas encore créée)
     try:
         pending_transfers = StockTransfer.query.filter(
             StockTransfer.status.in_([TransferStatus.REQUESTED, TransferStatus.APPROVED])
@@ -86,6 +96,7 @@ def overview():
         pending_transfers=pending_transfers,
         total_stock_value=total_stock_value,
         low_stock_products=low_stock_products,
+        # ✅ AJOUT : Variable manquante pour le template
         out_of_stock_products=out_of_stock_products
     )
 
@@ -101,9 +112,11 @@ def quick_entry():
         quantity_received = form.quantity_received.data
         location_type = form.location_type.data
         
+        # Mise à jour du stock selon la localisation
         if product_obj.update_stock_location(location_type, quantity_received):
             db.session.commit()
             
+            # Création du mouvement de traçabilité
             from .models import update_stock_quantity
             update_stock_quantity(
                 product_obj.id,
@@ -134,15 +147,18 @@ def adjustment():
         quantity_change = form.quantity.data
         reason = form.reason.data
         
+        # Récupération du stock actuel
         current_stock = product_obj.get_stock_by_location_type(location_type)
         new_stock = current_stock + quantity_change
         
         if new_stock < 0:
             flash(f'Le stock {product_obj.get_location_display_name(location_type)} de "{product_obj.name}" ne peut pas devenir négatif.', 'danger')
         else:
+            # Mise à jour du stock
             if product_obj.update_stock_location(location_type, quantity_change):
                 db.session.commit()
                 
+                # Création du mouvement de traçabilité
                 from .models import update_stock_quantity
                 update_stock_quantity(
                     product_obj.id,
@@ -162,32 +178,70 @@ def adjustment():
 
 # ==================== ROUTES DASHBOARD CORRIGÉES ====================
 
-# ### DEBUT DE LA MODIFICATION ###
 @stock.route('/dashboard/magasin')
 @login_required
 def dashboard_magasin():
-    """Dashboard Stock Magasin - Simplifié pour le débogage."""
+    """Dashboard Stock Magasin - Interface Amel"""
     
-    # Étape 1: On récupère TOUS les produits de type 'ingredient'.
-    ingredients = Product.query.filter_by(product_type='ingredient').order_by(Product.name).all()
+    # Tous les ingrédients (pas seulement ceux en stock)
+    all_ingredients = Product.query.filter(Product.product_type == 'ingredient').all()
     
-    # On passe la liste brute au template, sans autre calcul pour l'instant.
+    # Ingrédients par catégorie
+    ingredients_by_category = {}
+    for ingredient in all_ingredients:
+        category_name = ingredient.category.name if ingredient.category else 'Sans catégorie'
+        if category_name not in ingredients_by_category:
+            ingredients_by_category[category_name] = []
+        ingredients_by_category[category_name].append(ingredient)
+    
+    # Stock critique (rupture totale)
+    critical_ingredients = [p for p in all_ingredients if (p.stock_ingredients_magasin or 0) <= 0]
+    
+    # Suggestions d'achat (produits avec stock bas)
+    suggested_purchases = []
+    for product in all_ingredients:
+        stock_level = product.stock_ingredients_magasin or 0
+        seuil = product.seuil_min_ingredients_magasin or 50
+        if stock_level <= seuil and stock_level > 0:
+            suggested_purchases.append({
+                'product_id': product.id,
+                'product_name': product.name,
+                'suggested_quantity': seuil * 2,  # Suggestion: 2x le seuil
+                'unit': product.unit or 'unités'
+            })
+    
+    # Calculs statistiques
+    total_ingredients_magasin = len([p for p in all_ingredients if (p.stock_ingredients_magasin or 0) > 0])
+    critical_stock_count = len(critical_ingredients)
+    total_value = sum((p.stock_ingredients_magasin or 0) * float(p.cost_price or 0) for p in all_ingredients)
+    
+    # Achats en attente (simulation)
+    pending_purchases = 3  # À remplacer par vraie requête purchases
+    
     return render_template(
         'stock/dashboard_magasin.html',
-        title="[DEBUG] Dashboard Stock Magasin",
-        ingredients_debug=ingredients
+        title="Dashboard Stock Magasin",
+        # ✅ Variables templates corrigées
+        ingredients_by_category=ingredients_by_category,
+        critical_ingredients=critical_ingredients,
+        suggested_purchases=suggested_purchases,
+        total_ingredients_magasin=total_ingredients_magasin,
+        critical_stock_count=critical_stock_count,
+        pending_purchases=pending_purchases,
+        total_value=f"{total_value:,.0f}"
     )
-# ### FIN DE LA MODIFICATION ###
 
 @stock.route('/dashboard/local')
 @login_required  
 def dashboard_local():
     """Dashboard Stock Local - Interface Rayan"""
     
+    # Ingrédients avec stock local
     ingredients_local = Product.query.filter(
         Product.product_type == 'ingredient'
     ).all()
     
+    # Ingrédients manquants pour production urgent
     missing_ingredients_urgent = []
     for product in ingredients_local:
         stock_level = product.stock_ingredients_local or 0
@@ -199,6 +253,7 @@ def dashboard_local():
                 'unit': product.unit or 'unités'
             })
     
+    # Commandes en attente (simulation)
     from models import Order
     try:
         pending_orders = Order.query.filter(Order.status == 'pending').limit(5).all()
@@ -207,14 +262,16 @@ def dashboard_local():
         pending_orders = []
         current_time = datetime.utcnow()
     
+    # Statistiques
     total_ingredients_local = len([p for p in ingredients_local if (p.stock_ingredients_local or 0) > 0])
     ingredients_needed = len(missing_ingredients_urgent)
     orders_pending = len(pending_orders)
-    production_capacity = 85
+    production_capacity = 85  # Pourcentage simulation
     
     return render_template(
         'stock/dashboard_local.html',
         title="Dashboard Stock Local",
+        # ✅ Variables templates corrigées
         ingredients_local=ingredients_local,
         missing_ingredients_urgent=missing_ingredients_urgent,
         pending_orders=pending_orders,
@@ -230,8 +287,10 @@ def dashboard_local():
 def dashboard_comptoir():
     """Dashboard Stock Comptoir - Interface Yasmine"""
     
+    # Produits finis
     all_products = Product.query.filter(Product.product_type == 'finished').all()
     
+    # Produits par catégorie
     products_by_category = {}
     for product in all_products:
         category_name = product.category.name if product.category else 'Sans catégorie'
@@ -239,21 +298,35 @@ def dashboard_comptoir():
             products_by_category[category_name] = []
         products_by_category[category_name].append(product)
     
+    # Produits en rupture
     out_of_stock_products = [p for p in all_products if (p.stock_comptoir or 0) <= 0]
     
+    # Ventes récentes (simulation)
     recent_sales = [
-        {'product_name': 'Éclair au Chocolat', 'quantity': 2, 'total_amount': '800', 'time_ago': 'Il y a 15 min'},
-        {'product_name': 'Tarte aux Fraises', 'quantity': 1, 'total_amount': '1200', 'time_ago': 'Il y a 1h'}
+        {
+            'product_name': 'Éclair au Chocolat',
+            'quantity': 2,
+            'total_amount': '800',
+            'time_ago': 'Il y a 15 min'
+        },
+        {
+            'product_name': 'Tarte aux Fraises',
+            'quantity': 1,
+            'total_amount': '1200',
+            'time_ago': 'Il y a 1h'
+        }
     ]
     
+    # Statistiques
     total_products_comptoir = len([p for p in all_products if (p.stock_comptoir or 0) > 0])
     products_out_of_stock = len(out_of_stock_products)
-    sales_today = 12
-    revenue_today = '15750'
+    sales_today = 12  # Simulation
+    revenue_today = '15750'  # Simulation
     
     return render_template(
         'stock/dashboard_comptoir.html',
         title="Dashboard Stock Comptoir",
+        # ✅ Variables templates corrigées
         products_by_category=products_by_category,
         out_of_stock_products=out_of_stock_products,
         recent_sales=recent_sales,
@@ -268,8 +341,10 @@ def dashboard_comptoir():
 def dashboard_consommables():
     """Dashboard Stock Consommables - Interface Amel"""
     
+    # Consommables
     all_consommables = Product.query.filter(Product.product_type == 'consommable').all()
     
+    # Consommables par catégorie
     consumables_by_category = {}
     for consumable in all_consommables:
         category_name = consumable.category.name if consumable.category else 'Emballages'
@@ -277,6 +352,7 @@ def dashboard_consommables():
             consumables_by_category[category_name] = []
         consumables_by_category[category_name].append(consumable)
     
+    # Suggestions d'ajustement automatique
     suggested_adjustments = []
     for product in all_consommables:
         stock_level = product.stock_consommables or 0
@@ -285,23 +361,36 @@ def dashboard_consommables():
             suggested_adjustments.append({
                 'product_id': product.id,
                 'product_name': product.name,
-                'estimated_consumption': seuil * 3,
+                'estimated_consumption': seuil * 3,  # Suggestion: 3x le seuil
                 'unit': product.unit or 'unités'
             })
     
+    # Ajustements récents (simulation)
     recent_adjustments = [
-        {'product_name': 'Sacs Papier 15cm', 'quantity': 50, 'reason': 'Réception fournisseur', 'time_ago': 'Il y a 2h'},
-        {'product_name': 'Étiquettes Prix', 'quantity': -25, 'reason': 'Consommation estimée', 'time_ago': 'Hier'}
+        {
+            'product_name': 'Sacs Papier 15cm',
+            'quantity': 50,
+            'reason': 'Réception fournisseur',
+            'time_ago': 'Il y a 2h'
+        },
+        {
+            'product_name': 'Étiquettes Prix',
+            'quantity': -25,
+            'reason': 'Consommation estimée',
+            'time_ago': 'Hier'
+        }
     ]
     
+    # Statistiques
     total_consommables = len(all_consommables)
     critical_consommables = len([p for p in all_consommables if (p.stock_consommables or 0) <= 0])
-    adjustments_this_month = 8
-    estimated_consumption = 72
+    adjustments_this_month = 8  # Simulation
+    estimated_consumption = 72  # Pourcentage simulation
     
     return render_template(
         'stock/dashboard_consommables.html',
         title="Dashboard Stock Consommables",
+        # ✅ Variables templates corrigées
         consumables_by_category=consumables_by_category,
         suggested_adjustments=suggested_adjustments,
         recent_adjustments=recent_adjustments,
@@ -332,6 +421,7 @@ def create_transfer():
     form = StockTransferForm()
     
     if form.validate_on_submit():
+        # Création du transfert principal
         transfer = StockTransfer(
             source_location=getattr(StockLocationType, form.source_location.data.upper()),
             destination_location=getattr(StockLocationType, form.destination_location.data.upper()),
@@ -342,8 +432,9 @@ def create_transfer():
         )
         
         db.session.add(transfer)
-        db.session.flush()
+        db.session.flush()  # Pour obtenir l'ID du transfert
         
+        # Ajout des lignes de transfert
         for line_data in form.transfer_lines.data:
             if line_data['product_id'] and line_data['quantity_requested'] > 0:
                 transfer_line = StockTransferLine(
@@ -392,18 +483,25 @@ def complete_transfer(transfer_id):
         return redirect(url_for('stock.transfers_list'))
     
     try:
+        # Traitement de chaque ligne de transfert
         for line in transfer.transfer_lines:
             product = line.product
             quantity = line.quantity_requested
             
+            # Vérification du stock source
             source_stock = product.get_stock_by_location_type(transfer.source_location.value)
             if source_stock < quantity:
                 flash(f'Stock insuffisant pour {product.name} (disponible: {source_stock}, demandé: {quantity}).', 'danger')
                 return redirect(url_for('stock.transfers_list'))
             
+            # Décrémentation stock source
             product.update_stock_location(transfer.source_location.value, -quantity)
+            
+            # Incrémentation stock destination
             product.update_stock_location(transfer.destination_location.value, quantity)
             
+            # Création des mouvements de traçabilité
+            # Mouvement sortie
             movement_out = StockMovement(
                 product_id=product.id,
                 stock_location=transfer.source_location,
@@ -416,6 +514,7 @@ def complete_transfer(transfer_id):
             )
             db.session.add(movement_out)
             
+            # Mouvement entrée
             movement_in = StockMovement(
                 product_id=product.id,
                 stock_location=transfer.destination_location,
@@ -428,8 +527,10 @@ def complete_transfer(transfer_id):
             )
             db.session.add(movement_in)
             
+            # Mise à jour de la ligne de transfert
             line.quantity_transferred = quantity
         
+        # Finalisation du transfert
         transfer.complete(current_user.id)
         db.session.commit()
         
