@@ -57,14 +57,18 @@ Le stock est géré sur 4 emplacements distincts :
 - **Interface** : Catégories, recherche, panier dynamique, responsive
 
 ### ✅ **CAISSE** (Terminé)
-- **Fonctionnalités** : Sessions, mouvements (vente, entrée, sortie, acompte)
+- **Fonctionnalités** : Sessions, mouvements (vente, entrée, sortie, acompte, encaissement commandes)
 - **Fichiers** : `app/sales/models.py` (CashRegisterSession, CashMovement)
 - **Logique** : Ouverture/fermeture session, historique mouvements, employé responsable
+- **Intégration commandes** : Encaissement automatique avec création mouvement de caisse
+- **Dettes livreurs** : Gestion des dettes avec encaissement et mouvement de caisse
 
-### 🔄 **COMMANDES** (En cours)
-- **Fonctionnalités** : Commandes clients, production, livraison
+### ✅ **COMMANDES** (Terminé)
+- **Fonctionnalités** : Commandes clients, production, livraison, encaissement
 - **Fichiers** : `app/orders/`, `models.py` (Order, OrderItem)
-- **Logique** : Workflow commande → production → réception → livraison
+- **Logique** : Workflow commande → production → réception → livraison → encaissement
+- **Encaissement** : Bouton "Encaisser" sur liste commandes et dashboard shop
+- **Intégration caisse** : Mouvements automatiques lors de l'encaissement
 
 ### 🔄 **RH** (En cours)
 - **Fonctionnalités** : Gestion employés, droits, pointage
@@ -242,6 +246,39 @@ flask db upgrade
   - Toujours synchroniser les classes JS attendues entre les templates générés par WTForms et les templates JS dynamiques.
   - Vérifier systématiquement la valeur des champs cachés dans le DOM avant soumission en cas de bug de validation côté serveur.
 
+### [2025-07-01] ✅ Finalisation de l'intégration caisse-commandes
+
+- **Fonctionnalités ajoutées :**
+  - Bouton "Encaisser" sur la liste des commandes (`list_orders.html`)
+  - Bouton "Encaisser" sur le dashboard shop (`shop_dashboard.html`)
+  - Bouton "Encaisser" sur la fiche commande (`view_order.html`)
+  - Vérification automatique si commande déjà encaissée
+  - Création automatique du mouvement de caisse lors de l'encaissement
+
+- **Logique d'affichage :**
+  - Commande client uniquement (`order_type == 'customer_order'`)
+  - Session de caisse ouverte (`cash_session_open`)
+  - Pas de mouvement de caisse existant pour cette commande
+  - Confirmation utilisateur avant encaissement
+
+- **Corrections techniques :**
+  - Correction erreur template `view_order.html` : vérification `order.delivery_debts|length > 0`
+  - Ajout vérifications sécurisées dans tous les templates
+  - Passage de `cash_session_open` aux routes `list_orders` et `shop_dashboard`
+
+- **Workflow complet :**
+  1. Commande client créée → Statut "En attente" ou "En production"
+  2. Production terminée → Statut "Prête au magasin"
+  3. Réception au magasin → Statut "Prête à livrer"
+  4. Livraison → Statut "Livrée"
+  5. Encaissement → Mouvement de caisse créé automatiquement
+
+- **Prochaines étapes (demain) :**
+  - Tester le workflow complet : création → production → réception → livraison → encaissement
+  - Vérifier l'intégration avec les dettes livreurs
+  - Tester les différents scénarios (retrait magasin vs livraison)
+  - Optimiser l'interface utilisateur si nécessaire
+
 ---
 
 ## 6. Roadmap et TODO
@@ -364,4 +401,4 @@ python Save_Project.py
 
 **💡 À chaque évolution majeure, pense à mettre à jour ce fichier !**
 
-*Dernière mise à jour : 29/06/2025* 
+*Dernière mise à jour : 01/07/2025* 
