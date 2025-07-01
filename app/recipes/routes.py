@@ -46,6 +46,10 @@ def new_recipe():
     from models import Recipe, Product, RecipeIngredient
     form = RecipeForm()
 
+    # LOG : Afficher le payload POST et le contenu de form.ingredients.data avant validation
+    current_app.logger.warning(f"Payload POST : {request.form}")
+    current_app.logger.warning(f"Form.ingredients.data avant validation : {form.ingredients.data}")
+
     if form.validate_on_submit():
         try:
             recipe = Recipe(

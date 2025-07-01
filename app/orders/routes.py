@@ -3,9 +3,10 @@ from flask_login import login_required, current_user
 from extensions import db
 from models import Order, OrderItem, Product, Recipe, RecipeIngredient
 from .forms import OrderForm, OrderStatusForm, CustomerOrderForm, ProductionOrderForm
-from decorators import admin_required
+from decorators import admin_required, require_open_cash_session
 from decimal import Decimal
 from datetime import datetime, timezone
+from app.sales.models import CashRegisterSession, CashMovement
 
 orders = Blueprint('orders', __name__)
 
@@ -51,8 +52,14 @@ def check_stock_availability(form_items):
                     print(f"      - Quantité par unité de recette: {qty_per_unit:.3f}g") # Log mis à jour
                     print(f"      - Quantité totale nécessaire pour la commande: {needed_qty:.3f}g") # Log mis à jour
 
-                    available_stock = ingredient_product.get_stock_by_location(labo_key)
-                    print(f"      - Stock disponible dans '{labo_key}': {available_stock or 0:.3f}g")
+                    # Correction du mapping pour le stock
+                    location_map = {
+                        "ingredients_magasin": "stock_ingredients_magasin",
+                        "ingredients_local": "stock_ingredients_local"
+                    }
+                    stock_attr = location_map.get(labo_key, labo_key)
+                    available_stock = ingredient_product.get_stock_by_location(stock_attr)
+                    print(f"      - Stock disponible dans '{stock_attr}': {available_stock or 0:.3f}g")
                     
                     if not available_stock or available_stock < needed_qty:
                         is_sufficient = False
@@ -195,7 +202,9 @@ def new_production_order():
 def list_orders():
     page = request.args.get('page', 1, type=int)
     pagination = Order.query.order_by(Order.due_date.desc()).paginate(page=page, per_page=current_app.config.get('ORDERS_PER_PAGE', 10))
-    return render_template('orders/list_orders.html', orders_pagination=pagination, title='Gestion des Commandes')
+    # Vérifier si une session de caisse est ouverte
+    cash_session_open = CashRegisterSession.query.filter_by(is_open=True).first() is not None
+    return render_template('orders/list_orders.html', orders_pagination=pagination, title='Gestion des Commandes', cash_session_open=cash_session_open)
 
 @orders.route('/customer')
 @login_required
@@ -297,10 +306,17 @@ def edit_order_status(order_id):
     order = db.session.get(Order, order_id) or abort(404)
     form = OrderStatusForm(obj=order)
     if form.validate_on_submit():
+        previous_status = order.status
         order.status = form.status.data
         if form.notes.data:
             order.notes = (order.notes or '') + f"\n---\nNote du {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')}: {form.notes.data}"
-        db.session.commit()
+        # PATCH : décrémentation du stock ingrédients lors du passage à 'ready_at_shop'
+        if previous_status != 'ready_at_shop' and order.status == 'ready_at_shop':
+            order.decrement_ingredients_stock_on_production()
+            db.session.commit()
+            flash('Stock des ingrédients décrémenté selon la recette et la quantité produite (réception au magasin).', 'info')
+        else:
+            db.session.commit()
         flash('Le statut de la commande a été mis à jour.', 'success')
         return redirect(url_for('orders.view_order', order_id=order.id))
     return render_template('orders/order_status_form.html', form=form, order=order, title='Modifier le Statut')
@@ -315,3 +331,36 @@ def orders_calendar():
         if order.should_appear_in_calendar():
             events.append({'id': order.id, 'title': f"#{order.id} - {order.customer_name or 'Production'}", 'start': order.due_date.isoformat(), 'url': url_for('orders.view_order', order_id=order.id), 'backgroundColor': '#ffc107' if order.status == 'in_production' else '#6c757d'})
     return render_template('orders/orders_calendar.html', events=events, title="Calendrier des Commandes")
+
+@orders.route('/<int:order_id>/pay', methods=['POST'])
+@login_required
+@admin_required
+@require_open_cash_session
+def pay_order(order_id):
+    order = Order.query.get_or_404(order_id)
+    # Vérifier si déjà encaissée (mouvement de caisse existant pour cette commande)
+    existing_movement = CashMovement.query.filter(
+        CashMovement.reason.ilike(f'%commande #{order.id}%'),
+        CashMovement.amount == order.total_amount
+    ).first()
+    if existing_movement:
+        flash('Cette commande a déjà été encaissée.', 'info')
+        return redirect(url_for('orders.view_order', order_id=order.id))
+    session = CashRegisterSession.query.filter_by(is_open=True).first()
+    if not session:
+        flash('Aucune session de caisse ouverte.', 'warning')
+        return redirect(url_for('orders.view_order', order_id=order.id))
+    # Créer le mouvement de caisse
+    movement = CashMovement(
+        session_id=session.id,
+        created_at=datetime.utcnow(),
+        type='entrée',
+        amount=order.total_amount,
+        reason=f'Paiement commande #{order.id} ({order.delivery_option})',
+        notes=f'Encaissement commande client: {order.customer_name or "-"}',
+        employee_id=current_user.id
+    )
+    db.session.add(movement)
+    db.session.commit()
+    flash(f'Commande #{order.id} encaissée avec succès ({order.total_amount:.2f} DA).', 'success')
+    return redirect(url_for('orders.view_order', order_id=order.id))

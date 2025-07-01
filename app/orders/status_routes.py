@@ -48,6 +48,13 @@ def change_status_to_ready(order_id):
                 recipe = product_fini.recipe_definition
                 labo_key = recipe.production_location
                 
+                # Correction du mapping pour la décrémentation
+                location_map = {
+                    "ingredients_magasin": "stock_ingredients_magasin",
+                    "ingredients_local": "stock_ingredients_local"
+                }
+                stock_attr = location_map.get(labo_key, labo_key)
+
                 for ingredient_in_recipe in recipe.ingredients.all():
                     ingredient_product = ingredient_in_recipe.product
                     
@@ -62,8 +69,14 @@ def change_status_to_ready(order_id):
                     value_to_decrement = quantity_to_decrement * cost_per_base_unit
                     
                     # 3. On met à jour la quantité ET la valeur du stock de l'ingrédient
-                    ingredient_product.update_stock_by_location(labo_key, -quantity_to_decrement)
+                    ingredient_product.update_stock_by_location(stock_attr, -quantity_to_decrement)
                     ingredient_product.total_stock_value = float(ingredient_product.total_stock_value or 0.0) - value_to_decrement
+                    
+                    # Décrémenter la valeur du stock par emplacement
+                    if stock_attr == "stock_ingredients_magasin":
+                        ingredient_product.valeur_stock_ingredients_magasin = float(getattr(ingredient_product, "valeur_stock_ingredients_magasin", 0.0)) - value_to_decrement
+                    elif stock_attr == "stock_ingredients_local":
+                        ingredient_product.valeur_stock_ingredients_local = float(getattr(ingredient_product, "valeur_stock_ingredients_local", 0.0)) - value_to_decrement
                     
                     print(f"DECREMENT: {quantity_to_decrement:.2f}g de {ingredient_product.name} (Valeur: {value_to_decrement:.2f} DA)")
         

@@ -2,6 +2,7 @@ from flask import render_template, jsonify, Blueprint
 from flask_login import login_required
 from models import Order, Product
 from app.employees.models import Employee
+from app.sales.models import CashRegisterSession
 from datetime import datetime, timedelta
 from decorators import admin_required
 
@@ -55,9 +56,12 @@ def shop_dashboard():
     orders_ready = Order.query.filter(
         Order.status == 'ready_at_shop'
     ).order_by(Order.due_date.asc()).all()
+    # Vérifier si une session de caisse est ouverte
+    cash_session_open = CashRegisterSession.query.filter_by(is_open=True).first() is not None
     return render_template('dashboards/shop_dashboard.html',
                          orders_in_production=orders_in_production,
                          orders_ready=orders_ready,
+                         cash_session_open=cash_session_open,
                          title="Dashboard Magasin")
 
 @dashboard_bp.route('/ingredients-alerts')

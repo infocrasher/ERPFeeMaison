@@ -16,9 +16,29 @@
                     <a href="{{ url_for('products.new_product') }}" class="btn btn-primary me-2">
                         <i class="bi bi-plus-circle-fill me-1"></i>Nouveau Produit
                     </a>
-                    <a href="{{ url_for('stock.overview') }}" class="btn btn-info"></a>
+                    <a href="{{ url_for('stock.overview') }}" class="btn btn-info">
                         <i class="bi bi-clipboard-data-fill me-1"></i>Vue d'ensemble du Stock
                     </a>
+                </div>
+            </div>
+
+            <!-- Champ de recherche autocomplétée -->
+            <div class="mb-3">
+                <div class="input-group" style="max-width: 400px;">
+                    <input type="text" id="product-search" class="form-control" placeholder="Rechercher un produit...">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                </div>
+                <div id="product-search-results" class="list-group position-absolute w-25" style="z-index: 1000; display: none;"></div>
+            </div>
+
+            <!-- Filtres par type de produit -->
+            <div class="mb-3">
+                {% set type_param = request.args.get('type', 'all') %}
+                <div class="btn-group" role="group" aria-label="Filtrer par type">
+                    <a href="{{ url_for('products.list_products', type='all') }}" class="btn btn-outline-secondary{% if type_param == 'all' %} active{% endif %}">Tous</a>
+                    <a href="{{ url_for('products.list_products', type='ingredient') }}" class="btn btn-outline-success{% if type_param == 'ingredient' %} active{% endif %}">Ingrédients</a>
+                    <a href="{{ url_for('products.list_products', type='finished') }}" class="btn btn-outline-primary{% if type_param == 'finished' %} active{% endif %}">Produits finis</a>
+                    <a href="{{ url_for('products.list_products', type='consommable') }}" class="btn btn-outline-warning{% if type_param == 'consommable' %} active{% endif %}">Consommables</a>
                 </div>
             </div>
 
@@ -56,14 +76,36 @@
                                         <td class="align-middle">
                                             <span class="badge bg-secondary">{{ product.category_ref.name if product.category_ref else 'N/A' }}</span>
                                         </td>
-                                        <td class="text-end align-middle fw-semibold">{{ "%.2f"|format(product.price|float if product.price is not none else 0.0) }}</td> {# Ajout de `if product.price is not none` #}
-                                        <td class="text-center align-middle">
-                                            {% if product.quantity_in_stock <= 0 %}
-                                                <span class="badge bg-danger">{{ product.quantity_in_stock }}</span>
-                                            {% elif product.quantity_in_stock <= 5 %}
-                                                <span class="badge bg-warning text-dark">{{ product.quantity_in_stock }}</span>
+                                        <td class="text-end align-middle fw-semibold">
+                                            {% if product.product_type == 'ingredient' or product.product_type == 'consommable' %}
+                                                {{ '%.2f'|format(product.cost_price|float if product.cost_price is not none else 0.0) }}
                                             {% else %}
-                                                <span class="badge bg-success">{{ product.quantity_in_stock }}</span>
+                                                {{ '%.2f'|format(product.price|float if product.price is not none else 0.0) }}
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            {% if product.product_type == 'finished' %}
+                                                {% set stock = product.stock_comptoir %}
+                                                {% set unit = product.unit or 'pcs' %}
+                                                <span class="badge {{ 'bg-danger' if stock <= 0 else 'bg-warning text-dark' if stock <= 5 else 'bg-success' }}">{{ stock }} {{ unit }}</span>
+                                            {% elif product.product_type == 'ingredient' %}
+                                                {% set stock = product.stock_ingredients_magasin %}
+                                                {% set unit = product.unit or 'g' %}
+                                                {% if unit == 'g' and stock >= 1000 %}
+                                                    <span class="badge {{ 'bg-danger' if stock <= 0 else 'bg-warning text-dark' if stock <= 5000 else 'bg-success' }}">{{ (stock / 1000)|round(2) }} kg</span>
+                                                {% elif unit == 'ml' and stock >= 1000 %}
+                                                    <span class="badge {{ 'bg-danger' if stock <= 0 else 'bg-warning text-dark' if stock <= 5000 else 'bg-success' }}">{{ (stock / 1000)|round(2) }} L</span>
+                                                {% else %}
+                                                    <span class="badge {{ 'bg-danger' if stock <= 0 else 'bg-warning text-dark' if stock <= 5000 else 'bg-success' }}">{{ stock }} {{ unit }}</span>
+                                                {% endif %}
+                                            {% elif product.product_type == 'consommable' %}
+                                                {% set stock = product.stock_consommables %}
+                                                {% set unit = product.unit or 'pcs' %}
+                                                <span class="badge {{ 'bg-danger' if stock <= 0 else 'bg-warning text-dark' if stock <= 5 else 'bg-success' }}">{{ stock }} {{ unit }}</span>
+                                            {% else %}
+                                                {% set stock = product.quantity_in_stock %}
+                                                {% set unit = product.unit or '' %}
+                                                <span class="badge {{ 'bg-danger' if stock <= 0 else 'bg-warning text-dark' if stock <= 5 else 'bg-success' }}">{{ stock }} {{ unit }}</span>
                                             {% endif %}
                                         </td>
                                         <td class="text-end align-middle">
@@ -143,4 +185,95 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('product-search');
+    const resultsContainer = document.getElementById('product-search-results');
+    let timeout = null;
+    let currentResults = [];
+    let selectedIndex = -1;
+
+    function clearResults() {
+        resultsContainer.innerHTML = '';
+        resultsContainer.style.display = 'none';
+        currentResults = [];
+        selectedIndex = -1;
+    }
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length < 2) {
+            clearResults();
+            return;
+        }
+        clearTimeout(timeout);
+        timeout = setTimeout(function() {
+            fetch(`/admin/products/autocomplete?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(data => {
+                    currentResults = data.results || [];
+                    if (currentResults.length === 0) {
+                        clearResults();
+                        return;
+                    }
+                    let html = '';
+                    currentResults.forEach((item, idx) => {
+                        html += `<button type="button" class="list-group-item list-group-item-action${idx === 0 ? ' active' : ''}" data-id="${item.id}">${item.name} <span class='badge bg-secondary ms-2'>${item.type}</span></button>`;
+                    });
+                    resultsContainer.innerHTML = html;
+                    resultsContainer.style.display = 'block';
+                    selectedIndex = 0;
+                });
+        }, 250);
+    });
+
+    resultsContainer.addEventListener('click', function(e) {
+        const btn = e.target.closest('button[data-id]');
+        if (btn) {
+            const id = btn.getAttribute('data-id');
+            window.location.href = `/admin/products/${id}`;
+        }
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (!currentResults.length) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, currentResults.length - 1);
+            updateSelection();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, 0);
+            updateSelection();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (currentResults[selectedIndex]) {
+                window.location.href = `/admin/products/${currentResults[selectedIndex].id}`;
+            }
+        } else if (e.key === 'Escape') {
+            clearResults();
+        }
+    });
+
+    function updateSelection() {
+        const items = resultsContainer.querySelectorAll('button[data-id]');
+        items.forEach((item, idx) => {
+            item.classList.toggle('active', idx === selectedIndex);
+        });
+        if (items[selectedIndex]) {
+            items[selectedIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!resultsContainer.contains(e.target) && e.target !== searchInput) {
+            clearResults();
+        }
+    });
+});
+</script>
 {% endblock %}

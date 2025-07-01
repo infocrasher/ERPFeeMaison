@@ -85,6 +85,23 @@
                                     <div class="btn-group btn-group-sm">
                                         <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="btn btn-outline-info" title="Voir Détails"><i class="bi bi-eye-fill"></i></a>
                                         <a href="{{ url_for('orders.edit_order_status', order_id=order.id) }}" class="btn btn-outline-primary" title="Modifier Statut"><i class="bi bi-pencil-square"></i></a>
+                                        {% if order.order_type == 'customer_order' and cash_session_open %}
+                                            {% set existing_movement = false %}
+                                            {% if order.cash_movements %}
+                                                {% for movement in order.cash_movements %}
+                                                    {% if movement.reason and 'commande #' + order.id|string in movement.reason and movement.amount == order.total_amount %}
+                                                        {% set existing_movement = true %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+                                            {% if not existing_movement %}
+                                                <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" class="d-inline">
+                                                    <button type="submit" class="btn btn-outline-success" title="Encaisser" onclick="return confirm('Encaisser cette commande ?')">
+                                                        <i class="bi bi-cash-coin"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>

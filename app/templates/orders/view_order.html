@@ -19,6 +19,23 @@
                     <a href="{{ url_for('orders.edit_order_status', order_id=order.id) }}" class="btn btn-outline-primary">
                         <i class="bi bi-pencil me-1"></i>Modifier Statut
                     </a>
+                    {% if order.order_type == 'customer_order' %}
+                        {% set deja_encaissee = false %}
+                        {% if order.delivery_debts and order.delivery_debts|length > 0 and order.delivery_debts[0].session %}
+                            {% for mvt in order.delivery_debts[0].session.cash_movements %}
+                                {% if mvt.reason and (('commande #' ~ order.id) in mvt.reason) and mvt.amount == order.total_amount %}
+                                    {% set deja_encaissee = true %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        {% if not deja_encaissee %}
+                        <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-success ms-2" onclick="return confirm('Confirmer l\'encaissement de cette commande ?');">
+                                <i class="bi bi-cash-coin"></i> Encaisser
+                            </button>
+                        </form>
+                        {% endif %}
+                    {% endif %}
                     <a href="{{ url_for('orders.list_orders') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left me-1"></i>Retour
                     </a>

@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}État de la caisse – Fée Maison{% endblock %}
+
+{% block head %}
+<style>
+    :root {
+        --primary-color: #2C3E50;
+        --secondary-color: #3498DB;
+        --accent-color: #E74C3C;
+        --success-color: #27AE60;
+        --warning-color: #F39C12;
+        --light-bg: #ECF0F1;
+        --dark-text: #2C3E50;
+        --light-text: #7F8C8D;
+        --white: #FFFFFF;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--light-bg);
+        min-height: 100vh;
+        margin: 0;
+    }
+
+    .pos-container {
+        max-width: 800px;
+        margin: 40px auto;
+        background: var(--white);
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        padding: 30px;
+    }
+
+    .status-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .status-header h1 {
+        color: var(--primary-color);
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .status-header p {
+        color: var(--light-text);
+        font-size: 1rem;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-left: 10px;
+    }
+
+    .status-open {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .status-closed {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .info-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        border-left: 4px solid var(--secondary-color);
+    }
+
+    .info-card h3 {
+        color: var(--primary-color);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .info-card .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--success-color);
+    }
+
+    .info-card .label {
+        font-size: 0.9rem;
+        color: var(--light-text);
+        margin-bottom: 5px;
+    }
+
+    .session-details {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .session-details h3 {
+        color: var(--primary-color);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        font-weight: 500;
+        color: var(--dark-text);
+    }
+
+    .detail-value {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background: var(--secondary-color);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2980b9;
+        color: white;
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: var(--secondary-color);
+        border: 2px solid var(--secondary-color);
+    }
+
+    .btn-outline:hover {
+        background: var(--secondary-color);
+        color: white;
+    }
+
+    .btn-danger {
+        background: var(--accent-color);
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c0392b;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pos-container">
+    <div class="status-header">
+        <h1><i class="bi bi-safe"></i> État de la caisse</h1>
+        <p>Session de caisse actuelle et solde théorique</p>
+        <span class="status-badge status-open">
+            <i class="bi bi-unlock-fill"></i> Session ouverte
+        </span>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card">
+            <div class="label">Montant initial</div>
+            <div class="value">{{ session.initial_amount|round(2) }} DA</div>
+        </div>
+        <div class="info-card">
+            <div class="label">Total des entrées</div>
+            <div class="value">{{ total_cash_in|round(2) }} DA</div>
+        </div>
+        <div class="info-card">
+            <div class="label">Total des sorties</div>
+            <div class="value">{{ total_cash_out|round(2) }} DA</div>
+        </div>
+        <div class="info-card">
+            <div class="label">Solde théorique</div>
+            <div class="value">{{ theoretical_balance|round(2) }} DA</div>
+        </div>
+    </div>
+
+    <div class="session-details">
+        <h3><i class="bi bi-info-circle"></i> Détails de la session</h3>
+        <div class="detail-row">
+            <span class="detail-label">Ouvert par :</span>
+            <span class="detail-value">{{ session.opened_by.name if session.opened_by else 'N/A' }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Date d'ouverture :</span>
+            <span class="detail-value">{{ session.opened_at.strftime('%d/%m/%Y %H:%M') }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Durée d'ouverture :</span>
+            <span class="detail-value">{{ ((session.opened_at - session.opened_at.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds() / 3600)|round(1) }} heures</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Nombre de mouvements :</span>
+            <span class="detail-value">{{ session.movements|length }}</span>
+        </div>
+    </div>
+
+    <div class="actions">
+        <a href="{{ url_for('sales.pos_interface') }}" class="btn btn-primary">
+            <i class="bi bi-cart-check"></i> Point de Vente
+        </a>
+        <a href="{{ url_for('sales.new_cash_movement') }}" class="btn btn-outline">
+            <i class="bi bi-cash-coin"></i> Nouveau Mouvement
+        </a>
+        <a href="{{ url_for('sales.list_cash_movements') }}" class="btn btn-outline">
+            <i class="bi bi-eye"></i> Voir Mouvements
+        </a>
+        <a href="{{ url_for('sales.close_cash_register') }}" class="btn btn-danger">
+            <i class="bi bi-safe-fill"></i> Fermer Caisse
+        </a>
+    </div>
+</div>
+{% endblock %} 
