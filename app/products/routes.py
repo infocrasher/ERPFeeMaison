@@ -4,10 +4,14 @@ from extensions import db
 from models import Product, Category
 from .forms import ProductForm, CategoryForm # Import local depuis le même dossier
 from decorators import admin_required
+import os
+from werkzeug.utils import secure_filename
 
 # Création du Blueprint 'products'
 products = Blueprint('products', __name__)
 
+UPLOAD_FOLDER = os.path.join('app', 'static', 'img', 'products')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # --- ROUTES POUR LES CATÉGORIES ---
 
@@ -66,7 +70,11 @@ def delete_category(category_id):
 @login_required
 def list_products():
     page = request.args.get('page', 1, type=int)
-    pagination = Product.query.order_by(Product.name).paginate(page=page, per_page=current_app.config['PRODUCTS_PER_PAGE'])
+    type_param = request.args.get('type', 'all')
+    query = Product.query
+    if type_param != 'all':
+        query = query.filter(Product.product_type == type_param)
+    pagination = query.order_by(Product.name).paginate(page=page, per_page=current_app.config['PRODUCTS_PER_PAGE'])
     return render_template('products/list_products.html', products_pagination=pagination, title='Produits')
 
 @products.route('/<int:product_id>')
@@ -83,13 +91,18 @@ def new_product():
     if form.validate_on_submit():
         product = Product()
         form.populate_obj(product)
-        # L'objet `category` est directement assigné grâce à QuerySelectField
         product.category = form.category.data
+        # Gestion de l'image
+        if form.image.data:
+            filename = secure_filename(form.image.data.filename)
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            form.image.data.save(filepath)
+            product.image_filename = filename
         db.session.add(product)
         db.session.commit()
         flash(f'Le produit "{product.name}" a été créé.', 'success')
         return redirect(url_for('products.list_products'))
-    return render_template('products/product_form.html', form=form, title='Nouveau Produit')
+    return render_template('products/product_form.html', form=form, title='Nouveau Produit', product=None)
 
 @products.route('/<int:product_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -100,10 +113,16 @@ def edit_product(product_id):
     if form.validate_on_submit():
         form.populate_obj(product)
         product.category = form.category.data
+        # Gestion de l'image
+        if form.image.data:
+            filename = secure_filename(form.image.data.filename)
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            form.image.data.save(filepath)
+            product.image_filename = filename
         db.session.commit()
         flash(f'Le produit "{product.name}" a été mis à jour.', 'success')
         return redirect(url_for('products.list_products'))
-    return render_template('products/product_form.html', form=form, title=f'Modifier: {product.name}')
+    return render_template('products/product_form.html', form=form, title=f'Modifier: {product.name}', product=product)
 
 @products.route('/<int:product_id>/delete', methods=['POST'])
 @login_required
@@ -117,3 +136,19 @@ def delete_product(product_id):
         db.session.commit()
         flash('Produit supprimé.', 'success')
     return redirect(url_for('products.list_products'))
+
+@products.route('/autocomplete')
+@login_required
+def autocomplete_products():
+    term = request.args.get('q', '').strip()
+    results = []
+    if len(term) >= 2:
+        products = Product.query.filter(Product.name.ilike(f'%{term}%')).order_by(Product.name).limit(10).all()
+        for p in products:
+            results.append({
+                'id': p.id,
+                'name': p.name,
+                'type': p.product_type,
+                'sku': p.sku
+            })
+    return {'results': results}

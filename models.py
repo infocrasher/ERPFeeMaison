@@ -84,6 +84,11 @@ class Product(db.Model):
     
     order_items = db.relationship('OrderItem', backref='product', lazy='dynamic')
 
+    valeur_stock_ingredients_magasin = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
+    valeur_stock_ingredients_local = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
+
+    image_filename = db.Column(db.String(255), nullable=True)
+
     @property
     def to_dict(self):
         return {
@@ -148,13 +153,24 @@ class Product(db.Model):
         return getattr(self, location_key, 0.0)
 
     def update_stock_by_location(self, location_key: str, quantity_change: float) -> bool:
-        if hasattr(self, location_key):
-            current_value = getattr(self, location_key, 0.0)
-            new_value = max(0, current_value + quantity_change)
-            setattr(self, location_key, new_value)
-            self.last_stock_update = datetime.utcnow()
-            return True
-        return False
+        """Met à jour le stock d'un produit à un emplacement spécifique"""
+        if location_key == 'stock_ingredients_magasin':
+            current_value = self.stock_ingredients_magasin or 0.0
+            self.stock_ingredients_magasin = max(0, current_value + quantity_change)
+        elif location_key == 'stock_ingredients_local':
+            current_value = self.stock_ingredients_local or 0.0
+            self.stock_ingredients_local = max(0, current_value + quantity_change)
+        elif location_key == 'stock_comptoir':
+            current_value = self.stock_comptoir or 0.0
+            self.stock_comptoir = max(0, current_value + quantity_change)
+        elif location_key == 'stock_consommables':
+            current_value = self.stock_consommables or 0.0
+            self.stock_consommables = max(0, current_value + quantity_change)
+        else:
+            return False
+        
+        self.last_stock_update = datetime.utcnow()
+        return True
 
     def get_stock_display(self, location_type='total'):
         stock_value = 0
@@ -384,38 +400,48 @@ class Order(db.Model):
             return True
         return False
     
-    # ### DEBUT DE LA MODIFICATION ###
     def mark_as_delivered(self):
         if self.status == 'ready_at_shop':
             self.status = 'delivered'
-            self._decrement_stock_with_value_on_delivery() # Appel de la nouvelle méthode robuste
+            self._decrement_stock_with_value_on_delivery()
             return True
         return False
-    # ### FIN DE LA MODIFICATION ###
     
     def _increment_shop_stock(self):
         """Méthode dépréciée. Utiliser _increment_shop_stock_with_value."""
         print("AVERTISSEMENT: _increment_shop_stock est dépréciée et ne met pas à jour la valeur du stock.")
         for item in self.items:
             if item.product:
-                item.product.update_stock_by_location('comptoir', float(item.quantity))
+                item.product.update_stock_by_location('stock_comptoir', float(item.quantity))
 
     def _increment_shop_stock_with_value(self):
+        """
+        Incrémente le stock comptoir ET sa valeur pour les produits finis.
+        Calcule aussi le PMP du produit fini.
+        """
+        from extensions import db
         for item in self.items:
             product_fini = item.product
             if product_fini and product_fini.recipe_definition:
-                product_fini.update_stock_by_location('comptoir', float(item.quantity))
+                # 1. Incrémenter la quantité en stock comptoir
+                quantity_to_increment = float(item.quantity)
+                product_fini.update_stock_by_location('stock_comptoir', quantity_to_increment)
                 
+                # 2. Calculer la valeur à ajouter (basée sur le coût de production)
                 cost_per_unit = product_fini.recipe_definition.cost_per_unit
-                value_to_increment = cost_per_unit * item.quantity
+                value_to_increment = cost_per_unit * Decimal(str(quantity_to_increment))
                 
+                # 3. Incrémenter la valeur totale du stock
                 product_fini.total_stock_value = (product_fini.total_stock_value or Decimal('0.0')) + value_to_increment
-
-                new_total_stock_qty = Decimal(product_fini.total_stock_all_locations)
+                
+                # 4. Recalculer le PMP du produit fini
+                new_total_stock_qty = Decimal(str(product_fini.total_stock_all_locations))
                 if new_total_stock_qty > 0:
                     product_fini.cost_price = product_fini.total_stock_value / new_total_stock_qty
-    
-    # ### DEBUT DE LA MODIFICATION ###
+                
+                db.session.add(product_fini)
+                print(f"INCREMENT COMPTOIR: {quantity_to_increment} {product_fini.unit} de {product_fini.name} (Valeur: {value_to_increment:.2f} DA)")
+
     def _decrement_stock_with_value_on_delivery(self):
         """
         Décrémente le stock de vente (comptoir) ET sa valeur correspondante lors d'une vente.
@@ -425,7 +451,7 @@ class Order(db.Model):
             if product_fini:
                 # 1. On décrémente la quantité en stock
                 quantity_to_decrement = float(item.quantity)
-                product_fini.update_stock_by_location('comptoir', -quantity_to_decrement)
+                product_fini.update_stock_by_location('stock_comptoir', -quantity_to_decrement)
 
                 # 2. On calcule la valeur de ce qui a été vendu en se basant sur le PMP du produit fini
                 pmp_produit_fini = product_fini.cost_price or Decimal('0.0')
@@ -436,9 +462,36 @@ class Order(db.Model):
 
                 # Le PMP du produit fini ne change pas lors d'une sortie de stock.
     
-    # La méthode _decrement_shop_stock est maintenant supprimée car remplacée.
-    # ### FIN DE LA MODIFICATION ###
-    
+    def decrement_ingredients_stock_on_production(self):
+        """
+        Décrémente le stock des ingrédients lors de la production d'un produit fini,
+        en tenant compte du rendement de la recette (yield_quantity).
+        """
+        for item in self.items:
+            product_fini = item.product
+            if product_fini and product_fini.recipe_definition:
+                recipe = product_fini.recipe_definition
+                labo_key = recipe.production_location
+                # Pour chaque ingrédient de la recette
+                for ingredient_in_recipe in recipe.ingredients:
+                    ingredient_product = ingredient_in_recipe.product
+                    if not ingredient_product:
+                        continue
+                    # Quantité d'ingrédient par unité produite
+                    qty_per_unit = float(ingredient_in_recipe.quantity_needed) / float(recipe.yield_quantity)
+                    # Quantité totale à décrémenter pour la production réelle
+                    needed_qty = qty_per_unit * float(item.quantity)
+                    # Mapping de la localisation
+                    location_map = {
+                        "ingredients_magasin": "stock_ingredients_magasin",
+                        "ingredients_local": "stock_ingredients_local"
+                    }
+                    stock_attr = location_map.get(labo_key, labo_key)
+                    # Décrémentation du stock
+                    ingredient_product.update_stock_by_location(stock_attr, -needed_qty)
+                    # Log/debug
+                    print(f"Décrémentation: {ingredient_product.name} - {needed_qty:.3f} {ingredient_in_recipe.unit} (stock: {stock_attr})")
+
     def calculate_total_amount(self):
         items_total = Decimal('0.0')
         for item in self.items:
@@ -542,3 +595,22 @@ class Unit(db.Model):
     @property
     def display_name(self):
         return f"{self.name} ({self.unit_type})"
+
+class DeliveryDebt(db.Model):
+    __tablename__ = 'delivery_debts'
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    deliveryman_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    paid = db.Column(db.Boolean, default=False)
+    paid_at = db.Column(db.DateTime, nullable=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('cash_register_session.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relations
+    order = db.relationship('Order', backref='delivery_debts')
+    deliveryman = db.relationship('Employee', backref='delivery_debts')
+    session = db.relationship('CashRegisterSession', backref='delivery_debts')
+    
+    def __repr__(self):
+        return f'<DeliveryDebt {self.id} - Order {self.order_id} - Livreur {self.deliveryman_id}>'

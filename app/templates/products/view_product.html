@@ -64,14 +64,19 @@
                                 <div class="col-md-6 mb-3">
                                     <div class="card bg-light border">
                                         <div class="card-body">
-                                            <h6 class="text-muted small text-uppercase">Quantité en Stock</h6>
-                                            <p class="h4 fw-bold mb-0 
-                                                {% if product.quantity_in_stock <= 0 %}text-danger{% elif product.quantity_in_stock <= 5 %}text-warning{% else %}text-success{% endif %}">
-                                                {{ product.quantity_in_stock }} unité(s)
-                                            </p>
-                                            {% if product.quantity_in_stock <= 0 %}
+                                            <h6 class="text-muted small text-uppercase">Stock Global</h6>
+                                            {% set stock = product.total_stock_all_locations %}
+                                            {% set unit = product.unit or '' %}
+                                            {% if unit == 'g' and stock >= 1000 %}
+                                                <p class="h4 fw-bold mb-0 {{ 'text-danger' if stock <= 0 else 'text-warning' if stock <= 5000 else 'text-success' }}">{{ (stock / 1000)|round(2) }} kg</p>
+                                            {% elif unit == 'ml' and stock >= 1000 %}
+                                                <p class="h4 fw-bold mb-0 {{ 'text-danger' if stock <= 0 else 'text-warning' if stock <= 5000 else 'text-success' }}">{{ (stock / 1000)|round(2) }} L</p>
+                                            {% else %}
+                                                <p class="h4 fw-bold mb-0 {{ 'text-danger' if stock <= 0 else 'text-warning' if stock <= 5 else 'text-success' }}">{{ stock }} {{ unit }}</p>
+                                            {% endif %}
+                                            {% if stock <= 0 %}
                                                 <small class="d-block text-danger">Rupture de stock</small>
-                                            {% elif product.quantity_in_stock <= 5 %}
+                                            {% elif (unit in ['g','ml'] and stock <= 5000) or (unit not in ['g','ml'] and stock <= 5) %}
                                                 <small class="d-block text-warning">Stock bas</small>
                                             {% else %}
                                                 <small class="d-block text-success">En stock</small>

@@ -148,6 +148,13 @@ def create_app(config_name=None):
     from app.employees.routes import employees_bp
     app.register_blueprint(employees_bp, url_prefix='/employees')
 
+    # ✅ AJOUT : Blueprint sales pour le module de vente
+    from app.sales.routes import sales as sales_blueprint
+    app.register_blueprint(sales_blueprint, url_prefix='/sales')
+    
+    # ✅ AJOUT : Import des modèles sales pour Flask-Migrate
+    from app.sales import models as sales_models
+
     # Gestionnaire d'erreurs personnalisés
     @app.errorhandler(404)
     def not_found_error(error):

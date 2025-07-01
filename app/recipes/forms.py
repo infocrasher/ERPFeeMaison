@@ -34,7 +34,12 @@ class IngredientForm(Form):
     id = IntegerField(widget=HiddenInput(), validators=[Optional()])
     
     # Champ caché pour stocker l'ID du produit. La validation se fait sur ce champ.
-    product_id = IntegerField('Product ID', widget=HiddenInput(), validators=[DataRequired("Veuillez choisir un ingrédient valide.")])
+    product_id = IntegerField(
+        'Product ID',
+        widget=HiddenInput(),
+        filters=[lambda x: int(x) if x and str(x).isdigit() else None],
+        validators=[DataRequired("Veuillez choisir un ingrédient valide.")]
+    )
     
     # Champ visible pour la recherche par l'utilisateur.
     product_search = StringField('Ingrédient', render_kw={'placeholder': 'Tapez pour rechercher...'})

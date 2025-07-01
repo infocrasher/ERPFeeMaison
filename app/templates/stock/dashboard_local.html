@@ -187,7 +187,7 @@
                                 </div>
                                 <div class="d-flex justify-content-between">
                                     <small>{{ status_text }}</small>
-                                    <small>{{ ingredient.unit or 'unités' }}</small>
+                                    <small class="text-white-50">{{ "%.2f"|format(ingredient.valeur_stock_ingredients_local or 0) }} DA</small>
                                 </div>
                             </div>
                         </div>

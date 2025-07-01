@@ -1,6 +1,7 @@
 from functools import wraps
-from flask import abort
+from flask import abort, flash, redirect, url_for
 from flask_login import current_user
+from app.sales.models import CashRegisterSession
 
 def admin_required(f):
     """
@@ -31,3 +32,33 @@ def role_required(role_name):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+def require_open_cash_session(f):
+    """
+    Décorateur pour vérifier qu'une session de caisse est ouverte
+    Redirige vers la page d'ouverture de caisse si aucune session n'est ouverte
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Vérifier s'il y a une session de caisse ouverte
+        session = CashRegisterSession.query.filter_by(is_open=True).first()
+        if not session:
+            flash('Aucune session de caisse ouverte. Veuillez ouvrir une session avant de continuer.', 'warning')
+            return redirect(url_for('sales.open_cash_register'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def require_closed_cash_session(f):
+    """
+    Décorateur pour vérifier qu'aucune session de caisse n'est ouverte
+    Utilisé pour l'ouverture de caisse
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Vérifier s'il y a déjà une session de caisse ouverte
+        session = CashRegisterSession.query.filter_by(is_open=True).first()
+        if session:
+            flash('Une session de caisse est déjà ouverte. Veuillez la fermer avant d\'en ouvrir une nouvelle.', 'warning')
+            return redirect(url_for('sales.list_cash_sessions'))
+        return f(*args, **kwargs)
+    return decorated_function

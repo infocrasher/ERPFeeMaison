@@ -398,6 +398,23 @@
                                     <i class="bi bi-truck me-1"></i>Livrer
                                 </button>
                             </form>
+                            {% if cash_session_open %}
+                                {% set existing_movement = false %}
+                                {% if order.cash_movements %}
+                                    {% for movement in order.cash_movements %}
+                                        {% if movement.reason and 'commande #' + order.id|string in movement.reason and movement.amount == order.total_amount %}
+                                            {% set existing_movement = true %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                {% if not existing_movement %}
+                                    <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" style="display: inline;">
+                                        <button type="submit" class="action-btn" style="background: #28a745; color: white;" onclick="return confirm('Encaisser cette commande ?')">
+                                            <i class="bi bi-cash-coin me-1"></i>Encaisser
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>

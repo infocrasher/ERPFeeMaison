@@ -5,6 +5,7 @@ from wtforms import StringField, TextAreaField, SelectField, FloatField, SubmitF
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
 from wtforms_sqlalchemy.fields import QuerySelectField
 from models import Category
+from flask_wtf.file import FileField, FileAllowed
 
 def category_query_factory():
     return Category.query.order_by(Category.name)
@@ -53,4 +54,5 @@ class ProductForm(FlaskForm):
     # Le stock initial sera géré par un "Ajustement de stock" ou un premier achat.
     
     category = QuerySelectField('Catégorie', query_factory=category_query_factory, get_label='name', allow_blank=False)
+    image = FileField('Photo du produit', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images uniquement !')])
     submit = SubmitField('Enregistrer le produit')
