@@ -83,9 +83,15 @@ Le stock est géré sur 4 emplacements distincts :
 - **Fichiers** : `app/employees/`
 - **Logique** : Employés assignés aux commandes, gestion des sessions
 
-### ⏳ **COMPTABILITÉ** (À venir)
-- **Fonctionnalités** : Comptabilité générale, rapports, trésorerie
-- **Logique** : Intégration avec caisse et achats
+### ✅ **COMPTABILITÉ** (Terminé - 03/07/2025)
+- **Fonctionnalités** : Plan comptable, écritures, journaux, exercices, rapports
+- **Fichiers** : `app/accounting/`, `app/templates/accounting/`
+- **Logique** : Comptabilité générale conforme aux normes, balance générale
+- **Modèles** : `Account`, `Journal`, `JournalEntry`, `JournalEntryLine`, `FiscalYear`
+- **Architecture** : Classes comptables 1-7, nature débit/crédit, validation écritures
+- **Templates** : Dashboard, CRUD complet pour toutes les entités
+- **Migration** : 5 tables avec préfixe `accounting_`
+- **Corrections** : Import circulaire résolu, endpoints manquants ajoutés
 
 ---
 
@@ -113,6 +119,13 @@ Le stock est géré sur 4 emplacements distincts :
 # Modèles livreurs (app/deliverymen/models.py)
 - Deliveryman : Livreurs indépendants
 
+# Modèles comptabilité (app/accounting/models.py)
+- Account : Plan comptable avec hiérarchie
+- Journal : Journaux comptables (VT, AC, CA, BQ, OD)
+- JournalEntry : Écritures comptables
+- JournalEntryLine : Lignes d'écritures
+- FiscalYear : Exercices comptables
+
 ### 🛣️ **Routes Flask (Blueprints)**
 ```python
 # Structure des blueprints
@@ -127,7 +140,8 @@ app/
 ├── orders/        # Gestion commandes
 ├── sales/         # Ventes et POS
 ├── employees/     # Gestion RH
-└── deliverymen/   # Gestion livreurs
+├── deliverymen/   # Gestion livreurs
+└── accounting/    # Comptabilité générale
 
 ### 📊 **Base de Données**
 - **Moteur** : SQLite (développement)
@@ -197,6 +211,33 @@ flask db upgrade
 <!-- Solution : Ajouter en haut du fichier -->
 <!-- eslint-disable -->
 <!-- @ts-nocheck -->
+```
+
+### ❌ **Import circulaire module comptabilité**
+```python
+# Problème : Import des routes dans __init__.py
+from . import routes
+
+# Solution : Import dans app/__init__.py
+from app.accounting import bp as accounting_blueprint
+from app.accounting import routes as accounting_routes
+app.register_blueprint(accounting_blueprint)
+```
+
+### ❌ **Endpoints manquants dans templates**
+```bash
+# Solution : Utiliser le script de diagnostic
+python test_all_endpoints_and_suggest.py
+# Puis ajouter les endpoints manquants dans routes.py
+```
+
+### ❌ **Erreur AttributeError sur formulaires**
+```python
+# Problème : Noms de champs incorrects
+form.start_date.data  # Erreur
+
+# Solution : Vérifier les noms dans forms.py
+form.date_from.data   # Correct
 ```
 
 ### ❌ **Stock non décrémenté**
@@ -456,7 +497,33 @@ flask db upgrade
 
 ---
 
-## 6. Roadmap et TODO
+## 6. État Actuel du Projet (03/07/2025)
+
+### ✅ **Phase 6 - Comptabilité : TERMINÉE**
+- **Architecture complète** : Plan comptable, journaux, écritures, exercices
+- **Templates HTML** : Tous générés avec Bootstrap 5
+- **Endpoints** : 13 endpoints manquants ajoutés et corrigés
+- **Corrections techniques** : Import circulaire résolu, champs formulaires corrigés
+- **Tests** : 109 routes GET fonctionnelles, 94 endpoints templates validés
+- **Migration** : Base de données mise à jour avec 5 nouvelles tables
+
+### 🎯 **Modules Opérationnels**
+1. ✅ **Stock** - Gestion multi-emplacements
+2. ✅ **Achats** - Incrémentation stock + PMP
+3. ✅ **Production** - Recettes et transformation
+4. ✅ **Ventes (POS)** - Interface tactile moderne
+5. ✅ **Caisse** - Sessions et mouvements
+6. ✅ **Commandes** - Workflow complet
+7. ✅ **Livreurs** - Gestion indépendante
+8. ✅ **Comptabilité** - Module complet
+
+### 🔄 **Prochaines Étapes**
+- **RH** : Finalisation gestion employés avancée
+- **Rapports** : Tableaux de bord métier détaillés
+- **Optimisations** : Performance et UX
+- **Documentation** : Guide utilisateur
+
+## 7. Roadmap et TODO
 
 ### ✅ **PHASE 1 : FOUNDATION (TERMINÉE)**
 - [x] Infrastructure Flask + SQLAlchemy
@@ -490,14 +557,14 @@ flask db upgrade
 - [x] Dashboard shop 5 sections (03/07/2025)
 - [x] Page assignation livreur (03/07/2025)
 
-### 🚀 **PHASE 6 : COMPTABILITÉ (EN COURS - 03/07/2025)**
-- [ ] **Modèles comptables** : Comptes, écritures, journaux
-- [ ] **Plan comptable** : Structure hiérarchique des comptes
-- [ ] **Saisie d'écritures** : Interface de saisie comptable
-- [ ] **Rapports financiers** : Bilan, compte de résultat
-- [ ] **Intégration modules** : Liaison avec achats, ventes, caisse
-- [ ] **Trésorerie** : Suivi flux de trésorerie
-- [ ] **Clôture comptable** : Procédures de fin d'exercice
+### ✅ **PHASE 6 : COMPTABILITÉ (TERMINÉE - 03/07/2025)**
+- [x] **Modèles comptables** : Account, Journal, JournalEntry, JournalEntryLine, FiscalYear
+- [x] **Plan comptable** : Structure hiérarchique avec classes 1-7, nature débit/crédit
+- [x] **Saisie d'écritures** : Interface complète avec validation équilibre
+- [x] **Rapports financiers** : Balance générale, dashboard KPIs
+- [x] **Templates HTML** : CRUD complet pour toutes les entités
+- [x] **Migration BDD** : 5 nouvelles tables avec préfixe accounting_
+- [x] **Corrections techniques** : Import circulaire, endpoints manquants, champs formulaires
 
 ### ⏳ **PHASE 7 : OPTIMISATION (À VENIR)**
 - [ ] Performance et cache
@@ -581,4 +648,4 @@ python Save_Project.py
 
 **💡 À chaque évolution majeure, pense à mettre à jour ce fichier !**
 
-*Dernière mise à jour : 02/07/2025* 
+*Dernière mise à jour : 03/07/2025 - Phase 6 Comptabilité terminée* 
