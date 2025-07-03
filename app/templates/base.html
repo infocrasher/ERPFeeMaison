@@ -55,6 +55,9 @@
                             <li><a class="dropdown-item" href="{{ url_for('employees.list_employees') }}">
                                 <i class="bi bi-people me-2"></i>Employés
                             </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('deliverymen.list_deliverymen') }}">
+                                <i class="bi bi-truck me-2"></i>Livreurs
+                            </a></li>
                         </ul>
                     </li>
                     {% endif %}
@@ -170,6 +173,48 @@
                             </a></li>
                         </ul>
                     </li>
+                    
+                    {% if current_user.is_admin %}
+                    <!-- Comptabilité -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-calculator me-1"></i>Comptabilité
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><h6 class="dropdown-header">Tableau de Bord</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.dashboard') }}">
+                                <i class="bi bi-speedometer2 me-2"></i>Dashboard Comptable
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Plan Comptable</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.list_accounts') }}">
+                                <i class="bi bi-list-ul me-2"></i>Comptes Comptables
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.new_account') }}">
+                                <i class="bi bi-plus-circle me-2"></i>Nouveau Compte
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Journaux</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.list_journals') }}">
+                                <i class="bi bi-journal-text me-2"></i>Journaux Comptables
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.list_entries') }}">
+                                <i class="bi bi-journal-check me-2"></i>Écritures Comptables
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.new_entry') }}">
+                                <i class="bi bi-plus-square me-2"></i>Nouvelle Écriture
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Rapports</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.trial_balance') }}">
+                                <i class="bi bi-table me-2"></i>Balance Générale
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.list_fiscal_years') }}">
+                                <i class="bi bi-calendar-range me-2"></i>Exercices Comptables
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
                 </ul>
                 
                 <!-- User Menu -->

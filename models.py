@@ -7,6 +7,7 @@ from extensions import db
 
 # Import de la table de liaison depuis employees
 from app.employees.models import order_employees
+from app.deliverymen.models import Deliveryman
 
 CONVERSION_FACTORS = {
     'kg_g': 1000, 'g_kg': 0.001,
@@ -296,6 +297,7 @@ class Order(db.Model):
     delivery_option = db.Column(db.String(20), default='pickup')
     due_date = db.Column(db.DateTime, nullable=False)
     delivery_cost = db.Column(db.Numeric(10, 2), default=0.0)
+    deliveryman_id = db.Column(db.Integer, db.ForeignKey('deliverymen.id'), nullable=True)  # Champ livreur
     status = db.Column(db.String(50), default='pending', index=True)
     notes = db.Column(db.Text)
     total_amount = db.Column(db.Numeric(10, 2), default=0.0)
@@ -303,6 +305,7 @@ class Order(db.Model):
     
     items = db.relationship('OrderItem', backref='order', lazy='dynamic', cascade='all, delete-orphan')
     produced_by = db.relationship('Employee', secondary=order_employees, back_populates='orders_produced')
+    deliveryman = db.relationship('Deliveryman', backref='orders')
     
     @property
     def order_date(self):
@@ -348,8 +351,10 @@ class Order(db.Model):
             'completed': 'Terminée',
             'in_production': 'En production',
             'ready_at_shop': 'Reçue au magasin',
+            'waiting_for_pickup': 'En attente de retrait',
             'out_for_delivery': 'En livraison',
             'delivered': 'Livrée',
+            'delivered_unpaid': 'Livrée Non Payé',
             'in_progress': 'En préparation',
             'ready': 'Prête',
             'awaiting_payment': 'En attente de paiement'
@@ -370,8 +375,10 @@ class Order(db.Model):
             'pending': 'secondary',
             'in_production': 'warning',
             'ready_at_shop': 'info',
+            'waiting_for_pickup': 'primary',
             'out_for_delivery': 'primary',
             'delivered': 'success',
+            'delivered_unpaid': 'warning',
             'completed': 'success',
             'cancelled': 'danger',
             'awaiting_payment': 'warning'
@@ -600,7 +607,7 @@ class DeliveryDebt(db.Model):
     __tablename__ = 'delivery_debts'
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
-    deliveryman_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=False)
+    deliveryman_id = db.Column(db.Integer, db.ForeignKey('deliverymen.id'), nullable=False)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
     paid = db.Column(db.Boolean, default=False)
     paid_at = db.Column(db.DateTime, nullable=True)
@@ -609,7 +616,7 @@ class DeliveryDebt(db.Model):
     
     # Relations
     order = db.relationship('Order', backref='delivery_debts')
-    deliveryman = db.relationship('Employee', backref='delivery_debts')
+    deliveryman = db.relationship('Deliveryman', backref='delivery_debts')
     session = db.relationship('CashRegisterSession', backref='delivery_debts')
     
     def __repr__(self):

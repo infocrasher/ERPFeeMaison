@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Balance Générale</h1>
+        <div class="btn-group">
+            <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-secondary">Retour</a>
+            <button class="btn btn-primary" onclick="window.print()">Imprimer</button>
+        </div>
+    </div>
+
+    <!-- Résumé -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">Total Débit</h5>
+                    <p class="card-text fs-4 fw-bold text-success">{{ "%.2f"|format(total_debit) }} DZD</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">Total Crédit</h5>
+                    <p class="card-text fs-4 fw-bold text-danger">{{ "%.2f"|format(total_credit) }} DZD</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vérification d'équilibre -->
+    {% if total_debit == total_credit %}
+    <div class="alert alert-success">
+        <i class="fas fa-check-circle"></i> La balance est équilibrée
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i> Déséquilibre détecté : {{ "%.2f"|format(total_debit - total_credit) }} DZD
+    </div>
+    {% endif %}
+
+    <!-- Table de la balance -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Détail des Comptes</h5>
+        </div>
+        <div class="card-body">
+            {% if balance_data %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Code</th>
+                            <th>Nom du Compte</th>
+                            <th>Type</th>
+                            <th class="text-end">Solde Débiteur</th>
+                            <th class="text-end">Solde Créditeur</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in balance_data %}
+                        <tr>
+                            <td><code>{{ item.account.code }}</code></td>
+                            <td>{{ item.account.name }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ item.account.account_type.value }}</span>
+                            </td>
+                            <td class="text-end">
+                                {% if item.debit_balance > 0 %}
+                                    <span class="text-success fw-bold">{{ "%.2f"|format(item.debit_balance) }}</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if item.credit_balance > 0 %}
+                                    <span class="text-danger fw-bold">{{ "%.2f"|format(item.credit_balance) }}</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-dark">
+                        <tr>
+                            <th colspan="3">TOTAUX</th>
+                            <th class="text-end">{{ "%.2f"|format(total_debit) }}</th>
+                            <th class="text-end">{{ "%.2f"|format(total_credit) }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Aucun compte avec solde trouvé.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0">Notes</h6>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li>Seuls les comptes de détail avec solde non nul sont affichés</li>
+                <li>Les soldes débiteurs sont affichés en vert, les soldes créditeurs en rouge</li>
+                <li>La balance doit toujours être équilibrée (Total Débit = Total Crédit)</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn-group, .card:last-child {
+        display: none !important;
+    }
+    
+    .container-fluid {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .table {
+        font-size: 12px;
+    }
+}
+</style>
+{% endblock %} 

@@ -70,6 +70,14 @@ Le stock est géré sur 4 emplacements distincts :
 - **Encaissement** : Bouton "Encaisser" sur liste commandes et dashboard shop
 - **Intégration caisse** : Mouvements automatiques lors de l'encaissement
 
+### ✅ **LIVREURS** (Terminé - 02/07/2025)
+- **Fonctionnalités** : Gestion des livreurs indépendants, assignation aux commandes
+- **Fichiers** : `app/deliverymen/`, `app/templates/deliverymen/`
+- **Logique** : Livreurs séparés des employés, assignation optionnelle aux commandes
+- **Modèle** : `Deliveryman` avec `name`, `phone`, relation `orders`
+- **Interface** : CRUD complet, intégration dans formulaires de commande
+- **Migration** : Table `deliverymen` + colonne `deliveryman_id` dans `orders`
+
 ### 🔄 **RH** (En cours)
 - **Fonctionnalités** : Gestion employés, droits, pointage
 - **Fichiers** : `app/employees/`
@@ -101,7 +109,9 @@ Le stock est géré sur 4 emplacements distincts :
 
 # Modèles employés (app/employees/models.py)
 - Employee : Employés et gestion RH
-```
+
+# Modèles livreurs (app/deliverymen/models.py)
+- Deliveryman : Livreurs indépendants
 
 ### 🛣️ **Routes Flask (Blueprints)**
 ```python
@@ -116,8 +126,8 @@ app/
 ├── recipes/       # Gestion recettes
 ├── orders/        # Gestion commandes
 ├── sales/         # Ventes et POS
-└── employees/     # Gestion RH
-```
+├── employees/     # Gestion RH
+└── deliverymen/   # Gestion livreurs
 
 ### 📊 **Base de Données**
 - **Moteur** : SQLite (développement)
@@ -198,6 +208,12 @@ flask db upgrade
 - Vérifier que la table référencée existe
 - Vérifier le nom de la colonne (`employees.id` vs `users.id`)
 
+### ❌ **Erreur "invalid keyword argument" pour Order**
+- **Problème** : `'deliveryman_id' is an invalid keyword argument for Order`
+- **Cause** : Le modèle `Order` n'a pas encore la colonne `deliveryman_id`
+- **Solution** : Vérifier que la migration a été appliquée correctement
+- **Vérification** : `\d orders` dans PostgreSQL pour voir les colonnes
+
 ### ❌ **Problème de migration**
 ```bash
 # Si migration cassée
@@ -256,7 +272,7 @@ flask db upgrade
   - Création automatique du mouvement de caisse lors de l'encaissement
 
 - **Logique d'affichage :**
-  - Commande client uniquement (`order_type == 'customer_order'`)
+  - Commande client uniquement (`order.delivery_debts|length > 0`)
   - Session de caisse ouverte (`cash_session_open`)
   - Pas de mouvement de caisse existant pour cette commande
   - Confirmation utilisateur avant encaissement
@@ -274,10 +290,169 @@ flask db upgrade
   5. Encaissement → Mouvement de caisse créé automatiquement
 
 - **Prochaines étapes (demain) :**
+  - **RÉSOLUTION URGENTE** : Corriger l'erreur `deliveryman_id` dans le modèle Order
   - Tester le workflow complet : création → production → réception → livraison → encaissement
   - Vérifier l'intégration avec les dettes livreurs
   - Tester les différents scénarios (retrait magasin vs livraison)
   - Optimiser l'interface utilisateur si nécessaire
+
+### [2025-07-01] ✅ Mise en place des tests automatisés Selenium
+
+- **Tests créés:**
+  - `test_workflow_selenium.py` : Test de base du workflow complet
+  - `advanced_workflow_analyzer.py` : Test avancé avec vérifications logique métier
+  - `analyze_test_logs.py` : Analyseur automatique des logs d'erreurs
+  - `run_selenium_tests.py` : Script de démarrage rapide
+
+- **Fonctionnalités des tests:**
+  - **Test de base** : Simulation complète du workflow via l'interface
+  - **Test avancé** : Vérifications automatiques de la logique métier :
+    - Incrémentations/décrémentations de stock
+    - Calculs de valeurs de stock
+    - Création de mouvements de caisse
+    - Vérification des montants et descriptions
+    - Validation des statuts de commande
+
+- **Vérifications logique métier:**
+  - Stock comptoir inchangé lors de création de commande
+  - Stock comptoir incrémenté lors du statut "Prête au magasin"
+  - Stock comptoir décrémenté lors du statut "Livrée"
+  - Mouvement de caisse créé avec montant correct
+  - Valeurs de stock mises à jour correctement
+
+- **Rapports générés:**
+  - Logs détaillés avec timestamps
+  - Rapports JSON avec métriques
+  - Analyse automatique des erreurs
+  - Suggestions de corrections
+
+- **Utilisation:**
+  ```bash
+  # Installation et exécution complète
+  python run_selenium_tests.py
+  
+  # Test de base uniquement
+  python test_workflow_selenium.py
+  
+  # Test avancé avec vérifications métier
+  python advanced_workflow_analyzer.py
+  
+  # Analyse des logs
+  python analyze_test_logs.py
+  ```
+
+- **Prochaines étapes:**
+  - Exécuter les tests pour valider le workflow complet
+  - Corriger les erreurs identifiées automatiquement
+  - Optimiser les performances des tests
+  - Ajouter des tests pour d'autres modules (achats, production, etc.)
+
+### [2025-07-02] ✅ Implémentation du système de gestion des livreurs
+
+**🎯 Objectif :** Ajouter un champ "livreur" indépendant des employés pour suivre qui livre quoi, sans lier ce champ à la table des employés.
+
+**📋 Travail réalisé :**
+
+#### **1. Création du modèle Deliveryman**
+- **Fichier** : `app/deliverymen/models.py`
+- **Modèle** : `Deliveryman` avec champs `name`, `phone`, `created_at`
+- **Relations** : `orders` (one-to-many avec Order)
+- **Migration** : `5a7dc22f426f_add_deliveryman_table_and_deliveryman_`
+
+#### **2. Routes et interface de gestion**
+- **Fichier** : `app/deliverymen/routes.py`
+- **Routes CRUD** :
+  - `GET /admin/deliverymen` : Liste des livreurs
+  - `GET/POST /admin/deliverymen/new` : Créer un livreur
+  - `GET/POST /admin/deliverymen/<id>/edit` : Modifier un livreur
+  - `POST /admin/deliverymen/<id>/delete` : Supprimer un livreur
+- **Sécurité** : Vérification des commandes associées avant suppression
+
+#### **3. Templates d'interface**
+- **Liste** : `app/templates/deliverymen/list_deliverymen.html`
+  - Tableau avec actions (modifier/supprimer)
+  - Modal de confirmation pour suppression
+  - Compteur de commandes par livreur
+- **Formulaire** : `app/templates/deliverymen/deliveryman_form.html`
+  - Formulaire réutilisable (création/modification)
+  - Validation côté client et serveur
+
+#### **4. Intégration dans les commandes**
+- **Modification formulaires** : `app/orders/forms.py`
+  - Ajout champ `deliveryman` dans `OrderForm` et `CustomerOrderForm`
+  - Population dynamique des choix de livreurs
+  - Champ optionnel (pas obligatoire)
+- **Modification routes** : `app/orders/routes.py`
+  - Traitement du `deliveryman_id` lors de la création de commande
+- **Modification templates** :
+  - `app/templates/orders/customer_order_form.html` : Ajout du champ livreur
+  - `app/templates/orders/view_order.html` : Affichage du livreur assigné
+
+#### **5. Enregistrement du blueprint**
+- **Fichier** : `app/__init__.py`
+- **URL prefix** : `/admin` (même espace que les autres modules admin)
+
+#### **6. Intégration dans le menu**
+- **Fichier** : `app/templates/base.html`
+- **Emplacement** : Menu "Gestion > Livreurs"
+- **Icône** : `bi-truck`
+
+**🔧 Problème technique rencontré :**
+- **Erreur** : `'deliveryman_id' is an invalid keyword argument for Order`
+- **Cause** : Le modèle `Order` n'a pas encore la colonne `deliveryman_id`
+- **Statut** : À résoudre demain en vérifiant l'application de la migration
+
+**✅ Fonctionnalités opérationnelles :**
+- Interface de gestion des livreurs complète
+- Intégration dans les formulaires de commande
+- Affichage du livreur dans les vues de commande
+- Menu de navigation fonctionnel
+
+**🚀 Prochaines étapes (03/07/2025) :**
+1. **Résoudre l'erreur de migration** : Vérifier que la colonne `deliveryman_id` existe dans la table `orders`
+2. **Tester la création de commande** avec assignation de livreur
+3. **Valider le workflow complet** : création → assignation → affichage
+4. **Ajouter des fonctionnalités avancées** si nécessaire (statistiques, planning, etc.)
+
+### [2025-07-03] ✅ Finalisation complète du workflow livreur - Fin de Phase 5
+
+**🎯 Objectif atteint :** Système complet de gestion des livreurs avec workflow de bout en bout.
+
+**📋 Travail finalisé :**
+
+#### **1. Système de statuts complet**
+- `waiting_for_pickup` = "En attente de retrait"
+- `delivered_unpaid` = "Livrée Non Payé" 
+- `ready_at_shop` = "Prêt à livrer"
+- Logique de transition selon `delivery_option` (pickup/delivery)
+
+#### **2. Dashboard shop opérationnel**
+- **5 sections distinctes** : En Production, En Attente Retrait, Prêt à Livrer, Au Comptoir, Livré Non Payé
+- **Boutons conditionnels** : Reçu, Encaisser, Assigner Livreur selon statut et session caisse
+- **Statistiques temps réel** : Compteurs par section
+
+#### **3. Page "Assigner livreur" fonctionnelle**
+- **Formulaire complet** : Sélection livreur + statut paiement + notes
+- **Logique métier** : Distinction produits vs frais de livraison
+- **Validation** : CSRF token, validation WTForms
+- **Intégration caisse** : Mouvement automatique si payé
+
+#### **4. Système de dettes livreur**
+- **Table `delivery_debts`** : Référence correcte vers `deliverymen`
+- **Migration** : Correction clé étrangère `employees` → `deliverymen`
+- **Logique financière** : Dette = montant produits (sans frais livraison)
+
+#### **5. Tests et validation**
+- **Workflow complet testé** : Création → Production → Assignation → Livraison → Encaissement
+- **Logs détaillés** : Vérification stock, mouvements caisse, calculs
+- **Interface utilisateur** : Navigation fluide, messages clairs
+
+**💾 Sauvegarde effectuée :**
+- **Base de données** : `FM_Gestion_DB_20250703_031114.backup`
+- **Code source** : `FM_Gestion_APP_20250703_031116.zip`
+- **Tables CSV** : 22 tables sauvegardées individuellement
+
+**✅ Phase 5 TERMINÉE - Prêt pour Phase 6**
 
 ---
 
@@ -307,17 +482,22 @@ flask db upgrade
 - [x] Sessions et mouvements
 - [x] Validation stock
 
-### 🔄 **PHASE 5 : COMMANDES & RH (EN COURS)**
+### ✅ **PHASE 5 : COMMANDES & LIVREURS (TERMINÉE - 03/07/2025)**
 - [x] Système de commandes
-- [x] Workflow production
-- [ ] Gestion RH complète
-- [ ] Pointage et planning
+- [x] Workflow production complet
+- [x] Gestion des livreurs (02/07/2025)
+- [x] Système de dettes livreur (03/07/2025)
+- [x] Dashboard shop 5 sections (03/07/2025)
+- [x] Page assignation livreur (03/07/2025)
 
-### ⏳ **PHASE 6 : COMPTABILITÉ (À VENIR)**
-- [ ] Comptabilité générale
-- [ ] Rapports financiers
-- [ ] Trésorerie
-- [ ] Bilan et compte de résultat
+### 🚀 **PHASE 6 : COMPTABILITÉ (EN COURS - 03/07/2025)**
+- [ ] **Modèles comptables** : Comptes, écritures, journaux
+- [ ] **Plan comptable** : Structure hiérarchique des comptes
+- [ ] **Saisie d'écritures** : Interface de saisie comptable
+- [ ] **Rapports financiers** : Bilan, compte de résultat
+- [ ] **Intégration modules** : Liaison avec achats, ventes, caisse
+- [ ] **Trésorerie** : Suivi flux de trésorerie
+- [ ] **Clôture comptable** : Procédures de fin d'exercice
 
 ### ⏳ **PHASE 7 : OPTIMISATION (À VENIR)**
 - [ ] Performance et cache
@@ -401,4 +581,4 @@ python Save_Project.py
 
 **💡 À chaque évolution majeure, pense à mettre à jour ce fichier !**
 
-*Dernière mise à jour : 01/07/2025* 
+*Dernière mise à jour : 02/07/2025* 

@@ -148,12 +148,28 @@ def create_app(config_name=None):
     from app.employees.routes import employees_bp
     app.register_blueprint(employees_bp, url_prefix='/employees')
 
+    # ✅ AJOUT : Blueprint deliverymen pour la gestion des livreurs
+    from app.deliverymen.routes import deliverymen_bp
+    app.register_blueprint(deliverymen_bp, url_prefix='/admin')
+
     # ✅ AJOUT : Blueprint sales pour le module de vente
     from app.sales.routes import sales as sales_blueprint
     app.register_blueprint(sales_blueprint, url_prefix='/sales')
     
     # ✅ AJOUT : Import des modèles sales pour Flask-Migrate
     from app.sales import models as sales_models
+    
+    # ✅ AJOUT : Import des modèles deliverymen pour Flask-Migrate
+    from app.deliverymen import models as deliverymen_models
+    
+    # ✅ AJOUT : Blueprint accounting pour la comptabilité
+    from app.accounting import bp as accounting_blueprint
+    # Import des routes après la création du blueprint
+    from app.accounting import routes as accounting_routes
+    app.register_blueprint(accounting_blueprint)
+    
+    # ✅ AJOUT : Import des modèles accounting pour Flask-Migrate
+    from app.accounting import models as accounting_models
 
     # Gestionnaire d'erreurs personnalisés
     @app.errorhandler(404)

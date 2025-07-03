@@ -50,17 +50,45 @@ def production_dashboard():
 @login_required
 @admin_required
 def shop_dashboard():
+    # 1. En Production (toutes commandes)
     orders_in_production = Order.query.filter(
         Order.status == 'in_production'
     ).order_by(Order.due_date.asc()).all()
-    orders_ready = Order.query.filter(
-        Order.status == 'ready_at_shop'
+    
+    # 2. En attente de retrait (commandes client pickup)
+    orders_waiting_pickup = Order.query.filter(
+        Order.status == 'waiting_for_pickup',
+        Order.order_type == 'customer_order',
+        Order.delivery_option == 'pickup'
     ).order_by(Order.due_date.asc()).all()
+    
+    # 3. Prêt à livrer (commandes client delivery)
+    orders_ready_delivery = Order.query.filter(
+        Order.status == 'ready_at_shop',
+        Order.order_type == 'customer_order',
+        Order.delivery_option == 'delivery'
+    ).order_by(Order.due_date.asc()).all()
+    
+    # 4. Au comptoir (ordres de production terminés)
+    orders_at_counter = Order.query.filter(
+        Order.status == 'completed',
+        Order.order_type == 'counter_production_request'
+    ).order_by(Order.created_at.desc()).limit(10).all()
+    
+    # 5. Livré Non Payé (commandes livrées en attente paiement)
+    orders_delivered_unpaid = Order.query.filter(
+        Order.status == 'delivered_unpaid'
+    ).order_by(Order.due_date.asc()).all()
+    
     # Vérifier si une session de caisse est ouverte
     cash_session_open = CashRegisterSession.query.filter_by(is_open=True).first() is not None
+    
     return render_template('dashboards/shop_dashboard.html',
                          orders_in_production=orders_in_production,
-                         orders_ready=orders_ready,
+                         orders_waiting_pickup=orders_waiting_pickup,
+                         orders_ready_delivery=orders_ready_delivery,
+                         orders_at_counter=orders_at_counter,
+                         orders_delivered_unpaid=orders_delivered_unpaid,
                          cash_session_open=cash_session_open,
                          title="Dashboard Magasin")
 

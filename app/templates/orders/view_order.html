@@ -87,6 +87,9 @@
                                 {% if order.delivery_option == 'delivery' and order.delivery_cost is not none and order.delivery_cost > 0 %}
                                     <p><strong>Frais de Livraison :</strong> {{ "%.2f"|format(order.delivery_cost|float) }} DA</p>
                                 {% endif %}
+                                {% if order.deliveryman %}
+                                    <p><strong>Livreur :</strong> {{ order.deliveryman.name }}</p>
+                                {% endif %}
                             {% endif %}
                             
                             <p><strong>Statut :</strong>

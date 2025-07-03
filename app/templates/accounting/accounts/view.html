@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title">Détails du Compte : {{ account.name }} ({{ account.code }})</h3>
+            <div>
+                <a href="{{ url_for('accounting.edit_account', account_id=account.id) }}" class="btn btn-warning me-2">Éditer</a>
+                <a href="{{ url_for('accounting.list_accounts') }}" class="btn btn-secondary">Retour à la liste</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Code:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ account.code }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Libellé:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ account.name }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Catégorie:</strong>
+                </div>
+                <div class="col-md-6">
+                    <span class="badge bg-info">{{ account.category }}</span>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Actif:</strong>
+                </div>
+                <div class="col-md-6">
+                    {% if account.is_active %}
+                        <span class="badge bg-success">Oui</span>
+                    {% else %}
+                        <span class="badge bg-danger">Non</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Date de création:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ account.created_at.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Dernière modification:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ account.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
