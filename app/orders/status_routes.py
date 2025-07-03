@@ -88,8 +88,13 @@ def change_status_to_ready(order_id):
             order.status = 'completed'
             final_message = f'Ordre de production #{order.id} terminé. Stocks mis à jour.'
         else:
-            order.status = 'ready_at_shop'
-            final_message = f'Commande client #{order.id} prête pour le client. Stocks mis à jour.'
+            # Commande client : décision basée sur delivery_option
+            if order.delivery_option == 'pickup':
+                order.status = 'waiting_for_pickup'
+                final_message = f'Commande client #{order.id} en attente de retrait. Stocks mis à jour.'
+            else:  # delivery_option == 'delivery'
+                order.status = 'ready_at_shop'
+                final_message = f'Commande client #{order.id} prête à livrer. Stocks mis à jour.'
         
         # Assignation des employés
         for employee_id in employee_ids:
@@ -219,3 +224,4 @@ def test_admin_only(order_id, new_status):
 @admin_required
 def test_both_decorators(order_id, new_status):
     return f"✅ BOTH OK: order_id={order_id}, new_status={new_status}, user={current_user.username}"
+

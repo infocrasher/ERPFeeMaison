@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Tableau de Bord Comptable</h1>
+        <div class="btn-group">
+            <a href="{{ url_for('accounting.new_entry') }}" class="btn btn-primary">Nouvelle Écriture</a>
+            <a href="{{ url_for('accounting.new_expense') }}" class="btn btn-success">Nouvelle Dépense</a>
+        </div>
+    </div>
+
+    <!-- Indicateurs Clés (KPIs) -->
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="card text-white bg-primary h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Chiffre d'Affaires (Mois)</h5>
+                    <p class="card-text fs-4 fw-bold">{{ kpis.ca_mensuel|default('N/A') }} DZD</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card text-white bg-danger h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Charges (Mois)</h5>
+                    <p class="card-text fs-4 fw-bold">{{ kpis.charges_mensuelles|default('N/A') }} DZD</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card text-white bg-success h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Bénéfice Net (Mois)</h5>
+                    <p class="card-text fs-4 fw-bold">{{ kpis.benefice_net|default('N/A') }} DZD</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card bg-light h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Solde de Caisse</h5>
+                    <p class="card-text fs-4 fw-bold">{{ kpis.solde_caisse|default('N/A') }} DZD</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accès Rapides -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    Accès Rapides
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('accounting.list_entries') }}" class="btn btn-outline-secondary m-1">Voir les Écritures</a>
+                    <a href="{{ url_for('accounting.list_accounts') }}" class="btn btn-outline-secondary m-1">Plan Comptable</a>
+                    <a href="{{ url_for('accounting.list_journals') }}" class="btn btn-outline-secondary m-1">Journaux</a>
+                    <a href="{{ url_for('accounting.list_periods') }}" class="btn btn-outline-secondary m-1">Exercices Comptables</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

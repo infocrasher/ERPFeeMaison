@@ -8,10 +8,12 @@ from wtforms import (
     SelectField,
     DecimalField,
     DateTimeField,
-    DateField
+    DateField,
+    BooleanField
 )
-from wtforms.validators import DataRequired, Optional, Length
+from wtforms.validators import DataRequired, Optional, Length, ValidationError
 from models import Product
+from app.deliverymen.models import Deliveryman
 
 def get_sellable_products():
     return Product.query.filter_by(product_type='finished').order_by(Product.name).all()
@@ -168,6 +170,8 @@ class CustomerOrderForm(FlaskForm):
         default=0.0
     )
 
+
+
     payment_status = SelectField(
         'Statut paiement',
         choices=[
@@ -280,3 +284,21 @@ class OrderStatusForm(FlaskForm):
 
     notes = TextAreaField('Ajouter une note (optionnel)', validators=[Optional()])
     submit = SubmitField('Mettre à jour le statut')
+
+class AssignDeliverymanForm(FlaskForm):
+    """Formulaire pour assigner un livreur à une commande"""
+    deliveryman_id = SelectField('Livreur', coerce=int)
+    is_paid = BooleanField('Commande payée par le livreur', default=False)
+    notes = TextAreaField('Notes', render_kw={'rows': 3, 'placeholder': 'Notes optionnelles...'})
+    submit = SubmitField('Assigner et Livrer')
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from app.deliverymen.models import Deliveryman
+        # Charger tous les livreurs actifs
+        deliverymen = Deliveryman.query.all()
+        self.deliveryman_id.choices = [(0, 'Sélectionner un livreur...')] + [(d.id, d.name) for d in deliverymen]
+    
+    def validate_deliveryman_id(self, field):
+        if field.data == 0:
+            raise ValidationError('Veuillez sélectionner un livreur.')

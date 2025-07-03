@@ -364,3 +364,86 @@ def pay_order(order_id):
     db.session.commit()
     flash(f'Commande #{order.id} encaissée avec succès ({order.total_amount:.2f} DA).', 'success')
     return redirect(url_for('orders.view_order', order_id=order.id))
+
+@orders.route('/<int:order_id>/assign-deliveryman', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def assign_deliveryman(order_id):
+    """Assigner un livreur à une commande prête à livrer"""
+    from app.orders.forms import AssignDeliverymanForm
+    from app.deliverymen.models import Deliveryman
+    from models import DeliveryDebt
+    from app.sales.models import CashRegisterSession, CashMovement
+    
+    order = Order.query.get_or_404(order_id)
+    
+    # Vérifier que la commande peut recevoir un livreur
+    if order.status != 'ready_at_shop' or order.delivery_option != 'delivery':
+        flash('Cette commande ne peut pas recevoir d\'assignation de livreur.', 'error')
+        return redirect(url_for('dashboard.shop_dashboard'))
+    
+    form = AssignDeliverymanForm()
+    
+    if form.validate_on_submit():
+        deliveryman_id = form.deliveryman_id.data
+        is_paid = form.is_paid.data
+        notes = form.notes.data
+        
+        if deliveryman_id == 0:
+            flash('Veuillez sélectionner un livreur.', 'error')
+            return render_template('orders/assign_deliveryman.html', order=order, form=form)
+        
+        # Assigner le livreur
+        order.deliveryman_id = deliveryman_id
+        
+        if is_paid:
+            # Le livreur a payé : marquer comme livrée et encaissée
+            order.status = 'delivered'
+            
+            # Créer le mouvement de caisse si une session est ouverte
+            session = CashRegisterSession.query.filter_by(is_open=True).first()
+            if session:
+                # Calculer le montant à encaisser (produits seulement, sans frais de livraison)
+                products_amount = order.total_amount - (order.delivery_cost or 0)
+                
+                movement = CashMovement(
+                    session_id=session.id,
+                    created_at=datetime.utcnow(),
+                    type='entrée',
+                    amount=products_amount,
+                    reason=f'Encaissement commande #{order.id} - Livraison payée (hors frais livraison)',
+                    notes=f'Livreur: {Deliveryman.query.get(deliveryman_id).name} - Frais livraison: {order.delivery_cost or 0:.2f} DA' + (f' - {notes}' if notes else ''),
+                    employee_id=current_user.id
+                )
+                db.session.add(movement)
+                flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name} et encaissée ({products_amount:.2f} DA, frais livraison {order.delivery_cost or 0:.2f} DA pour le livreur).', 'success')
+            else:
+                flash(f'Commande #{order.id} assignée et livrée, mais aucune session de caisse ouverte pour l\'encaissement.', 'warning')
+        else:
+            # Le livreur n'a pas payé : marquer comme livrée non payée et créer une dette
+            order.status = 'delivered_unpaid'
+            
+            # Créer une dette livreur (produits seulement, sans frais de livraison)
+            products_amount = order.total_amount - (order.delivery_cost or 0)
+            
+            debt = DeliveryDebt(
+                order_id=order.id,
+                deliveryman_id=deliveryman_id,
+                amount=products_amount,
+                paid=False
+            )
+            db.session.add(debt)
+            flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name}. Dette créée: {products_amount:.2f} DA (hors frais livraison {order.delivery_cost or 0:.2f} DA).', 'info')
+        
+        # Ajouter les notes à la commande si spécifiées
+        if notes:
+            if order.notes:
+                order.notes += f'\n--- Livraison ---\n{notes}'
+            else:
+                order.notes = f'Livraison: {notes}'
+        
+        db.session.commit()
+        return redirect(url_for('dashboard.shop_dashboard'))
+    
+    return render_template('orders/assign_deliveryman.html', order=order, form=form)
+

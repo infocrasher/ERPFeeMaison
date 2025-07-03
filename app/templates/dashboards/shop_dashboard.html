@@ -58,9 +58,24 @@
         background: linear-gradient(135deg, #fff3cd 0%, #fffef7 100%);
     }
     
-    .order-ready {
+    .order-pickup {
+        border-left-color: #17a2b8;
+        background: linear-gradient(135deg, #d1ecf1 0%, #f8fdff 100%);
+    }
+    
+    .order-delivery {
         border-left-color: #28a745;
         background: linear-gradient(135deg, #d4edda 0%, #f8fff9 100%);
+    }
+    
+    .order-counter {
+        border-left-color: #6f42c1;
+        background: linear-gradient(135deg, #e2d9f3 0%, #faf8ff 100%);
+    }
+    
+    .order-unpaid {
+        border-left-color: #fd7e14;
+        background: linear-gradient(135deg, #ffeaa7 0%, #fffef7 100%);
     }
     
     .order-header {
@@ -105,14 +120,35 @@
         text-decoration: none;
     }
     
-    .btn-deliver {
+    .btn-assign {
         background: #007bff;
         color: white;
     }
     
-    .btn-deliver:hover {
+    .btn-assign:hover {
         background: #0056b3;
         transform: scale(1.05);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-cash {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-cash:hover {
+        background: #218838;
+        transform: scale(1.05);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-cash-disabled {
+        background: #6c757d;
+        color: white;
+        opacity: 0.6;
+        cursor: not-allowed;
     }
     
     .btn-view {
@@ -183,7 +219,7 @@
     
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 1rem;
         margin-bottom: 2rem;
     }
@@ -198,7 +234,7 @@
     }
     
     .stat-number {
-        font-size: 2.5rem;
+        font-size: 2rem;
         font-weight: bold;
         display: block;
         margin-bottom: 0.5rem;
@@ -207,38 +243,24 @@
     .stat-label {
         color: #6c757d;
         font-size: 0.9rem;
-        text-transform: uppercase;
+        font-weight: 500;
     }
     
     .empty-state {
         text-align: center;
-        padding: 3rem;
+        padding: 3rem 1rem;
         color: #6c757d;
     }
     
     .empty-state i {
-        font-size: 4rem;
+        font-size: 3rem;
         margin-bottom: 1rem;
-        opacity: 0.3;
+        opacity: 0.5;
     }
     
-    /* Responsive */
-    @media (max-width: 768px) {
-        .order-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        
-        .order-actions {
-            width: 100%;
-            justify-content: space-between;
-            margin-top: 1rem;
-        }
-        
-        .action-btn {
-            flex: 1;
-            text-align: center;
-        }
+    .empty-state h5 {
+        margin-bottom: 0.5rem;
+        color: #495057;
     }
 </style>
 {% endblock %}
@@ -271,20 +293,28 @@
             <div class="stat-label">En Production</div>
         </div>
         <div class="stat-card">
-            <span class="stat-number text-success">{{ orders_ready|length }}</span>
-            <div class="stat-label">Prêtes à Livrer</div>
+            <span class="stat-number text-info">{{ orders_waiting_pickup|length }}</span>
+            <div class="stat-label">Attente Retrait</div>
         </div>
         <div class="stat-card">
-            <span class="stat-number text-info">{{ (orders_in_production|length + orders_ready|length) }}</span>
-            <div class="stat-label">Total Actif</div>
+            <span class="stat-number text-success">{{ orders_ready_delivery|length }}</span>
+            <div class="stat-label">Prêt à Livrer</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number text-primary">{{ orders_at_counter|length }}</span>
+            <div class="stat-label">Au Comptoir</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number text-warning">{{ orders_delivered_unpaid|length }}</span>
+            <div class="stat-label">Livré Non Payé</div>
         </div>
     </div>
     
-    <!-- Section: Commandes en Production -->
+    <!-- Section 1: Commandes en Production -->
     <div class="section-card">
         <div class="section-title">
             <i class="bi bi-gear-wide-connected me-3 text-warning"></i>
-            <h3 class="mb-0">Commandes en Production</h3>
+            <h3 class="mb-0">En Production</h3>
             <span class="badge bg-warning ms-auto">{{ orders_in_production|length }}</span>
         </div>
         
@@ -314,9 +344,8 @@
                         <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
                             <i class="bi bi-eye me-1"></i>Voir
                         </a>
-                        <!-- ✅ CORRECTION : Redirection vers sélection employés -->
                         <a href="{{ url_for('status.select_employees_for_status_change', order_id=order.id, new_status='ready_at_shop') }}" class="action-btn btn-receive">
-                            <i class="bi bi-check-circle me-1"></i>Reçue
+                            <i class="bi bi-check-circle me-1"></i>Reçu
                         </a>
                     </div>
                 </div>
@@ -348,25 +377,21 @@
         {% endif %}
     </div>
     
-    <!-- Section: Commandes Prêtes à Livrer -->
+    <!-- Section 2: En Attente de Retrait -->
     <div class="section-card">
         <div class="section-title">
-            <i class="bi bi-check-circle me-3 text-success"></i>
-            <h3 class="mb-0">Commandes Prêtes à Livrer</h3>
-            <span class="badge bg-success ms-auto">{{ orders_ready|length }}</span>
+            <i class="bi bi-bag-check me-3 text-info"></i>
+            <h3 class="mb-0">En Attente de Retrait</h3>
+            <span class="badge bg-info ms-auto">{{ orders_waiting_pickup|length }}</span>
         </div>
         
-        {% if orders_ready %}
-            {% for order in orders_ready %}
-            <div class="order-item order-ready">
+        {% if orders_waiting_pickup %}
+            {% for order in orders_waiting_pickup %}
+            <div class="order-item order-pickup">
                 <div class="order-header">
                     <div class="order-info">
                         <h5 class="mb-1">
-                            {% if order.order_type == 'customer_order' %}
-                                <i class="bi bi-person me-2"></i>Commande #{{ order.id }} - {{ order.customer_name }}
-                            {% else %}
-                                <i class="bi bi-box me-2"></i>Stock #{{ order.id }}
-                            {% endif %}
+                            <i class="bi bi-person me-2"></i>Commande #{{ order.id }} - {{ order.customer_name }}
                         </h5>
                         
                         <div class="product-list">
@@ -376,60 +401,33 @@
                                 </span>
                             {% endfor %}
                         </div>
-                        
-                        {% if order.order_type == 'customer_order' %}
-                            <div class="mt-2">
-                                <i class="bi bi-geo-alt me-1"></i>
-                                <strong>{{ order.get_delivery_option_display() }}</strong>
-                                {% if order.delivery_option == 'delivery' and order.customer_address %}
-                                    <br><small class="text-muted">{{ order.customer_address }}</small>
-                                {% endif %}
-                            </div>
-                        {% endif %}
                     </div>
                     
                     <div class="order-actions">
                         <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
                             <i class="bi bi-eye me-1"></i>Voir
                         </a>
-                        {% if order.order_type == 'customer_order' %}
-                            <form method="POST" action="{{ url_for('status.change_status_to_delivered', order_id=order.id) }}" style="display: inline;">
-                                <button type="submit" class="action-btn btn-deliver" onclick="return confirm('Marquer cette commande comme livrée ?')">
-                                    <i class="bi bi-truck me-1"></i>Livrer
+                        {% if cash_session_open %}
+                            <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" style="display: inline;">
+                                <button type="submit" class="action-btn btn-cash" onclick="return confirm('Encaisser cette commande ?')">
+                                    <i class="bi bi-cash-coin me-1"></i>Encaisser
                                 </button>
                             </form>
-                            {% if cash_session_open %}
-                                {% set existing_movement = false %}
-                                {% if order.cash_movements %}
-                                    {% for movement in order.cash_movements %}
-                                        {% if movement.reason and 'commande #' + order.id|string in movement.reason and movement.amount == order.total_amount %}
-                                            {% set existing_movement = true %}
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endif %}
-                                {% if not existing_movement %}
-                                    <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" style="display: inline;">
-                                        <button type="submit" class="action-btn" style="background: #28a745; color: white;" onclick="return confirm('Encaisser cette commande ?')">
-                                            <i class="bi bi-cash-coin me-1"></i>Encaisser
-                                        </button>
-                                    </form>
-                                {% endif %}
-                            {% endif %}
+                        {% else %}
+                            <span class="action-btn btn-cash-disabled">
+                                <i class="bi bi-cash-coin me-1"></i>Encaisser
+                            </span>
                         {% endif %}
                     </div>
                 </div>
                 
                 <div class="order-meta">
                     <div class="customer-info">
-                        {% if order.order_type == 'customer_order' %}
-                            <i class="bi bi-telephone me-1"></i>{{ order.customer_phone or 'N/A' }}
-                            {% if order.total_amount %}
-                                <span class="ms-3">
-                                    <i class="bi bi-cash me-1"></i>{{ "%.2f"|format(order.total_amount|float) }} DA
-                                </span>
-                            {% endif %}
-                        {% else %}
-                            <i class="bi bi-box me-1"></i>Disponible en stock
+                        <i class="bi bi-telephone me-1"></i>{{ order.customer_phone or 'N/A' }}
+                        {% if order.total_amount %}
+                            <span class="ms-3">
+                                <i class="bi bi-cash me-1"></i>{{ "%.2f"|format(order.total_amount|float) }} DA
+                            </span>
                         {% endif %}
                     </div>
                     <div class="time-info">
@@ -441,9 +439,212 @@
             {% endfor %}
         {% else %}
             <div class="empty-state">
+                <i class="bi bi-bag-check"></i>
+                <h5>Aucune commande en attente de retrait</h5>
+                <p class="text-muted">Les commandes retrait magasin apparaîtront ici.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Section 3: Prêt à Livrer -->
+    <div class="section-card">
+        <div class="section-title">
+            <i class="bi bi-truck me-3 text-success"></i>
+            <h3 class="mb-0">Prêt à Livrer</h3>
+            <span class="badge bg-success ms-auto">{{ orders_ready_delivery|length }}</span>
+        </div>
+        
+        {% if orders_ready_delivery %}
+            {% for order in orders_ready_delivery %}
+            <div class="order-item order-delivery">
+                <div class="order-header">
+                    <div class="order-info">
+                        <h5 class="mb-1">
+                            <i class="bi bi-person me-2"></i>Commande #{{ order.id }} - {{ order.customer_name }}
+                        </h5>
+                        
+                        <div class="product-list">
+                            {% for item in order.items %}
+                                <span class="product-badge">
+                                    {{ item.product.name }} ({{ item.quantity }} {{ item.product.unit }})
+                                </span>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-2">
+                            <i class="bi bi-geo-alt me-1"></i>
+                            <strong>{{ order.get_delivery_option_display() }}</strong>
+                            {% if order.customer_address %}
+                                <br><small class="text-muted">{{ order.customer_address }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="order-actions">
+                        <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
+                            <i class="bi bi-eye me-1"></i>Voir
+                        </a>
+                        <a href="{{ url_for('orders.assign_deliveryman', order_id=order.id) }}" class="action-btn btn-assign">
+                            <i class="bi bi-person-plus me-1"></i>Assigner Livreur
+                        </a>
+                        {% if cash_session_open %}
+                            <span class="action-btn btn-cash-disabled">
+                                <i class="bi bi-cash-coin me-1"></i>Encaisser
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="order-meta">
+                    <div class="customer-info">
+                        <i class="bi bi-telephone me-1"></i>{{ order.customer_phone or 'N/A' }}
+                        {% if order.total_amount %}
+                            <span class="ms-3">
+                                <i class="bi bi-cash me-1"></i>{{ "%.2f"|format(order.total_amount|float) }} DA
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="time-info">
+                        <i class="bi bi-clock me-1"></i>
+                        Prêt depuis {{ order.due_date.strftime('%H:%M') }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="bi bi-truck"></i>
+                <h5>Aucune commande prête à livrer</h5>
+                <p class="text-muted">Les commandes livraison à domicile apparaîtront ici.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Section 4: Au Comptoir -->
+    <div class="section-card">
+        <div class="section-title">
+            <i class="bi bi-shop-window me-3 text-primary"></i>
+            <h3 class="mb-0">Au Comptoir</h3>
+            <span class="badge bg-primary ms-auto">{{ orders_at_counter|length }}</span>
+        </div>
+        
+        {% if orders_at_counter %}
+            {% for order in orders_at_counter %}
+            <div class="order-item order-counter">
+                <div class="order-header">
+                    <div class="order-info">
+                        <h5 class="mb-1">
+                            <i class="bi bi-box me-2"></i>Ordre Production #{{ order.id }}
+                        </h5>
+                        
+                        <div class="product-list">
+                            {% for item in order.items %}
+                                <span class="product-badge">
+                                    {{ item.product.name }} ({{ item.quantity }} {{ item.product.unit }})
+                                </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="order-actions">
+                        <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
+                            <i class="bi bi-eye me-1"></i>Voir
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="order-meta">
+                    <div class="customer-info">
+                        <i class="bi bi-box me-1"></i>Disponible en stock comptoir
+                    </div>
+                    <div class="time-info">
+                        <i class="bi bi-clock me-1"></i>
+                        Terminé le {{ order.created_at.strftime('%d/%m à %H:%M') }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="bi bi-shop-window"></i>
+                <h5>Aucun produit au comptoir</h5>
+                <p class="text-muted">Les ordres de production terminés apparaîtront ici.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Section 5: Livré Non Payé -->
+    <div class="section-card">
+        <div class="section-title">
+            <i class="bi bi-exclamation-triangle me-3 text-warning"></i>
+            <h3 class="mb-0">Livré Non Payé</h3>
+            <span class="badge bg-warning ms-auto">{{ orders_delivered_unpaid|length }}</span>
+        </div>
+        
+        {% if orders_delivered_unpaid %}
+            {% for order in orders_delivered_unpaid %}
+            <div class="order-item order-unpaid">
+                <div class="order-header">
+                    <div class="order-info">
+                        <h5 class="mb-1">
+                            <i class="bi bi-person me-2"></i>Commande #{{ order.id }} - {{ order.customer_name }}
+                        </h5>
+                        
+                        <div class="product-list">
+                            {% for item in order.items %}
+                                <span class="product-badge">
+                                    {{ item.product.name }} ({{ item.quantity }} {{ item.product.unit }})
+                                </span>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if order.deliveryman %}
+                            <div class="mt-2">
+                                <i class="bi bi-person-badge me-1"></i>
+                                <strong>Livreur: {{ order.deliveryman.name }}</strong>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="order-actions">
+                        <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
+                            <i class="bi bi-eye me-1"></i>Voir
+                        </a>
+                        {% if cash_session_open %}
+                            <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" style="display: inline;">
+                                <button type="submit" class="action-btn btn-cash" onclick="return confirm('Encaisser cette commande ?')">
+                                    <i class="bi bi-cash-coin me-1"></i>Encaisser
+                                </button>
+                            </form>
+                        {% else %}
+                            <span class="action-btn btn-cash-disabled">
+                                <i class="bi bi-cash-coin me-1"></i>Encaisser
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="order-meta">
+                    <div class="customer-info">
+                        <i class="bi bi-telephone me-1"></i>{{ order.customer_phone or 'N/A' }}
+                        {% if order.total_amount %}
+                            <span class="ms-3">
+                                <i class="bi bi-cash me-1"></i>{{ "%.2f"|format(order.total_amount|float) }} DA
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="time-info">
+                        <i class="bi bi-truck me-1"></i>
+                        Livré le {{ order.due_date.strftime('%d/%m à %H:%M') }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
                 <i class="bi bi-check-circle"></i>
-                <h5>Aucune commande prête</h5>
-                <p class="text-muted">Les commandes finalisées apparaîtront ici pour livraison.</p>
+                <h5>Aucune commande en attente de paiement</h5>
+                <p class="text-muted">Les commandes livrées non payées apparaîtront ici.</p>
             </div>
         {% endif %}
     </div>
