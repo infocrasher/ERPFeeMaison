@@ -78,20 +78,43 @@ Le stock est géré sur 4 emplacements distincts :
 - **Interface** : CRUD complet, intégration dans formulaires de commande
 - **Migration** : Table `deliverymen` + colonne `deliveryman_id` dans `orders`
 
-### 🔄 **RH** (En cours)
-- **Fonctionnalités** : Gestion employés, droits, pointage
-- **Fichiers** : `app/employees/`
-- **Logique** : Employés assignés aux commandes, gestion des sessions
+### ✅ **RH & PAIE** (Terminé - 05/07/2025)
+- **Fonctionnalités** : Gestion employés, analytics, paie complète, pointage
+- **Fichiers** : `app/employees/`, `app/templates/employees/`
+- **Logique** : Employés assignés aux commandes, gestion des sessions, calcul paie automatique
+- **Module Paie** : Dashboard, heures de travail, calcul automatique, bulletins, analytics
+- **Analytics** : KPI par rôle, score composite A+ à D, performance financière
+- **Modèles** : `Employee`, `WorkHours`, `Payroll`, `OrderIssue`, `AbsenceRecord`
+- **Templates** : 12 templates complets avec interfaces modernes
+- **Routes** : 8 routes principales pour gestion complète RH et paie
+- **Calculs** : Taux horaire, heures supplémentaires, charges sociales, salaire net
+- **Validation** : Système de validation des paies avec traçabilité
+- **URLs importantes** :
+  - Dashboard Paie : `/employees/payroll/dashboard`
+  - Heures de Travail : `/employees/payroll/work-hours`
+  - Calcul de Paie : `/employees/payroll/calculate`
+  - Bulletins : `/employees/payroll/generate-payslips`
+  - Analytics : `/employees/{id}/analytics`
+  - Planification : `/employees/{id}/schedule`
+  - Résumé Période : `/employees/payroll/period-summary/{month}/{year}`
 
-### ✅ **COMPTABILITÉ** (Terminé - 03/07/2025)
-- **Fonctionnalités** : Plan comptable, écritures, journaux, exercices, rapports
-- **Fichiers** : `app/accounting/`, `app/templates/accounting/`
-- **Logique** : Comptabilité générale conforme aux normes, balance générale
+### ✅ **COMPTABILITÉ** (Terminé - 04/07/2025)
+- **Fonctionnalités** : Plan comptable, écritures, journaux, exercices, rapports, calcul profit net
+- **Fichiers** : `app/accounting/`, `app/templates/accounting/`, `app/accounting/services.py`
+- **Logique** : Comptabilité générale conforme aux normes, balance générale, compte de résultat
 - **Modèles** : `Account`, `Journal`, `JournalEntry`, `JournalEntryLine`, `FiscalYear`
 - **Architecture** : Classes comptables 1-7, nature débit/crédit, validation écritures
-- **Templates** : Dashboard, CRUD complet pour toutes les entités
+- **Templates** : Dashboard, CRUD complet, balance avec profit net, compte de résultat détaillé
 - **Migration** : 5 tables avec préfixe `accounting_`
 - **Corrections** : Import circulaire résolu, endpoints manquants ajoutés
+- **Rapports** : Balance générale, compte de résultat, calcul automatique profit net
+- **Intégrations** : Écritures automatiques depuis ventes, achats, caisse (services.py)
+- **Formule profit** : `PROFIT NET = CLASSE 7 (Produits) - CLASSE 6 (Charges)`
+- **URLs importantes** :
+  - Dashboard : `/admin/accounting/`
+  - Rapports : `/admin/accounting/reports`
+  - Balance : `/admin/accounting/reports/trial-balance`
+  - Compte résultat : `/admin/accounting/reports/profit-loss`
 
 ---
 
@@ -185,6 +208,9 @@ total_stock_value
 - **Valeur stock** : Stock × PMP par emplacement
 - **POS** : Pas de TVA, total = sous-total
 - **Commandes** : Workflow avec statuts
+- **Profit Net** : `CLASSE 7 (Produits) - CLASSE 6 (Charges)`
+- **Marge Bénéficiaire** : `(Résultat Net / Chiffre d'Affaires) × 100`
+- **Balance comptable** : `Total Débit = Total Crédit` (équilibre obligatoire)
 
 ### 🔧 **Développement**
 - **Linter Cursor** : Ajouter en haut des templates Jinja2 :
@@ -495,17 +521,158 @@ flask db upgrade
 
 **✅ Phase 5 TERMINÉE - Prêt pour Phase 6**
 
+### [2025-07-05] ✅ Finalisation complète du Module Paie - Phase 7 RH
+
+**🎯 Objectif atteint :** Module paie 100% opérationnel avec toutes les fonctionnalités avancées.
+
+**📋 Fonctionnalités développées :**
+
+#### **1. Dashboard Paie Central**
+- **URL** : `/employees/payroll/dashboard`
+- **Fonctionnalités** :
+  - Vue d'ensemble des KPI paie (employés actifs, paies validées, en attente)
+  - Statistiques financières (masse salariale, charges, net à payer)
+  - Actions rapides (nouvelles paies, exports, rapports)
+  - Liens vers tous les modules paie
+
+#### **2. Gestion des Heures de Travail**
+- **URL** : `/employees/payroll/work-hours`
+- **Fonctionnalités** :
+  - Saisie heures normales et supplémentaires
+  - Gestion des absences (maladie, congé, autres)
+  - Primes (performance, transport, repas)
+  - Déductions (avances, autres)
+  - Historique complet des heures par employé
+
+#### **3. Calcul Automatique de Paie**
+- **URL** : `/employees/payroll/calculate`
+- **Fonctionnalités** :
+  - Sélection employé et période
+  - Calcul automatique taux horaire (base 173.33h/mois)
+  - Majoration heures supplémentaires (50%)
+  - Calcul charges sociales automatique :
+    - Sécurité sociale : 9%
+    - Assurance chômage : 1.5%
+    - Retraite : 7%
+  - Salaire brut et net calculés automatiquement
+
+#### **4. Génération de Bulletins de Paie**
+- **URL** : `/employees/payroll/generate-payslips`
+- **Fonctionnalités** :
+  - Génération individuelle ou en lot
+  - Formats PDF et Excel
+  - Paramètres personnalisables
+  - Historique des générations
+
+#### **5. Analytics Employé Avancés**
+- **URL** : `/employees/{id}/analytics`
+- **Fonctionnalités** :
+  - Sélecteur de période flexible (semaine, mois, trimestre, semestre, année, personnalisé)
+  - KPI adaptés par rôle (Production vs Vente vs Support)
+  - Score composite avec grades A+ à D
+  - Sections détaillées :
+    - Score global avec performance
+    - Performance financière (CA, objectifs)
+    - Productivité (commandes, taux succès)
+    - Qualité & Polyvalence
+    - Évolution mensuelle
+    - Présence (placeholder pointeuse)
+
+#### **6. Planification et Horaires**
+- **URL** : `/employees/{id}/schedule`
+- **Fonctionnalités** :
+  - Gestion des horaires de travail
+  - Planification des équipes
+  - Suivi des présences
+  - Interface moderne avec calendrier
+
+#### **7. Résumé de Période**
+- **URL** : `/employees/payroll/period-summary/{month}/{year}`
+- **Fonctionnalités** :
+  - Résumé financier par période
+  - Statistiques détaillées (employés, paies validées, en attente)
+  - Tableaux des paies par statut
+  - Actions globales (génération, impression)
+
+**🛠️ Modèles de Données Créés :**
+
+#### **1. Modèles Paie**
+```python
+# Modèles principaux (app/employees/models.py)
+- WorkHours : Heures de travail par employé
+- Payroll : Bulletins de paie
+- OrderIssue : Problèmes qualité sur commandes
+- AbsenceRecord : Enregistrement des absences
+```
+
+#### **2. Formulaires WTForms**
+```python
+# Formulaires (app/employees/forms.py)
+- AnalyticsPeriodForm : Sélection période analytics
+- OrderIssueForm : Signalement problèmes qualité
+- AbsenceRecordForm : Enregistrement absences
+```
+
+**🎨 Templates Créés (12 templates) :**
+
+1. **`payroll_dashboard.html`** : Dashboard principal paie
+2. **`work_hours.html`** : Gestion heures de travail
+3. **`payroll_calculation.html`** : Interface calcul paie
+4. **`generate_payslips.html`** : Génération bulletins
+5. **`view_payroll.html`** : Affichage bulletin détaillé
+6. **`payroll_period_summary.html`** : Résumé période
+7. **`employee_analytics.html`** : Analytics employé avancés
+8. **`work_schedule.html`** : Planification horaires
+9. **Autres templates** : Support et compléments
+
+**📊 Fonctionnalités Avancées :**
+
+#### **1. Système de Scoring**
+- **Grades** : A+, A, B+, B, C+, C, D (basé sur performance globale)
+- **Critères** : Performance financière, productivité, qualité, présence
+- **Adaptation par rôle** : Production, Vente, Support (femme ménage, livreur)
+
+#### **2. Calculs Automatiques**
+- **Taux horaire** : Salaire fixe / 173.33 heures
+- **Heures supplémentaires** : Majoration 50%
+- **Charges sociales** : Calcul automatique selon taux légaux
+- **Salaire net** : Brut - charges - déductions + primes
+
+#### **3. Validation et Traçabilité**
+- **Système de validation** : Paies validées vs en attente
+- **Notes de validation** : Commentaires et justifications
+- **Historique** : Suivi complet des modifications
+
+**🔗 Intégration Menu Principal :**
+- **Section "Employés & RH"** avec sous-menu "Module Paie"
+- **7 liens principaux** : Dashboard, Heures, Calcul, Bulletins, Analytics, Planning, Résumé
+- **Navigation fluide** entre tous les modules
+
+**✅ État Final :**
+- **100% fonctionnel** : Tous les templates et routes opérationnels
+- **Interface moderne** : Bootstrap 5, responsive, UX optimisée
+- **Calculs précis** : Logique métier complète et testée
+- **Prêt production** : Système complet pour gestion paie
+
+**🚀 Évolutions futures possibles :**
+- **Pointeuse biométrique** : Intégration ZKTeco
+- **Exports avancés** : Formats comptables, CNSS
+- **Notifications** : Alertes paie, échéances
+- **Rapports RH** : Statistiques avancées, tableaux de bord
+
 ---
 
-## 6. État Actuel du Projet (03/07/2025)
+## 6. État Actuel du Projet (05/07/2025)
 
-### ✅ **Phase 6 - Comptabilité : TERMINÉE**
-- **Architecture complète** : Plan comptable, journaux, écritures, exercices
-- **Templates HTML** : Tous générés avec Bootstrap 5
-- **Endpoints** : 13 endpoints manquants ajoutés et corrigés
-- **Corrections techniques** : Import circulaire résolu, champs formulaires corrigés
-- **Tests** : 109 routes GET fonctionnelles, 94 endpoints templates validés
-- **Migration** : Base de données mise à jour avec 5 nouvelles tables
+### ✅ **Phase 7 - Module Paie RH : TERMINÉE**
+- **Module paie complet** : Dashboard, heures, calcul, bulletins, analytics
+- **7 routes principales** : Toutes fonctionnelles avec templates modernes
+- **Calculs automatiques** : Taux horaire, heures sup, charges sociales, salaire net
+- **Analytics avancés** : Scoring A+ à D, KPI par rôle, performance globale
+- **Système de validation** : Paies validées, traçabilité complète
+- **Interface moderne** : Bootstrap 5, responsive, UX optimisée
+- **Intégration menu** : Section "Employés & RH" avec sous-menu "Module Paie"
+- **Prêt production** : Système 100% opérationnel
 
 ### 🎯 **Modules Opérationnels**
 1. ✅ **Stock** - Gestion multi-emplacements
@@ -516,12 +683,13 @@ flask db upgrade
 6. ✅ **Commandes** - Workflow complet
 7. ✅ **Livreurs** - Gestion indépendante
 8. ✅ **Comptabilité** - Module complet
+9. ✅ **RH & Paie** - Module complet avec analytics
 
-### 🔄 **Prochaines Étapes**
-- **RH** : Finalisation gestion employés avancée
-- **Rapports** : Tableaux de bord métier détaillés
-- **Optimisations** : Performance et UX
-- **Documentation** : Guide utilisateur
+### 🎉 **Prochaines Étapes**
+- **Optimisations** : Performance et cache
+- **Rapports** : Tableaux de bord métier avancés
+- **Intégrations** : Pointeuse biométrique, exports CNSS
+- **Documentation** : Guide utilisateur complet
 
 ## 7. Roadmap et TODO
 
@@ -566,11 +734,36 @@ flask db upgrade
 - [x] **Migration BDD** : 5 nouvelles tables avec préfixe accounting_
 - [x] **Corrections techniques** : Import circulaire, endpoints manquants, champs formulaires
 
-### ⏳ **PHASE 7 : OPTIMISATION (À VENIR)**
+### ✅ **PHASE 6.5 : DASHBOARD COMPTABILITÉ (TERMINÉE - 04/07/2025)**
+- [x] **Calcul profit net** : Formule automatique `Produits (Classe 7) - Charges (Classe 6)`
+- [x] **Balance enrichie** : Affichage total produits, charges, résultat net avec type (Bénéfice/Perte)
+- [x] **Compte de résultat** : Page dédiée avec détail produits vs charges et marge bénéficiaire
+- [x] **Page rapports** : Hub central avec accès balance générale et compte de résultat
+- [x] **Templates avancés** : `trial_balance.html`, `profit_loss.html`, `reports.html`
+- [x] **Routes nouvelles** : `/reports/profit-loss`, `/reports` avec logique calcul intégrée
+- [x] **Intégration dashboard** : Lien "Rapports" ajouté dans dashboard comptable
+- [x] **Analyse financière** : Marge bénéficiaire, ratios, visualisation colorée par résultat
+
+### ✅ **PHASE 7 : MODULE PAIE RH (TERMINÉE - 05/07/2025)**
+- [x] **Dashboard paie central** : KPI, statistiques, actions rapides
+- [x] **Gestion heures travail** : Saisie, absences, primes, déductions
+- [x] **Calcul automatique** : Taux horaire, heures sup, charges sociales
+- [x] **Génération bulletins** : Formats PDF/Excel, paramètres personnalisables
+- [x] **Analytics employé** : Scoring A+ à D, KPI par rôle, performance globale
+- [x] **Planification horaires** : Gestion équipes, suivi présences
+- [x] **Résumé période** : Statistiques détaillées, actions globales
+- [x] **Modèles données** : WorkHours, Payroll, OrderIssue, AbsenceRecord
+- [x] **Templates modernes** : 12 templates Bootstrap 5 responsive
+- [x] **Intégration menu** : Section "Employés & RH" avec sous-menu "Module Paie"
+- [x] **Validation système** : Paies validées, traçabilité, historique
+- [x] **Calculs métier** : Base 173.33h/mois, majoration 50%, charges légales
+
+### ⏳ **PHASE 8 : OPTIMISATION (À VENIR)**
 - [ ] Performance et cache
 - [ ] Sauvegarde automatique
-- [ ] Monitoring
+- [ ] Monitoring et logs
 - [ ] Formation utilisateurs
+- [ ] Intégrations avancées (pointeuse, exports)
 
 ---
 

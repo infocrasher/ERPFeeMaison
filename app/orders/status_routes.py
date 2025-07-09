@@ -7,7 +7,8 @@ Routes spécialisées pour les changements de statut avec sélection employés
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
-from models import Order, db
+from models import Order
+from extensions import db
 from app.employees.models import Employee
 from decorators import admin_required
 

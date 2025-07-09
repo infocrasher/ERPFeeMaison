@@ -49,6 +49,45 @@
         gap: 8px;
     }
 
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .header-actions a {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .header-actions a:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .cashout-btn {
+        background: linear-gradient(135deg, #28a745, #20c997) !important;
+    }
+
+    .expense-btn {
+        background: linear-gradient(135deg, #ffc107, #fd7e14) !important;
+    }
+
+    .status-btn {
+        background: linear-gradient(135deg, #007bff, #6f42c1) !important;
+    }
+
     .pos-container {
         display: flex;
         flex: 1;
@@ -323,6 +362,20 @@
 {% block content %}
 <div class="pos-header">
     <div class="logo">Fée Maison POS</div>
+    <div class="header-actions">
+        <a href="{{ url_for('sales.cashout') }}" class="cashout-btn" title="Dépôt en Banque">
+            <i class="bi bi-bank"></i>
+            Cashout
+        </a>
+        <a href="{{ url_for('accounting.new_expense') }}" class="expense-btn" title="Frais Divers">
+            <i class="bi bi-receipt"></i>
+            Frais
+        </a>
+        <a href="{{ url_for('sales.cash_status') }}" class="status-btn" title="État de la Caisse">
+            <i class="bi bi-safe"></i>
+            Caisse
+        </a>
+    </div>
     <div class="user-info">
         <span>{{ current_user.username if current_user.is_authenticated else 'Utilisateur' }}</span>
         <span>✔️</span>

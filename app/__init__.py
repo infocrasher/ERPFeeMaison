@@ -171,6 +171,10 @@ def create_app(config_name=None):
     # ✅ AJOUT : Import des modèles accounting pour Flask-Migrate
     from app.accounting import models as accounting_models
 
+    # ✅ AJOUT : Blueprint ZKTeco pour la pointeuse
+    from app.zkteco import zkteco as zkteco_blueprint
+    app.register_blueprint(zkteco_blueprint, url_prefix='/zkteco')
+
     # Gestionnaire d'erreurs personnalisés
     @app.errorhandler(404)
     def not_found_error(error):

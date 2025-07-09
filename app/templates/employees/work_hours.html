@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Heures de Travail{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-clock-history text-primary me-2"></i>
+                    Gestion des Heures de Travail
+                </h1>
+                <a href="{{ url_for('employees.payroll_dashboard') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left me-2"></i>Retour Dashboard
+                </a>
+            </div>
+
+            <!-- Formulaire de saisie -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Saisir les Heures de Travail
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <!-- Sélection Employé -->
+                            <div class="col-md-4 mb-3">
+                                {{ form.employee_id.label(class="form-label fw-bold") }}
+                                {{ form.employee_id(class="form-select") }}
+                                {% if form.employee_id.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.employee_id.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Période -->
+                            <div class="col-md-4 mb-3">
+                                {{ form.period_month.label(class="form-label fw-bold") }}
+                                {{ form.period_month(class="form-select") }}
+                                {% if form.period_month.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.period_month.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form.period_year.label(class="form-label fw-bold") }}
+                                {{ form.period_year(class="form-control") }}
+                                {% if form.period_year.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.period_year.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Heures de travail -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-primary fw-bold">
+                                    <i class="bi bi-clock me-2"></i>Heures de Travail
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.regular_hours.label(class="form-label") }}
+                                {{ form.regular_hours(class="form-control", step="0.5") }}
+                                {% if form.regular_hours.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.regular_hours.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.overtime_hours.label(class="form-label") }}
+                                {{ form.overtime_hours(class="form-control", step="0.5") }}
+                                {% if form.overtime_hours.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.overtime_hours.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Absences -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-warning fw-bold">
+                                    <i class="bi bi-calendar-x me-2"></i>Absences (en jours)
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form.sick_days.label(class="form-label") }}
+                                {{ form.sick_days(class="form-control", step="0.5") }}
+                                {% if form.sick_days.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.sick_days.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form.vacation_days.label(class="form-label") }}
+                                {{ form.vacation_days(class="form-control", step="0.5") }}
+                                {% if form.vacation_days.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.vacation_days.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form.other_absences.label(class="form-label") }}
+                                {{ form.other_absences(class="form-control", step="0.5") }}
+                                {% if form.other_absences.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.other_absences.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Primes -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-success fw-bold">
+                                    <i class="bi bi-plus-circle me-2"></i>Primes (en DA)
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form.performance_bonus.label(class="form-label") }}
+                                {{ form.performance_bonus(class="form-control", step="0.01") }}
+                                {% if form.performance_bonus.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.performance_bonus.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form.transport_allowance.label(class="form-label") }}
+                                {{ form.transport_allowance(class="form-control", step="0.01") }}
+                                {% if form.transport_allowance.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.transport_allowance.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form.meal_allowance.label(class="form-label") }}
+                                {{ form.meal_allowance(class="form-control", step="0.01") }}
+                                {% if form.meal_allowance.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.meal_allowance.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Déductions -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-danger fw-bold">
+                                    <i class="bi bi-dash-circle me-2"></i>Déductions (en DA)
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.advance_deduction.label(class="form-label") }}
+                                {{ form.advance_deduction(class="form-control", step="0.01") }}
+                                {% if form.advance_deduction.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.advance_deduction.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.other_deductions.label(class="form-label") }}
+                                {{ form.other_deductions(class="form-control", step="0.01") }}
+                                {% if form.other_deductions.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.other_deductions.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                {{ form.notes.label(class="form-label") }}
+                                {{ form.notes(class="form-control", rows="3") }}
+                                {% if form.notes.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.notes.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-2"></i>Enregistrer les Heures
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Historique des heures -->
+            {% if work_hours_history %}
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Historique des Heures de Travail
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Employé</th>
+                                    <th>Période</th>
+                                    <th>Heures Normales</th>
+                                    <th>Heures Sup.</th>
+                                    <th>Absences</th>
+                                    <th>Primes</th>
+                                    <th>Déductions</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for hours in work_hours_history %}
+                                <tr>
+                                    <td>{{ hours.employee.name }}</td>
+                                    <td>{{ hours.period_month }}/{{ hours.period_year }}</td>
+                                    <td>{{ hours.regular_hours }}h</td>
+                                    <td>{{ hours.overtime_hours }}h</td>
+                                    <td>{{ (hours.sick_days + hours.vacation_days + hours.other_absences) }}j</td>
+                                    <td>{{ "{:,.2f}".format(hours.performance_bonus + hours.transport_allowance + hours.meal_allowance) }} DA</td>
+                                    <td>{{ "{:,.2f}".format(hours.advance_deduction + hours.other_deductions) }} DA</td>
+                                    <td>
+                                        <a href="{{ url_for('employees.calculate_payroll', employee_id=hours.employee_id, month=hours.period_month, year=hours.period_year) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-calculator"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Validation du formulaire
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+</script>
+{% endblock %} 

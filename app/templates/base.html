@@ -174,6 +174,36 @@
                         </ul>
                     </li>
                     
+                    <!-- Employés & RH -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-people me-1"></i>Employés & RH
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><h6 class="dropdown-header">Gestion Employés</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('employees.new_employee') }}">
+                                <i class="bi bi-person-plus me-2"></i>Nouvel Employé
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('employees.list_employees') }}">
+                                <i class="bi bi-list-ul me-2"></i>Liste des Employés
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Module Paie</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('employees.payroll_dashboard') }}">
+                                <i class="bi bi-speedometer2 me-2"></i>Dashboard Paie
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('employees.manage_work_hours') }}">
+                                <i class="bi bi-clock me-2"></i>Heures de Travail
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('employees.calculate_payroll') }}">
+                                <i class="bi bi-calculator me-2"></i>Calcul de Paie
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('employees.generate_payslips') }}">
+                                <i class="bi bi-file-earmark-text me-2"></i>Bulletins de Paie
+                            </a></li>
+                        </ul>
+                    </li>
+                    
                     {% if current_user.is_admin %}
                     <!-- Comptabilité -->
                     <li class="nav-item dropdown">
@@ -206,9 +236,17 @@
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header">Rapports</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.reports') }}">
+                                <i class="bi bi-bar-chart me-2"></i>Tous les Rapports
+                            </a></li>
                             <li><a class="dropdown-item" href="{{ url_for('accounting.trial_balance') }}">
                                 <i class="bi bi-table me-2"></i>Balance Générale
                             </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.profit_loss') }}">
+                                <i class="bi bi-graph-up me-2"></i>Compte de Résultat
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Exercices</h6></li>
                             <li><a class="dropdown-item" href="{{ url_for('accounting.list_fiscal_years') }}">
                                 <i class="bi bi-calendar-range me-2"></i>Exercices Comptables
                             </a></li>

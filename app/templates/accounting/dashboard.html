@@ -1,66 +1,594 @@
 {% extends 'base.html' %}
 
+{% block title %}Dashboard Comptabilité{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+    }
+    
+    .kpi-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .kpi-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .kpi-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .trend-positive {
+        color: #28a745;
+    }
+    
+    .trend-negative {
+        color: #dc3545;
+    }
+    
+    .trend-neutral {
+        color: #6c757d;
+    }
+    
+    .chart-container {
+        height: 300px;
+        position: relative;
+    }
+    
+    .ratio-gauge {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 8px;
+        background: #f8f9fa;
+        margin-bottom: 1rem;
+    }
+    
+    .ratio-value {
+        font-size: 2rem;
+        font-weight: 600;
+        margin: 0.5rem 0;
+    }
+    
+    .ratio-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .transaction-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .transaction-item:last-child {
+        border-bottom: none;
+    }
+    
+    .progress-thin {
+        height: 8px;
+    }
+    
+    .alert-custom {
+        border-radius: 8px;
+        border: none;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-action {
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3">Tableau de Bord Comptable</h1>
-        <div class="btn-group">
-            <a href="{{ url_for('accounting.new_entry') }}" class="btn btn-primary">Nouvelle Écriture</a>
-            <a href="{{ url_for('accounting.new_expense') }}" class="btn btn-success">Nouvelle Dépense</a>
+<div class="container-fluid">
+    <!-- Header avec filtres -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-graph-up text-primary me-2"></i>
+                Dashboard Comptabilité
+            </h1>
+            <p class="text-muted">Vue d'ensemble de la santé financière</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <button class="btn btn-outline-secondary btn-sm active" data-filter="current">Ce mois-ci</button>
+                <button class="btn btn-outline-secondary btn-sm" data-filter="last">Mois dernier</button>
+                <button class="btn btn-outline-secondary btn-sm" data-filter="custom">Personnalisé</button>
+            </div>
         </div>
     </div>
 
-    <!-- Indicateurs Clés (KPIs) -->
+    <!-- Section 1: KPIs Principaux -->
+    <div class="row mb-4">
+        <!-- CA du Jour -->
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card kpi-card h-100">
+                <div class="card-body text-center">
+                    <div class="kpi-label">
+                        <i class="bi bi-cash-coin text-success"></i> CA du Jour
+                    </div>
+                    <div class="kpi-value text-success">
+                        {{ "{:,.0f}".format(kpis.ca_jour) }} DZD
+                    </div>
+                    <div class="small">
+                        {% if kpis.ca_jour_tendance > 0 %}
+                            <span class="trend-positive">
+                                <i class="bi bi-arrow-up"></i> +{{ "{:.1f}".format(kpis.ca_jour_tendance) }}%
+                            </span>
+                        {% elif kpis.ca_jour_tendance < 0 %}
+                            <span class="trend-negative">
+                                <i class="bi bi-arrow-down"></i> {{ "{:.1f}".format(kpis.ca_jour_tendance) }}%
+                            </span>
+                        {% else %}
+                            <span class="trend-neutral">
+                                <i class="bi bi-dash"></i> Stable
+                            </span>
+                        {% endif %}
+                        vs hier
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CA du Mois -->
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card kpi-card h-100">
+                <div class="card-body text-center">
+                    <div class="kpi-label">
+                        <i class="bi bi-calendar-month text-primary"></i> CA du Mois
+                    </div>
+                    <div class="kpi-value text-primary">
+                        {{ "{:,.0f}".format(kpis.ca_mensuel) }} DZD
+                    </div>
+                    <div class="progress progress-thin mt-2">
+                        <div class="progress-bar" role="progressbar" 
+                             style="width: {{ kpis.progression_objectif }}%"
+                             aria-valuenow="{{ kpis.progression_objectif }}" 
+                             aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-1">
+                        {{ "{:.1f}".format(kpis.progression_objectif) }}% de l'objectif
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bénéfice Net -->
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card kpi-card h-100">
+                <div class="card-body text-center">
+                    <div class="kpi-label">
+                        <i class="bi bi-trophy text-warning"></i> Bénéfice Net
+                    </div>
+                    <div class="kpi-value {% if kpis.benefice_net > 0 %}text-success{% elif kpis.benefice_net < 0 %}text-danger{% else %}text-muted{% endif %}">
+                        {{ "{:,.0f}".format(kpis.benefice_net) }} DZD
+                    </div>
+                    <div class="small">
+                        {% if kpis.benefice_net > 0 %}
+                            <span class="badge bg-success">Bénéfice</span>
+                        {% elif kpis.benefice_net < 0 %}
+                            <span class="badge bg-danger">Perte</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Équilibre</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charges du Mois -->
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card kpi-card h-100">
+                <div class="card-body text-center">
+                    <div class="kpi-label">
+                        <i class="bi bi-wallet text-danger"></i> Charges du Mois
+                    </div>
+                    <div class="kpi-value text-danger">
+                        {{ "{:,.0f}".format(kpis.charges_mensuelles) }} DZD
+                    </div>
+                    <div class="small text-muted">
+                        {% if kpis.ca_mensuel > 0 %}
+                            {{ "{:.1f}".format((kpis.charges_mensuelles / kpis.ca_mensuel) * 100) }}% du CA
+                        {% else %}
+                            0% du CA
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trésorerie -->
+        <div class="col-xl-4 col-md-8 col-sm-12 mb-3">
+            <div class="card kpi-card h-100">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 text-center">
+                            <div class="kpi-label">
+                                <i class="bi bi-safe text-info"></i> Trésorerie
+                            </div>
+                            <div class="kpi-value text-info">
+                                {{ "{:,.0f}".format(kpis.tresorerie_totale) }} DZD
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="row">
+                                <div class="col-12 mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="small">Caisse:</span>
+                                        <span class="small fw-bold">{{ "{:,.0f}".format(kpis.solde_caisse) }} DZD</span>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="small">Banque:</span>
+                                        <span class="small fw-bold">{{ "{:,.0f}".format(kpis.solde_banque) }} DZD</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Graphiques et Ratios -->
+    <div class="row mb-4">
+        <!-- Évolution CA 30 jours -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2"></i>
+                        Évolution du CA sur 30 jours
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ratios Clés -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-speedometer2 me-2"></i>
+                        Ratios Clés
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Marge Brute -->
+                    <div class="ratio-gauge">
+                        <div class="ratio-label">Marge Brute</div>
+                        <div class="ratio-value {% if ratios.marge_brute > 30 %}text-success{% elif ratios.marge_brute > 15 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ "{:.1f}".format(ratios.marge_brute) }}%
+                        </div>
+                    </div>
+
+                    <!-- Ratio Charges -->
+                    <div class="ratio-gauge">
+                        <div class="ratio-label">Poids des Charges</div>
+                        <div class="ratio-value {% if ratios.ratio_charges < 70 %}text-success{% elif ratios.ratio_charges < 85 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ "{:.1f}".format(ratios.ratio_charges) }}%
+                        </div>
+                    </div>
+
+                    <!-- Seuil de Rentabilité -->
+                    <div class="ratio-gauge">
+                        <div class="ratio-label">Seuil de Rentabilité</div>
+                        <div class="ratio-value {% if ratios.progression_seuil >= 100 %}text-success{% elif ratios.progression_seuil >= 80 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ "{:.1f}".format(ratios.progression_seuil) }}%
+                        </div>
+                        <div class="small text-muted">
+                            {{ "{:,.0f}".format(ratios.seuil_rentabilite) }} DZD requis
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Répartition des Charges -->
+    <div class="row mb-4">
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pie-chart me-2"></i>
+                        Répartition des Charges Mensuelles
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions Rapides -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightning me-2"></i>
+                        Actions Rapides
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <a href="{{ url_for('accounting.new_expense') }}" class="btn btn-danger btn-action w-100">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Nouvelle Dépense
+                            </a>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <a href="{{ url_for('accounting.new_entry') }}" class="btn btn-success btn-action w-100">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Nouvelle Écriture
+                            </a>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <a href="{{ url_for('accounting.trial_balance') }}" class="btn btn-info btn-action w-100">
+                                <i class="bi bi-table me-2"></i>
+                                Balance Générale
+                            </a>
+                        </div>
+                        <div class="col-12">
+                            <a href="{{ url_for('accounting.profit_loss') }}" class="btn btn-warning btn-action w-100">
+                                <i class="bi bi-graph-up me-2"></i>
+                                Compte de Résultat
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Données Détaillées -->
     <div class="row">
-        <div class="col-md-3 mb-4">
-            <div class="card text-white bg-primary h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Chiffre d'Affaires (Mois)</h5>
-                    <p class="card-text fs-4 fw-bold">{{ kpis.ca_mensuel|default('N/A') }} DZD</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="card text-white bg-danger h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Charges (Mois)</h5>
-                    <p class="card-text fs-4 fw-bold">{{ kpis.charges_mensuelles|default('N/A') }} DZD</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="card text-white bg-success h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Bénéfice Net (Mois)</h5>
-                    <p class="card-text fs-4 fw-bold">{{ kpis.benefice_net|default('N/A') }} DZD</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="card bg-light h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Solde de Caisse</h5>
-                    <p class="card-text fs-4 fw-bold">{{ kpis.solde_caisse|default('N/A') }} DZD</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Accès Rapides -->
-    <div class="row mt-3">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    Accès Rapides
+                    <ul class="nav nav-tabs card-header-tabs" id="detailTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="transactions-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#transactions" type="button" role="tab">
+                                <i class="bi bi-list-ul me-2"></i>
+                                Dernières Opérations
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="stats-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#stats" type="button" role="tab">
+                                <i class="bi bi-bar-chart me-2"></i>
+                                Statistiques
+                            </button>
+                        </li>
+                    </ul>
                 </div>
                 <div class="card-body">
-                    <a href="{{ url_for('accounting.list_entries') }}" class="btn btn-outline-secondary m-1">Voir les Écritures</a>
-                    <a href="{{ url_for('accounting.list_accounts') }}" class="btn btn-outline-secondary m-1">Plan Comptable</a>
-                    <a href="{{ url_for('accounting.list_journals') }}" class="btn btn-outline-secondary m-1">Journaux</a>
-                    <a href="{{ url_for('accounting.list_periods') }}" class="btn btn-outline-secondary m-1">Exercices Comptables</a>
+                    <div class="tab-content" id="detailTabsContent">
+                        <!-- Onglet Transactions -->
+                        <div class="tab-pane fade show active" id="transactions" role="tabpanel">
+                            {% if recent_transactions %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Référence</th>
+                                                <th>Description</th>
+                                                <th>Type</th>
+                                                <th class="text-end">Montant</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for transaction in recent_transactions %}
+                                            <tr>
+                                                <td>{{ transaction.date.strftime('%d/%m/%Y') }}</td>
+                                                <td>
+                                                    <code>{{ transaction.reference }}</code>
+                                                </td>
+                                                <td>{{ transaction.description }}</td>
+                                                <td>
+                                                    {% if transaction.type == 'Crédit' %}
+                                                        <span class="badge bg-success">{{ transaction.type }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-primary">{{ transaction.type }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-end">
+                                                    <strong>{{ "{:,.0f}".format(transaction.amount) }} DZD</strong>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="bi bi-inbox display-1 text-muted"></i>
+                                    <p class="text-muted">Aucune transaction récente</p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Onglet Statistiques -->
+                        <div class="tab-pane fade" id="stats" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="h2 text-primary">{{ stats.total_accounts }}</div>
+                                        <div class="text-muted">Comptes Actifs</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="h2 text-success">{{ stats.total_journals }}</div>
+                                        <div class="text-muted">Journaux</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="h2 text-info">{{ stats.total_entries }}</div>
+                                        <div class="text-muted">Écritures</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="h2 text-warning">{{ stats.validated_entries }}</div>
+                                        <div class="text-muted">Validées</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if stats.current_fiscal_year %}
+                            <hr>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-calendar-event me-2"></i>
+                                        <strong>Exercice Courant:</strong> {{ stats.current_fiscal_year.name }}
+                                        ({{ stats.current_fiscal_year.start_date.strftime('%d/%m/%Y') }} - 
+                                         {{ stats.current_fiscal_year.end_date.strftime('%d/%m/%Y') }})
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Données pour les graphiques
+    const revenueData = {{ charts.revenue_trend | tojson }};
+    const expenseData = {{ charts.expense_breakdown | tojson }};
+
+    // Configuration du graphique CA
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    const revenueChart = new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+            labels: revenueData.map(item => {
+                const date = new Date(item.date);
+                return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+            }),
+            datasets: [{
+                label: 'CA Journalier (DZD)',
+                data: revenueData.map(item => item.revenue),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return new Intl.NumberFormat('fr-FR').format(value) + ' DZD';
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+
+    // Configuration du graphique Charges
+    if (expenseData.length > 0) {
+        const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+        const expenseChart = new Chart(expenseCtx, {
+            type: 'doughnut',
+            data: {
+                labels: expenseData.map(item => item.category),
+                datasets: [{
+                    data: expenseData.map(item => item.amount),
+                    backgroundColor: [
+                        '#dc3545',
+                        '#ffc107',
+                        '#28a745',
+                        '#6c757d',
+                        '#17a2b8'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = new Intl.NumberFormat('fr-FR').format(context.parsed);
+                                const percentage = ((context.parsed / context.dataset.data.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
+                                return `${label}: ${value} DZD (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Gestion des filtres de période
+    document.querySelectorAll('[data-filter]').forEach(button => {
+        button.addEventListener('click', function() {
+            // Retirer la classe active de tous les boutons
+            document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
+            // Ajouter la classe active au bouton cliqué
+            this.classList.add('active');
+            
+            // TODO: Implémenter le filtrage des données
+            const filter = this.dataset.filter;
+            console.log('Filtre sélectionné:', filter);
+        });
+    });
+</script>
 {% endblock %}

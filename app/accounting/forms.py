@@ -74,7 +74,7 @@ class JournalEntryLineForm(FlaskForm):
     account_id = SelectField('Compte', coerce=int, validators=[DataRequired(message="Le compte est obligatoire")])
     debit_amount = DecimalField('Débit', validators=[Optional(), NumberRange(min=0)], places=2)
     credit_amount = DecimalField('Crédit', validators=[Optional(), NumberRange(min=0)], places=2)
-    description = StringField('Libellé', validators=[Optional(), Length(max=255)])
+    line_description = StringField('Libellé', validators=[Optional(), Length(max=255)])
     reference = StringField('Référence', validators=[Optional(), Length(max=100)])
     
     def __init__(self, *args, **kwargs):
@@ -174,4 +174,50 @@ class JournalEntrySearchForm(FlaskForm):
         # Charger les journaux
         from .models import Journal
         journals = Journal.query.filter_by(is_active=True).order_by(Journal.code).all()
-        self.journal_id.choices = [(0, 'Tous')] + [(j.id, f"{j.code} - {j.name}") for j in journals] 
+        self.journal_id.choices = [(0, 'Tous')] + [(j.id, f"{j.code} - {j.name}") for j in journals]
+
+
+class ExpenseForm(FlaskForm):
+    """Formulaire pour enregistrer une dépense courante"""
+    date = DateField('Date', default=date.today, validators=[DataRequired(message="La date est obligatoire")])
+    description = StringField('Description', validators=[
+        DataRequired(message="La description est obligatoire"),
+        Length(max=255, message="La description ne peut pas dépasser 255 caractères")
+    ])
+    amount = DecimalField('Montant', validators=[
+        DataRequired(message="Le montant est obligatoire"),
+        NumberRange(min=0.01, message="Le montant doit être positif")
+    ], places=2)
+    category = SelectField('Catégorie', validators=[DataRequired(message="La catégorie est obligatoire")])
+    payment_method = SelectField('Mode de paiement', choices=[
+        ('cash', 'Espèces (Caisse)'),
+        ('bank', 'Virement bancaire'),
+        ('check', 'Chèque')
+    ], validators=[DataRequired(message="Le mode de paiement est obligatoire")])
+    supplier = StringField('Fournisseur/Bénéficiaire', validators=[Optional(), Length(max=100)])
+    reference = StringField('Référence (facture, reçu...)', validators=[Optional(), Length(max=100)])
+    notes = TextAreaField('Notes', validators=[Optional()])
+    is_paid = BooleanField('Payé', default=True)
+    submit = SubmitField('Enregistrer')
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Catégories de dépenses courantes pour une boulangerie
+        self.category.choices = [
+            ('601', '601 - Achats matières premières'),
+            ('602', '602 - Achats emballages'),
+            ('606', '606 - Achats fournitures'),
+            ('613', '613 - Locations'),
+            ('615', '615 - Entretien et réparations'),
+            ('616', '616 - Assurances'),
+            ('621', '621 - Personnel extérieur'),
+            ('622', '622 - Rémunérations intermédiaires'),
+            ('625', '625 - Déplacements'),
+            ('626', '626 - Frais postaux'),
+            ('627', '627 - Services bancaires'),
+            ('628', '628 - Divers'),
+            ('641', '641 - Rémunérations du personnel'),
+            ('645', '645 - Charges de sécurité sociale'),
+            ('661', '661 - Charges d\'intérêts'),
+            ('681', '681 - Dotations aux amortissements')
+        ] 

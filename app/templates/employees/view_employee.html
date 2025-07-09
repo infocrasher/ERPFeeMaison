@@ -233,6 +233,24 @@
         box-shadow: 0 10px 30px rgba(40, 167, 69, 0.4);
     }
     
+    .btn-schedule {
+        background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
+        box-shadow: 0 6px 20px rgba(23, 162, 184, 0.3);
+    }
+    
+    .btn-schedule:hover {
+        box-shadow: 0 10px 30px rgba(23, 162, 184, 0.4);
+    }
+    
+    .btn-analytics {
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        box-shadow: 0 6px 20px rgba(255, 193, 7, 0.3);
+    }
+    
+    .btn-analytics:hover {
+        box-shadow: 0 10px 30px rgba(255, 193, 7, 0.4);
+    }
+    
     .btn-toggle {
         background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
         box-shadow: 0 6px 20px rgba(253, 126, 20, 0.3);
@@ -376,7 +394,7 @@
                 <div class="info-item">
                     <span class="info-label">Total mensuel</span>
                     <span class="info-value salary-highlight">
-                        {{ employee.get_formatted_salary() }}
+                        {{ "{:,.2f}".format((employee.salaire_fixe|float + (employee.prime|float or 0))) }} DA
                     </span>
                 </div>
                 {% endif %}
@@ -469,10 +487,91 @@
                     {% endif %}
                 </div>
             </div>
+            
+            <!-- ===== SECTION RH ===== -->
+            <div class="info-card">
+                <div class="card-title">
+                    <i class="bi bi-person-badge"></i>
+                    Ressources Humaines
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">ID Pointeuse</span>
+                    <span class="info-value">
+                        {% if employee.zk_user_id %}
+                            <span class="badge bg-success">{{ employee.zk_user_id }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Non configuré</span>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Taux Horaire</span>
+                    <span class="info-value">
+                        {% if employee.hourly_rate %}
+                            {{ "{:,.0f}".format(employee.hourly_rate) }} DA/h
+                        {% else %}
+                            <span class="text-muted">Non défini</span>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Assurance Sociale</span>
+                    <span class="info-value">
+                        {% if employee.is_insured %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-shield-check me-1"></i>
+                                {{ "{:,.0f}".format(employee.insurance_amount or 0) }} DA
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary">
+                                <i class="bi bi-shield-x me-1"></i>
+                                Non assuré
+                            </span>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Horaires de Travail</span>
+                    <span class="info-value">
+                        {% if employee.work_schedule %}
+                            <span class="badge bg-info">
+                                <i class="bi bi-clock me-1"></i>
+                                Configurés
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning">
+                                <i class="bi bi-clock me-1"></i>
+                                À définir
+                            </span>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Coût Mensuel Total</span>
+                    <span class="info-value salary-highlight">
+                        {{ "{:,.0f}".format(employee.get_monthly_salary_cost(2025, 1)) }} DA
+                    </span>
+                </div>
+            </div>
         </div>
         
         <!-- Boutons d'action -->
         <div class="action-buttons">
+            <a href="{{ url_for('employees.employee_analytics', employee_id=employee.id) }}" class="btn-action btn-analytics">
+                <i class="bi bi-graph-up me-2"></i>
+                Analytics
+            </a>
+            
+            <a href="{{ url_for('employees.work_schedule', employee_id=employee.id) }}" class="btn-action btn-schedule">
+                <i class="bi bi-clock me-2"></i>
+                Horaires
+            </a>
+            
             <a href="{{ url_for('employees.edit_employee', employee_id=employee.id) }}" class="btn-action btn-edit">
                 <i class="bi bi-pencil me-2"></i>
                 Modifier

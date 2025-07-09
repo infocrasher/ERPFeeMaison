@@ -41,3 +41,86 @@ def dashboard():
                          employees_count=employees_count,
                          products_count=products_count,
                          recipes_count=recipes_count)
+
+# ==========================================
+# ROUTES POUR LES CONCEPTS DE DASHBOARD
+# ==========================================
+
+@main.route('/dashboard/concepts')
+@login_required
+def dashboard_concepts_index():
+    """Page d'index pour naviguer entre les concepts de dashboard"""
+    return render_template('main/dashboard_concepts_index.html', 
+                         title="Concepts Dashboard")
+
+@main.route('/dashboard/concept1')
+@login_required
+def dashboard_concept1():
+    """Dashboard Concept 1 - Template pour test"""
+    
+    # Calcul des statistiques pour l'affichage
+    today = date.today()
+    
+    # KPI de base
+    orders_today = Order.query.filter(
+        db.func.date(Order.created_at) == today
+    ).count()
+    
+    employees_count = Employee.query.filter(Employee.is_active == True).count()
+    products_count = Product.query.count()
+    recipes_count = Recipe.query.count()
+    
+    return render_template('main/dashboard_concept1.html', 
+                         title="Dashboard Concept 1",
+                         orders_today=orders_today,
+                         employees_count=employees_count,
+                         products_count=products_count,
+                         recipes_count=recipes_count)
+
+@main.route('/dashboard/concept2')
+@login_required
+def dashboard_concept2():
+    """Dashboard Concept 2 - Template pour test"""
+    
+    # Calcul des statistiques pour l'affichage
+    today = date.today()
+    
+    # KPI de base
+    orders_today = Order.query.filter(
+        db.func.date(Order.created_at) == today
+    ).count()
+    
+    employees_count = Employee.query.filter(Employee.is_active == True).count()
+    products_count = Product.query.count()
+    recipes_count = Recipe.query.count()
+    
+    return render_template('main/dashboard_concept2.html', 
+                         title="Dashboard Concept 2",
+                         orders_today=orders_today,
+                         employees_count=employees_count,
+                         products_count=products_count,
+                         recipes_count=recipes_count)
+
+@main.route('/dashboard/concept3')
+@login_required
+def dashboard_concept3():
+    """Dashboard Concept 3 - Template pour test"""
+    
+    # Calcul des statistiques pour l'affichage
+    today = date.today()
+    
+    # KPI de base
+    orders_today = Order.query.filter(
+        db.func.date(Order.created_at) == today
+    ).count()
+    
+    employees_count = Employee.query.filter(Employee.is_active == True).count()
+    products_count = Product.query.count()
+    recipes_count = Recipe.query.count()
+    
+    return render_template('main/dashboard_concept3.html', 
+                         title="Dashboard Concept 3",
+                         orders_today=orders_today,
+                         employees_count=employees_count,
+                         products_count=products_count,
+                         recipes_count=recipes_count)

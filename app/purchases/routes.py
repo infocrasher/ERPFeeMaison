@@ -278,6 +278,20 @@ def mark_as_paid(id):
     if form.validate_on_submit():
         purchase.is_paid = True
         purchase.payment_date = form.payment_date.data
+        
+        # Intégration comptable automatique
+        try:
+            from app.accounting.services import AccountingIntegrationService
+            AccountingIntegrationService.create_purchase_entry(
+                purchase_id=purchase.id,
+                purchase_amount=float(purchase.total_amount),
+                payment_method='cash',  # Par défaut cash, peut être amélioré avec un champ dans le formulaire
+                description=f'Achat {purchase.reference} - {purchase.supplier_name}'
+            )
+        except Exception as e:
+            print(f"Erreur intégration comptable: {e}")
+            # On continue même si l'intégration comptable échoue
+        
         db.session.commit()
         payment_date_str = form.payment_date.data.strftime("%d/%m/%Y") if form.payment_date.data else "date inconnue"
         flash(f'Bon d\'achat {purchase.reference} marqué comme payé le {payment_date_str}.', 'success')

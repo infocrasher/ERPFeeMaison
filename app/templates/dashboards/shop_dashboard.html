@@ -347,6 +347,9 @@
                         <a href="{{ url_for('status.select_employees_for_status_change', order_id=order.id, new_status='ready_at_shop') }}" class="action-btn btn-receive">
                             <i class="bi bi-check-circle me-1"></i>Reçu
                         </a>
+                        <a href="{{ url_for('orders.report_order_issue', order_id=order.id) }}" class="action-btn btn-warning">
+                            <i class="bi bi-flag me-1"></i>Signaler Erreur
+                        </a>
                     </div>
                 </div>
                 
@@ -418,6 +421,9 @@
                                 <i class="bi bi-cash-coin me-1"></i>Encaisser
                             </span>
                         {% endif %}
+                        <a href="{{ url_for('orders.report_order_issue', order_id=order.id) }}" class="action-btn btn-warning">
+                            <i class="bi bi-flag me-1"></i>Signaler Erreur
+                        </a>
                     </div>
                 </div>
                 
@@ -492,6 +498,9 @@
                                 <i class="bi bi-cash-coin me-1"></i>Encaisser
                             </span>
                         {% endif %}
+                        <a href="{{ url_for('orders.report_order_issue', order_id=order.id) }}" class="action-btn btn-warning">
+                            <i class="bi bi-flag me-1"></i>Signaler Erreur
+                        </a>
                     </div>
                 </div>
                 

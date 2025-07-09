@@ -265,6 +265,20 @@ def process_sale():
             employee_id=current_user.id
         )
         db.session.add(cash_movement)
+        db.session.flush()  # Pour obtenir l'ID du mouvement
+        
+        # Intégration comptable automatique
+        try:
+            from app.accounting.services import AccountingIntegrationService
+            AccountingIntegrationService.create_cash_movement_entry(
+                cash_movement_id=cash_movement.id,
+                amount=total_amount,
+                movement_type='in',
+                description=f'Vente POS - {len(items)} article(s)'
+            )
+        except Exception as e:
+            print(f"Erreur intégration comptable: {e}")
+            # On continue même si l'intégration comptable échoue
         
         db.session.commit()
         
@@ -347,6 +361,21 @@ def new_cash_movement():
             employee_id=current_user.id
         )
         db.session.add(movement)
+        db.session.flush()  # Pour obtenir l'ID du mouvement
+        
+        # Intégration comptable automatique
+        try:
+            from app.accounting.services import AccountingIntegrationService
+            AccountingIntegrationService.create_cash_movement_entry(
+                cash_movement_id=movement.id,
+                amount=amount,
+                movement_type='in' if movement_type == 'entrée' else 'out',
+                description=f'{reason} - {notes}'
+            )
+        except Exception as e:
+            print(f"Erreur intégration comptable: {e}")
+            # On continue même si l'intégration comptable échoue
+        
         db.session.commit()
         flash('Mouvement de caisse ajouté.', 'success')
         return redirect(url_for('sales.list_cash_movements'))
@@ -415,7 +444,7 @@ def list_delivery_debts():
 @require_open_cash_session
 def pay_delivery_debt(debt_id):
     """Encaisse une dette livreur, crée le mouvement de caisse, solde la dette"""
-    from models import CashMovement, CashRegisterSession
+    from .models import CashMovement, CashRegisterSession
     debt = DeliveryDebt.query.get_or_404(debt_id)
     if debt.paid:
         flash('Cette dette a déjà été réglée.', 'info')
@@ -441,4 +470,67 @@ def pay_delivery_debt(debt_id):
     debt.session_id = session.id
     db.session.commit()
     flash(f'Dette de {debt.amount:.2f} DA pour la commande #{debt.order_id} réglée par {debt.deliveryman.name}.', 'success')
-    return redirect(url_for('sales.list_delivery_debts')) 
+    return redirect(url_for('sales.list_delivery_debts'))
+
+@sales.route('/cash/cashout', methods=['GET', 'POST'])
+@login_required
+@require_open_cash_session
+def cashout():
+    """Dépôt de caisse vers banque (Cashout)"""
+    session = get_open_cash_session()
+    
+    if request.method == 'POST':
+        amount = float(request.form.get('amount', 0))
+        notes = request.form.get('notes', '')
+        
+        if amount <= 0:
+            flash('Le montant doit être supérieur à 0.', 'error')
+            return redirect(url_for('sales.cashout'))
+        
+        # Calculer le solde théorique actuel de la caisse
+        total_cash_in = sum(m.amount for m in session.movements if m.type == 'entrée')
+        total_cash_out = sum(m.amount for m in session.movements if m.type == 'sortie')
+        theoretical_balance = session.initial_amount + total_cash_in - total_cash_out
+        
+        if amount > theoretical_balance:
+            flash(f'Montant insuffisant en caisse. Solde disponible: {theoretical_balance:.2f} DZD', 'error')
+            return redirect(url_for('sales.cashout'))
+        
+        # Créer le mouvement de caisse (sortie)
+        cash_movement = CashMovement(
+            session_id=session.id,
+            created_at=datetime.utcnow(),
+            type='sortie',
+            amount=amount,
+            reason='Dépôt en banque (Cashout)',
+            notes=f'Dépôt bancaire - {notes}' if notes else 'Dépôt bancaire',
+            employee_id=current_user.id
+        )
+        db.session.add(cash_movement)
+        db.session.flush()  # Pour obtenir l'ID du mouvement
+        
+        # Intégration comptable automatique (Caisse → Banque)
+        try:
+            from app.accounting.services import AccountingIntegrationService
+            AccountingIntegrationService.create_bank_deposit_entry(
+                cash_movement_id=cash_movement.id,
+                amount=amount,
+                description=f'Dépôt caisse vers banque - {notes}' if notes else 'Dépôt caisse vers banque'
+            )
+        except Exception as e:
+            print(f"Erreur intégration comptable cashout: {e}")
+            # On continue même si l'intégration comptable échoue
+        
+        db.session.commit()
+        
+        flash(f'Dépôt de {amount:.2f} DZD effectué avec succès vers la banque.', 'success')
+        return redirect(url_for('sales.cash_status'))
+    
+    # Calculer les totaux pour l'affichage
+    total_cash_in = sum(m.amount for m in session.movements if m.type == 'entrée')
+    total_cash_out = sum(m.amount for m in session.movements if m.type == 'sortie')
+    theoretical_balance = session.initial_amount + total_cash_in - total_cash_out
+    
+    return render_template('sales/cashout.html', 
+                         session=session,
+                         theoretical_balance=theoretical_balance) 
