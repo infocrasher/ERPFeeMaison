@@ -441,6 +441,62 @@
                     </div>
                 </div>
                 
+                <!-- ===== SECTION RH ===== -->
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="bi bi-person-badge"></i>
+                        Ressources Humaines
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form.zk_user_id.label(class="form-label") }}
+                            {{ form.zk_user_id(class="form-control" + (" is-invalid" if form.zk_user_id.errors else ""), placeholder="001, 002, etc.") }}
+                            {% if form.zk_user_id.errors %}
+                                <div class="invalid-feedback">{{ form.zk_user_id.errors[0] }}</div>
+                            {% endif %}
+                            <div class="form-text">ID unique pour la pointeuse biométrique</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            {{ form.hourly_rate.label(class="form-label") }}
+                            <div class="input-group">
+                                {{ form.hourly_rate(class="form-control" + (" is-invalid" if form.hourly_rate.errors else ""), placeholder="1500.00", step="0.01") }}
+                                <span class="input-group-text">DA/h</span>
+                            </div>
+                            {% if form.hourly_rate.errors %}
+                                <div class="invalid-feedback">{{ form.hourly_rate.errors[0] }}</div>
+                            {% endif %}
+                            <div class="form-text">Taux horaire pour les heures supplémentaires</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cotisations Sociales -->
+                    <div class="hr-section">
+                        <div class="checkbox-wrapper" onclick="toggleInsurance()" id="insuranceWrapper">
+                            <div class="form-check-label">
+                                {{ form.is_insured(class="form-check-input", id="insuranceCheckbox") }}
+                                <div>
+                                    <strong>{{ form.is_insured.label.text }}</strong>
+                                    <div class="form-text">Cochez si l'employé bénéficie d'une assurance sociale</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mt-3" id="insuranceAmountGroup" style="display: none;">
+                            {{ form.insurance_amount.label(class="form-label") }}
+                            <div class="input-group">
+                                {{ form.insurance_amount(class="form-control" + (" is-invalid" if form.insurance_amount.errors else ""), placeholder="5000.00", step="0.01") }}
+                                <span class="input-group-text">DA</span>
+                            </div>
+                            {% if form.insurance_amount.errors %}
+                                <div class="invalid-feedback">{{ form.insurance_amount.errors[0] }}</div>
+                            {% endif %}
+                            <div class="form-text">Montant mensuel des cotisations sociales</div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Section Statut et Notes -->
                 <div class="form-section">
                     <div class="section-title">
@@ -535,14 +591,36 @@ document.addEventListener('DOMContentLoaded', function() {
         updateStatusWrapper();
     };
     
+    // Gestion de l'assurance
+    const insuranceCheckbox = document.getElementById('insuranceCheckbox');
+    const insuranceWrapper = document.getElementById('insuranceWrapper');
+    const insuranceAmountGroup = document.getElementById('insuranceAmountGroup');
+    
+    function updateInsuranceWrapper() {
+        if (insuranceCheckbox.checked) {
+            insuranceWrapper.classList.add('checked');
+            insuranceAmountGroup.style.display = 'block';
+        } else {
+            insuranceWrapper.classList.remove('checked');
+            insuranceAmountGroup.style.display = 'none';
+        }
+    }
+    
+    window.toggleInsurance = function() {
+        insuranceCheckbox.checked = !insuranceCheckbox.checked;
+        updateInsuranceWrapper();
+    };
+    
     // Event listeners
     if (salaireInput) salaireInput.addEventListener('input', updateSalaryPreview);
     if (primeInput) primeInput.addEventListener('input', updateSalaryPreview);
     if (statusCheckbox) statusCheckbox.addEventListener('change', updateStatusWrapper);
+    if (insuranceCheckbox) insuranceCheckbox.addEventListener('change', updateInsuranceWrapper);
     
     // Initialisation
     updateSalaryPreview();
     updateStatusWrapper();
+    updateInsuranceWrapper();
     
     // Validation du formulaire
     const form = document.getElementById('employeeForm');

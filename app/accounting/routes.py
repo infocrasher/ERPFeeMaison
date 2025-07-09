@@ -6,23 +6,53 @@ from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from extensions import db
 from decorators import admin_required
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from sqlalchemy import and_, or_, func
 
 from . import bp
 from .models import (Account, Journal, JournalEntry, JournalEntryLine, 
                      FiscalYear, AccountType, AccountNature, JournalType)
 from .forms import (AccountForm, JournalForm, JournalEntryForm, FiscalYearForm,
-                    AccountSearchForm, JournalEntrySearchForm)
+                    AccountSearchForm, JournalEntrySearchForm, ExpenseForm)
 
 
 @bp.route('/')
 @login_required
 @admin_required
 def dashboard():
-    """Dashboard principal de la comptabilité"""
+    """Dashboard principal de la comptabilité avec KPIs avancés"""
+    from .services import DashboardService
+    from datetime import date
     
-    # Statistiques générales
+    # Calculer les KPIs principaux
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    
+    # KPIs principaux
+    ca_jour = DashboardService.get_daily_revenue(today)
+    ca_hier = DashboardService.get_daily_revenue(yesterday)
+    ca_mensuel = DashboardService.get_monthly_revenue()
+    charges_mensuelles = DashboardService.get_monthly_expenses()
+    benefice_net = ca_mensuel - charges_mensuelles
+    solde_caisse = DashboardService.get_cash_balance()
+    solde_banque = DashboardService.get_bank_balance()
+    tresorerie_totale = solde_caisse + solde_banque
+    
+    # Tendance CA jour (comparaison avec hier)
+    if ca_hier > 0:
+        ca_jour_tendance = ((ca_jour - ca_hier) / ca_hier) * 100
+    else:
+        ca_jour_tendance = 0 if ca_jour == 0 else 100
+    
+    # Données pour les graphiques
+    revenue_trend = DashboardService.get_daily_revenue_trend(30)
+    expense_breakdown = DashboardService.get_expense_breakdown()
+    recent_transactions = DashboardService.get_recent_transactions(10)
+    
+    # Calcul des ratios
+    ratios = DashboardService.calculate_ratios(ca_mensuel, charges_mensuelles)
+    
+    # Statistiques générales (pour compatibilité)
     total_accounts = Account.query.filter_by(is_active=True).count()
     total_journals = Journal.query.filter_by(is_active=True).count()
     total_entries = JournalEntry.query.count()
@@ -31,43 +61,40 @@ def dashboard():
     # Exercice courant
     current_fiscal_year = FiscalYear.query.filter_by(is_current=True).first()
     
-    # Dernières écritures
-    recent_entries = JournalEntry.query.order_by(JournalEntry.created_at.desc()).limit(5).all()
+    # Objectif mensuel (à définir par l'utilisateur, pour l'instant fixe)
+    objectif_mensuel = 500000  # 500k DZD
+    progression_objectif = (ca_mensuel / objectif_mensuel * 100) if objectif_mensuel > 0 else 0
     
-    # Comptes avec soldes les plus importants
-    accounts_with_balance = []
-    for account in Account.query.filter_by(is_detail=True, is_active=True).limit(10):
-        balance = account.balance
-        if balance and abs(balance) > 0:
-            accounts_with_balance.append({
-                'account': account,
-                'balance': balance
-            })
-    
-    # Trier par valeur absolue du solde
-    accounts_with_balance.sort(key=lambda x: abs(x['balance']), reverse=True)
-    accounts_with_balance = accounts_with_balance[:5]
-    
-    # Calculer les KPIs pour le dashboard
-    kpis = {
-        'ca_mensuel': 0,  # À calculer à partir des ventes
-        'charges_mensuelles': 0,  # À calculer à partir des comptes de classe 6
-        'benefice_net': 0,  # CA - Charges
-        'solde_caisse': 0  # À calculer à partir du compte caisse
+    # Données pour le template
+    dashboard_data = {
+        'kpis': {
+            'ca_jour': ca_jour,
+            'ca_jour_tendance': ca_jour_tendance,
+            'ca_mensuel': ca_mensuel,
+            'charges_mensuelles': charges_mensuelles,
+            'benefice_net': benefice_net,
+            'tresorerie_totale': tresorerie_totale,
+            'solde_caisse': solde_caisse,
+            'solde_banque': solde_banque,
+            'objectif_mensuel': objectif_mensuel,
+            'progression_objectif': progression_objectif
+        },
+        'charts': {
+            'revenue_trend': revenue_trend,
+            'expense_breakdown': expense_breakdown
+        },
+        'ratios': ratios,
+        'recent_transactions': recent_transactions,
+        'stats': {
+            'total_accounts': total_accounts,
+            'total_journals': total_journals,
+            'total_entries': total_entries,
+            'validated_entries': validated_entries,
+            'current_fiscal_year': current_fiscal_year
+        }
     }
     
-    # TODO: Implémenter le calcul des KPIs réels
-    # Pour l'instant, on met des valeurs par défaut
-    
-    return render_template('accounting/dashboard.html',
-                         total_accounts=total_accounts,
-                         total_journals=total_journals,
-                         total_entries=total_entries,
-                         validated_entries=validated_entries,
-                         current_fiscal_year=current_fiscal_year,
-                         recent_entries=recent_entries,
-                         accounts_with_balance=accounts_with_balance,
-                         kpis=kpis)
+    return render_template('accounting/dashboard.html', **dashboard_data)
 
 
 # ==================== GESTION DES COMPTES ====================
@@ -395,7 +422,7 @@ def new_entry():
                     account_id=line_data['account_id'],
                     debit_amount=line_data['debit_amount'] or 0,
                     credit_amount=line_data['credit_amount'] or 0,
-                    description=line_data['description']
+                    description=line_data['line_description']
                 )
                 db.session.add(line)
                 total_debit += line.debit_amount
@@ -406,8 +433,10 @@ def new_entry():
             flash('L\'écriture n\'est pas équilibrée. Débit total : {:.2f}, Crédit total : {:.2f}'.format(
                 total_debit, total_credit), 'error')
             db.session.rollback()
+            accounts = Account.query.filter_by(is_active=True, is_detail=True).order_by(Account.code).all()
             return render_template('accounting/entries/form.html',
                                  form=form,
+                                 accounts=accounts,
                                  title="Nouvelle écriture")
         
         entry.total_amount = total_debit
@@ -416,8 +445,12 @@ def new_entry():
         flash(f'Écriture {entry.reference} créée avec succès.', 'success')
         return redirect(url_for('accounting.view_entry', entry_id=entry.id))
     
+    # Charger les comptes pour le template
+    accounts = Account.query.filter_by(is_active=True, is_detail=True).order_by(Account.code).all()
+    
     return render_template('accounting/entries/form.html',
                          form=form,
+                         accounts=accounts,
                          title="Nouvelle écriture")
 
 
@@ -466,7 +499,7 @@ def edit_entry(entry_id):
                     account_id=line_data['account_id'],
                     debit_amount=line_data['debit_amount'] or 0,
                     credit_amount=line_data['credit_amount'] or 0,
-                    description=line_data['description']
+                    description=line_data['line_description']
                 )
                 db.session.add(line)
                 total_debit += line.debit_amount
@@ -477,9 +510,11 @@ def edit_entry(entry_id):
             flash('L\'écriture n\'est pas équilibrée. Débit total : {:.2f}, Crédit total : {:.2f}'.format(
                 total_debit, total_credit), 'error')
             db.session.rollback()
+            accounts = Account.query.filter_by(is_active=True, is_detail=True).order_by(Account.code).all()
             return render_template('accounting/entries/form.html',
                                  form=form,
                                  entry=entry,
+                                 accounts=accounts,
                                  title="Modifier l'écriture")
         
         entry.total_amount = total_debit
@@ -488,9 +523,13 @@ def edit_entry(entry_id):
         flash(f'Écriture {entry.reference} modifiée avec succès.', 'success')
         return redirect(url_for('accounting.view_entry', entry_id=entry.id))
     
+    # Charger les comptes pour le template
+    accounts = Account.query.filter_by(is_active=True, is_detail=True).order_by(Account.code).all()
+    
     return render_template('accounting/entries/form.html',
                          form=form,
                          entry=entry,
+                         accounts=accounts,
                          title="Modifier l'écriture")
 
 
@@ -691,8 +730,89 @@ def list_expenses():
 @admin_required
 def new_expense():
     """Créer une nouvelle charge/dépense"""
-    # Rediriger vers la création d'écriture avec un journal de type charge
-    return redirect(url_for('accounting.new_entry'))
+    from .forms import ExpenseForm
+    
+    form = ExpenseForm()
+    
+    if form.validate_on_submit():
+        # Créer automatiquement l'écriture comptable
+        from .models import Journal, Account
+        
+        # Récupérer le journal des achats/charges
+        journal = Journal.query.filter_by(code='AC').first()
+        if not journal:
+            # Créer le journal AC s'il n'existe pas
+            journal = Journal(
+                code='AC',
+                name='Achats et Charges',
+                journal_type='PURCHASES'
+            )
+            db.session.add(journal)
+            db.session.flush()
+        
+        # Récupérer les comptes
+        expense_account = Account.query.filter_by(code=form.category.data).first()
+        
+        if form.payment_method.data == 'cash':
+            payment_account = Account.query.filter_by(code='530').first()  # Caisse
+        elif form.payment_method.data == 'bank':
+            payment_account = Account.query.filter_by(code='512').first()  # Banque
+        else:
+            payment_account = Account.query.filter_by(code='401').first()  # Fournisseurs (pour chèque)
+        
+        if not expense_account or not payment_account:
+            flash('Erreur : Comptes comptables non trouvés. Veuillez créer les comptes nécessaires.', 'error')
+            return render_template('accounting/expenses/form.html', form=form)
+        
+        # Créer l'écriture
+        entry = JournalEntry(
+            journal_id=journal.id,
+            entry_date=form.date.data,
+            reference=f"DEP{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            description=form.description.data,
+            total_amount=form.amount.data,
+            created_by=current_user.id
+        )
+        
+        db.session.add(entry)
+        db.session.flush()
+        
+        # Ligne débit (charge)
+        debit_line = JournalEntryLine(
+            entry_id=entry.id,
+            account_id=expense_account.id,
+            debit_amount=form.amount.data,
+            credit_amount=0,
+            description=form.description.data,
+            reference=form.reference.data
+        )
+        
+        # Ligne crédit (paiement)
+        credit_line = JournalEntryLine(
+            entry_id=entry.id,
+            account_id=payment_account.id,
+            debit_amount=0,
+            credit_amount=form.amount.data,
+            description=f"Paiement {form.payment_method.data}",
+            reference=form.reference.data
+        )
+        
+        db.session.add(debit_line)
+        db.session.add(credit_line)
+        
+        # Valider automatiquement si payé
+        if form.is_paid.data:
+            entry.is_validated = True
+            entry.validated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        flash(f'Dépense de {form.amount.data} DZD enregistrée avec succès.', 'success')
+        return redirect(url_for('accounting.list_expenses'))
+    
+    return render_template('accounting/expenses/form.html', 
+                         form=form,
+                         title="Nouvelle Dépense")
 
 
 @bp.route('/expenses/<int:expense_id>/edit', methods=['GET', 'POST'])
@@ -727,7 +847,7 @@ def reports():
 @login_required
 @admin_required
 def trial_balance():
-    """Balance générale"""
+    """Balance générale avec calcul du résultat net"""
     
     # Récupérer tous les comptes de détail avec leurs soldes
     accounts = Account.query.filter_by(is_detail=True, is_active=True).order_by(Account.code).all()
@@ -735,6 +855,10 @@ def trial_balance():
     balance_data = []
     total_debit = 0
     total_credit = 0
+    
+    # Variables pour le calcul du résultat net
+    total_produits = 0  # Classe 7
+    total_charges = 0   # Classe 6
     
     for account in accounts:
         balance = account.balance
@@ -753,11 +877,70 @@ def trial_balance():
                 'debit_balance': debit_balance,
                 'credit_balance': credit_balance
             })
+            
+            # Calcul du résultat net
+            if account.code.startswith('7'):  # Comptes de produits
+                total_produits += abs(balance)
+            elif account.code.startswith('6'):  # Comptes de charges
+                total_charges += abs(balance)
+    
+    # Calcul du résultat net
+    resultat_net = total_produits - total_charges
+    
+    # Déterminer si c'est un bénéfice ou une perte
+    resultat_type = "Bénéfice" if resultat_net > 0 else "Perte" if resultat_net < 0 else "Équilibre"
     
     return render_template('accounting/trial_balance.html',
                          balance_data=balance_data,
                          total_debit=total_debit,
-                         total_credit=total_credit)
+                         total_credit=total_credit,
+                         total_produits=total_produits,
+                         total_charges=total_charges,
+                         resultat_net=abs(resultat_net),
+                         resultat_type=resultat_type)
+
+
+@bp.route('/reports/profit-loss')
+@login_required
+@admin_required
+def profit_loss():
+    """Compte de résultat (Profit & Loss)"""
+    
+    # Récupérer tous les comptes de produits (classe 7) et charges (classe 6)
+    accounts = Account.query.filter_by(is_detail=True, is_active=True).order_by(Account.code).all()
+    
+    produits_data = []
+    charges_data = []
+    total_produits = 0
+    total_charges = 0
+    
+    for account in accounts:
+        balance = account.balance
+        if balance is not None and balance != 0:
+            if account.code.startswith('7'):  # Comptes de produits
+                produits_data.append({
+                    'account': account,
+                    'balance': abs(balance)
+                })
+                total_produits += abs(balance)
+            elif account.code.startswith('6'):  # Comptes de charges
+                charges_data.append({
+                    'account': account,
+                    'balance': abs(balance)
+                })
+                total_charges += abs(balance)
+    
+    # Calcul du résultat net
+    resultat_net = total_produits - total_charges
+    resultat_type = "Bénéfice" if resultat_net > 0 else "Perte" if resultat_net < 0 else "Équilibre"
+    
+    return render_template('accounting/profit_loss.html',
+                         produits_data=produits_data,
+                         charges_data=charges_data,
+                         total_produits=total_produits,
+                         total_charges=total_charges,
+                         resultat_net=abs(resultat_net),
+                         resultat_type=resultat_type)
 
 
 # ==================== API ====================

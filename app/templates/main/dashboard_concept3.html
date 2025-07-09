@@ -1,0 +1,509 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Vue d'Ensemble - Fée Maison{% endblock %}
+
+{% block head %}
+{{ super() }}
+<!-- Chart.js pour les graphiques -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- CSS spécifique au dashboard vue d'ensemble -->
+<style>
+    :root {
+        --primary-color: #2C3E50;
+        --secondary-color: #3498DB;
+        --success-color: #27AE60;
+        --warning-color: #F39C12;
+        --danger-color: #E74C3C;
+        --info-color: #17A2B8;
+        --light-gray: #F8F9FA;
+        --dark-gray: #6C757D;
+    }
+
+    body {
+        background-color: var(--light-gray);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        padding: 20px 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        cursor: pointer;
+        height: 100%;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 10px 0;
+    }
+
+    .kpi-label {
+        font-size: 1.1rem;
+        color: var(--dark-gray);
+        margin-bottom: 5px;
+    }
+
+    .kpi-trend {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .trend-up {
+        color: var(--success-color);
+    }
+
+    .trend-down {
+        color: var(--danger-color);
+    }
+
+    .alert-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .quick-nav {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        border-radius: 8px;
+        transition: background-color 0.3s ease;
+        text-decoration: none;
+        color: var(--primary-color);
+        margin-bottom: 5px;
+    }
+
+    .nav-item:hover {
+        background-color: var(--light-gray);
+        color: var(--secondary-color);
+        text-decoration: none;
+    }
+
+    .nav-item i {
+        margin-right: 10px;
+        width: 20px;
+    }
+
+    .action-buttons {
+        margin-top: 15px;
+    }
+
+    .btn-action {
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        margin-right: 10px;
+    }
+
+    .btn-primary-action {
+        background: var(--secondary-color);
+        color: white;
+    }
+
+    .btn-primary-action:hover {
+        background: #2980b9;
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    @media (max-width: 768px) {
+        .kpi-value {
+            font-size: 2rem;
+        }
+        
+        .kpi-card {
+            padding: 20px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="dashboard-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    Dashboard Vue d'Ensemble
+                </h1>
+                <p class="mb-0 opacity-75">Performance globale - <span id="currentDate"></span></p>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="d-flex justify-content-end align-items-center">
+                    <span class="badge bg-success me-2">
+                        <i class="fas fa-circle me-1"></i>
+                        Système opérationnel
+                    </span>
+                    <span class="opacity-75">Dernière mise à jour : <span id="lastUpdate"></span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="container mt-4">
+    <!-- KPI Cards Row 1 -->
+    <div class="row">
+        <div class="col-lg-4 col-md-6">
+            <div class="kpi-card position-relative" data-url="{{ url_for('sales.pos_interface') }}">
+                <div class="kpi-label">
+                    <i class="fas fa-euro-sign text-success me-2"></i>
+                    Chiffre d'Affaires Journalier
+                </div>
+                <div class="kpi-value text-success">2 847€</div>
+                <div class="kpi-trend trend-up">
+                    <i class="fas fa-arrow-up me-1"></i>
+                    +12.5% vs hier
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('sales.pos_interface') }}" class="btn-action btn-primary-action">
+                        Point de Vente
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="kpi-card position-relative" data-url="{{ url_for('dashboard.production_dashboard') }}">
+                <div class="kpi-label">
+                    <i class="fas fa-cogs text-warning me-2"></i>
+                    Commandes en Production
+                </div>
+                <div class="kpi-value text-warning">{{ orders_today }}</div>
+                <div class="kpi-trend">
+                    <span class="text-success">18 à temps</span> • 
+                    <span class="text-danger">5 urgentes</span>
+                </div>
+                <span class="badge bg-warning alert-badge">5</span>
+                <div class="action-buttons">
+                    <a href="{{ url_for('dashboard.production_dashboard') }}" class="btn-action btn-primary-action">
+                        Voir Production
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="kpi-card position-relative" data-url="{{ url_for('accounting.dashboard') }}">
+                <div class="kpi-label">
+                    <i class="fas fa-wallet text-info me-2"></i>
+                    Trésorerie Totale
+                </div>
+                <div class="kpi-value text-info">8 642€</div>
+                <div class="kpi-trend">
+                    <span class="text-muted">Caisse : 1 247€</span><br>
+                    <span class="text-muted">Banque : 7 395€</span>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('accounting.dashboard') }}" class="btn-action btn-primary-action">
+                        Comptabilité
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards Row 2 -->
+    <div class="row">
+        <div class="col-lg-4 col-md-6">
+            <div class="kpi-card position-relative" data-url="{{ url_for('stock.dashboard_magasin') }}">
+                <div class="kpi-label">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                    Alertes Stock
+                </div>
+                <div class="kpi-value text-danger">7</div>
+                <div class="kpi-trend">
+                    <span class="text-danger">Farine, Beurre, Œufs...</span>
+                </div>
+                <span class="badge bg-danger alert-badge">!</span>
+                <div class="action-buttons">
+                    <a href="{{ url_for('stock.dashboard_magasin') }}" class="btn-action btn-primary-action">
+                        Gérer Stock
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="kpi-card position-relative" data-url="{{ url_for('employees.list_employees') }}">
+                <div class="kpi-label">
+                    <i class="fas fa-users text-primary me-2"></i>
+                    Employés Actifs
+                </div>
+                <div class="kpi-value text-primary">{{ employees_count }}</div>
+                <div class="kpi-trend">
+                    <span class="text-success">8 production</span> • 
+                    <span class="text-info">4 magasin</span>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('employees.list_employees') }}" class="btn-action btn-primary-action">
+                        Gestion RH
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="kpi-card position-relative" data-url="{{ url_for('accounting.dashboard') }}">
+                <div class="kpi-label">
+                    <i class="fas fa-chart-line text-success me-2"></i>
+                    Marge Bénéficiaire
+                </div>
+                <div class="kpi-value text-success">34.2%</div>
+                <div class="kpi-trend trend-up">
+                    <i class="fas fa-arrow-up me-1"></i>
+                    +2.1% vs mois dernier
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('accounting.dashboard') }}" class="btn-action btn-primary-action">
+                        Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Navigation -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-area me-2"></i>
+                    Évolution du CA - 7 derniers jours
+                </h5>
+                <canvas id="caChart" height="300"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="quick-nav">
+                <h5 class="mb-3">
+                    <i class="fas fa-bolt me-2"></i>
+                    Accès Rapide
+                </h5>
+                <a href="{{ url_for('dashboard.production_dashboard') }}" class="nav-item">
+                    <i class="fas fa-cogs text-warning"></i>
+                    Production
+                </a>
+                <a href="{{ url_for('stock.dashboard_magasin') }}" class="nav-item">
+                    <i class="fas fa-boxes text-info"></i>
+                    Stock
+                </a>
+                <a href="{{ url_for('sales.pos_interface') }}" class="nav-item">
+                    <i class="fas fa-cash-register text-success"></i>
+                    Point de Vente
+                </a>
+                <a href="{{ url_for('orders.list_orders') }}" class="nav-item">
+                    <i class="fas fa-shopping-cart text-primary"></i>
+                    Commandes
+                </a>
+                <a href="{{ url_for('accounting.dashboard') }}" class="nav-item">
+                    <i class="fas fa-calculator text-secondary"></i>
+                    Comptabilité
+                </a>
+                <a href="{{ url_for('employees.list_employees') }}" class="nav-item">
+                    <i class="fas fa-user-tie text-info"></i>
+                    Employés
+                </a>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-nav">
+                <h5 class="mb-3">
+                    <i class="fas fa-plus me-2"></i>
+                    Actions Rapides
+                </h5>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('orders.new_customer_order') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>
+                        Nouvelle Commande
+                    </a>
+                    <a href="{{ url_for('orders.new_production_order') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-industry me-2"></i>
+                        Ordre Production
+                    </a>
+                    <a href="{{ url_for('stock.quick_entry') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-box me-2"></i>
+                        Ajustement Stock
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard Vue d\'Ensemble chargé');
+    
+    // Mise à jour de l'heure de dernière mise à jour
+    function updateLastUpdate() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('fr-FR');
+        const element = document.getElementById('lastUpdate');
+        if (element) {
+            element.textContent = timeString;
+        }
+    }
+    
+    // Affichage de la date actuelle
+    function updateCurrentDate() {
+        const now = new Date();
+        const options = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        };
+        const dateString = now.toLocaleDateString('fr-FR', options);
+        const element = document.getElementById('currentDate');
+        if (element) {
+            element.textContent = dateString;
+        }
+    }
+    
+    updateLastUpdate();
+    updateCurrentDate();
+    setInterval(updateLastUpdate, 60000);
+
+    // Chart CA Evolution
+    const ctx = document.getElementById('caChart');
+    if (ctx) {
+        new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+                datasets: [{
+                    label: 'CA Journalier (€)',
+                    data: [2340, 2580, 2120, 2890, 3200, 3450, 2847],
+                    borderColor: '#27AE60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#27AE60',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#27AE60',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                return 'CA: ' + context.parsed.y + '€';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '€';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Navigation pour les cartes KPI
+    const cards = document.querySelectorAll('.kpi-card[data-url]');
+    cards.forEach(function(card) {
+        card.addEventListener('click', function() {
+            const url = this.getAttribute('data-url');
+            if (url) {
+                window.location.href = url;
+            }
+        });
+    });
+
+    // Animation des cartes au chargement
+    const allCards = document.querySelectorAll('.kpi-card');
+    allCards.forEach(function(card, index) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(function() {
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Auto-refresh des données toutes les 5 minutes
+    setInterval(function() {
+        console.log('Rafraîchissement des données...');
+        updateLastUpdate();
+    }, 300000);
+});
+</script>
+{% endblock %}

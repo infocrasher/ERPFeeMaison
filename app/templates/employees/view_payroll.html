@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-receipt text-primary me-2"></i>
+                    Bulletin de Paie
+                </h1>
+                <div>
+                    <a href="{{ url_for('employees.payroll_dashboard') }}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-arrow-left me-2"></i>Dashboard
+                    </a>
+                    <button onclick="window.print()" class="btn btn-success">
+                        <i class="bi bi-printer me-2"></i>Imprimer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bulletin de Paie -->
+            <div class="card shadow-sm payslip-card">
+                <div class="card-header bg-primary text-white">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="mb-0">
+                                <i class="bi bi-receipt me-2"></i>
+                                Bulletin de Paie
+                            </h5>
+                            <small>Période : {{ payslip_data.period }}</small>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <h6 class="mb-0">{{ payslip_data.employee.name }}</h6>
+                            <small>{{ payslip_data.employee.get_role_display() }}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Informations Employé -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="bi bi-person me-2"></i>Informations Employé
+                            </h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="fw-bold">Nom :</td>
+                                    <td>{{ payslip_data.employee.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Poste :</td>
+                                    <td>{{ payslip_data.employee.get_role_display() }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Salaire de base :</td>
+                                    <td>{{ payslip_data.base_salary }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Période :</td>
+                                    <td>{{ payslip_data.period }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <!-- Heures Travaillées -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="bi bi-clock me-2"></i>Heures Travaillées
+                            </h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="fw-bold">Heures normales :</td>
+                                    <td>{{ payroll.work_hours.regular_hours }}h</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Heures supplémentaires :</td>
+                                    <td>{{ payroll.work_hours.overtime_hours }}h</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Jours d'absence :</td>
+                                    <td>{{ payroll.work_hours.get_total_absences() }}j</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Taux horaire :</td>
+                                    <td>{{ "{:,.2f}".format(payroll.hourly_rate) }} DA/h</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Détail des Calculs -->
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <h6 class="text-success fw-bold mb-3">
+                                <i class="bi bi-plus-circle me-2"></i>Gains
+                            </h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Heures normales</td>
+                                    <td class="text-end">{{ payslip_data.regular_amount }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Heures supplémentaires</td>
+                                    <td class="text-end">{{ payslip_data.overtime_amount }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Primes et indemnités</td>
+                                    <td class="text-end">{{ payslip_data.total_bonuses }}</td>
+                                </tr>
+                                <tr class="table-success fw-bold">
+                                    <td>Salaire Brut</td>
+                                    <td class="text-end">{{ payslip_data.gross_salary }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-4 mb-4">
+                            <h6 class="text-warning fw-bold mb-3">
+                                <i class="bi bi-percent me-2"></i>Charges Sociales
+                            </h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Sécurité sociale ({{ payroll.social_security_rate }}%)</td>
+                                    <td class="text-end">{{ payslip_data.social_security }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Assurance chômage ({{ payroll.unemployment_rate }}%)</td>
+                                    <td class="text-end">{{ payslip_data.unemployment }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Retraite ({{ payroll.retirement_rate }}%)</td>
+                                    <td class="text-end">{{ payslip_data.retirement }}</td>
+                                </tr>
+                                <tr class="table-warning fw-bold">
+                                    <td>Total Charges</td>
+                                    <td class="text-end">{{ payslip_data.total_charges }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-4 mb-4">
+                            <h6 class="text-danger fw-bold mb-3">
+                                <i class="bi bi-dash-circle me-2"></i>Déductions
+                            </h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Avances sur salaire</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(payroll.work_hours.advance_deduction) }} DA</td>
+                                </tr>
+                                <tr>
+                                    <td>Autres déductions</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(payroll.work_hours.other_deductions) }} DA</td>
+                                </tr>
+                                <tr class="table-danger fw-bold">
+                                    <td>Total Déductions</td>
+                                    <td class="text-end">{{ payslip_data.total_deductions }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Résultat Final -->
+                    <div class="row">
+                        <div class="col-md-8 offset-md-2">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h4 class="card-title mb-3">
+                                        <i class="bi bi-cash me-2"></i>Salaire Net à Payer
+                                    </h4>
+                                    <h2 class="display-4 fw-bold">{{ payslip_data.net_salary }}</h2>
+                                    <p class="mb-0">
+                                        {% if payslip_data.is_validated %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>Validé
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-clock me-1"></i>En attente de validation
+                                            </span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes de validation -->
+                    {% if payslip_data.validation_notes %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">
+                                    <i class="bi bi-chat-text me-2"></i>Notes de Validation
+                                </h6>
+                                <p class="mb-0">{{ payslip_data.validation_notes }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Métadonnées -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Bulletin généré le {{ payroll.created_at.strftime('%d/%m/%Y à %H:%M') }}
+                                {% if payroll.is_validated and payroll.validated_at %}
+                                    - Validé le {{ payroll.validated_at.strftime('%d/%m/%Y à %H:%M') }}
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .breadcrumb, .navbar {
+        display: none !important;
+    }
+    
+    .payslip-card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .card-header {
+        background-color: #333 !important;
+        color: white !important;
+    }
+    
+    .table {
+        page-break-inside: avoid;
+    }
+}
+</style>
+{% endblock %} 

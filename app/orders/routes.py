@@ -361,6 +361,21 @@ def pay_order(order_id):
         employee_id=current_user.id
     )
     db.session.add(movement)
+    db.session.flush()  # Pour obtenir l'ID du mouvement
+    
+    # Intégration comptable automatique
+    try:
+        from app.accounting.services import AccountingIntegrationService
+        AccountingIntegrationService.create_sale_entry(
+            order_id=order.id,
+            sale_amount=float(order.total_amount),
+            payment_method='cash',
+            description=f'Vente commande #{order.id} - {order.customer_name or "Client"}'
+        )
+    except Exception as e:
+        print(f"Erreur intégration comptable: {e}")
+        # On continue même si l'intégration comptable échoue
+    
     db.session.commit()
     flash(f'Commande #{order.id} encaissée avec succès ({order.total_amount:.2f} DA).', 'success')
     return redirect(url_for('orders.view_order', order_id=order.id))
@@ -446,4 +461,90 @@ def assign_deliveryman(order_id):
         return redirect(url_for('dashboard.shop_dashboard'))
     
     return render_template('orders/assign_deliveryman.html', order=order, form=form)
+
+@orders.route('/<int:order_id>/report-issue', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def report_order_issue(order_id):
+    """Signaler un problème de qualité sur une commande"""
+    from app.employees.forms import OrderIssueForm
+    from app.employees.models import OrderIssue, Employee
+    
+    order = Order.query.get_or_404(order_id)
+    form = OrderIssueForm()
+    
+    # Récupérer la liste des employés actifs pour le formulaire
+    employees = Employee.query.filter_by(is_active=True).all()
+    employee_choices = [(str(emp.id), emp.name) for emp in employees]
+    
+    # Ajouter le champ employee_id au formulaire dynamiquement
+    from wtforms import SelectField
+    from wtforms.validators import DataRequired
+    
+    if not hasattr(form, 'employee_id'):
+        form.employee_id = SelectField(
+            'Employé concerné',
+            choices=[('', '-- Sélectionner un employé --')] + employee_choices,
+            validators=[DataRequired()]
+        )
+    else:
+        form.employee_id.choices = [('', '-- Sélectionner un employé --')] + employee_choices
+    
+    if form.validate_on_submit():
+        try:
+            issue = OrderIssue(
+                order_id=order.id,
+                employee_id=int(form.employee_id.data),
+                issue_type=form.issue_type.data,
+                description=form.description.data,
+                detected_by=current_user.id,
+                is_resolved=False
+            )
+            
+            db.session.add(issue)
+            db.session.commit()
+            
+            flash(f'Problème signalé avec succès sur la commande #{order.id}', 'success')
+            return redirect(url_for('orders.view_order', order_id=order.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Erreur signalement problème: {e}", exc_info=True)
+            flash(f"Erreur lors du signalement: {e}", "danger")
+    
+    return render_template(
+        'orders/report_issue.html',
+        form=form,
+        order=order,
+        title=f'Signaler un Problème - Commande #{order.id}'
+    )
+
+@orders.route('/<int:order_id>/resolve-issue/<int:issue_id>', methods=['POST'])
+@login_required
+@admin_required
+def resolve_order_issue(order_id, issue_id):
+    """Marquer un problème comme résolu"""
+    from app.employees.models import OrderIssue
+    from datetime import datetime
+    
+    order = Order.query.get_or_404(order_id)
+    issue = OrderIssue.query.get_or_404(issue_id)
+    
+    if issue.order_id != order.id:
+        flash('Problème non trouvé pour cette commande', 'error')
+        return redirect(url_for('orders.view_order', order_id=order.id))
+    
+    try:
+        issue.is_resolved = True
+        issue.resolved_at = datetime.utcnow()
+        issue.resolution_notes = request.form.get('resolution_notes', '')
+        
+        db.session.commit()
+        flash('Problème marqué comme résolu', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erreur lors de la résolution: {e}', 'error')
+    
+    return redirect(url_for('orders.view_order', order_id=order.id))
 

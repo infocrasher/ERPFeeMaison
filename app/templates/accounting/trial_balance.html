@@ -12,7 +12,7 @@
 
     <!-- Résumé -->
     <div class="row mb-4">
-        <div class="col-md-6">
+        <div class="col-md-3">
             <div class="card bg-light">
                 <div class="card-body">
                     <h5 class="card-title">Total Débit</h5>
@@ -20,11 +20,40 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-3">
             <div class="card bg-light">
                 <div class="card-body">
                     <h5 class="card-title">Total Crédit</h5>
                     <p class="card-text fs-4 fw-bold text-danger">{{ "%.2f"|format(total_credit) }} DZD</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">Total Produits</h5>
+                    <p class="card-text fs-4 fw-bold text-info">{{ "%.2f"|format(total_produits) }} DZD</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">Total Charges</h5>
+                    <p class="card-text fs-4 fw-bold text-warning">{{ "%.2f"|format(total_charges) }} DZD</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Résultat Net -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card {% if resultat_type == 'Bénéfice' %}bg-success{% elif resultat_type == 'Perte' %}bg-danger{% else %}bg-secondary{% endif %} text-white">
+                <div class="card-body text-center">
+                    <h4 class="card-title">{{ resultat_type }}</h4>
+                    <p class="card-text display-6 fw-bold">{{ "%.2f"|format(resultat_net) }} DZD</p>
+                    <small class="text-light">Formule : Produits ({{ "%.2f"|format(total_produits) }}) - Charges ({{ "%.2f"|format(total_charges) }})</small>
                 </div>
             </div>
         </div>

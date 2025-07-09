@@ -6,4 +6,5 @@ import os
 app = create_app(os.getenv('FLASK_ENV') or 'default')
 
 if __name__ == '__main__':
-    app.run()
+    # Permettre l'accès depuis le réseau local
+    app.run(host='0.0.0.0', port=8080, debug=True)
