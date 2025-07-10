@@ -1,0 +1,630 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Concept 2 - Fée Maison{% endblock %}
+
+{% block head %}
+{{ super() }}
+<!-- Chart.js pour les graphiques -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- CSS spécifique au concept 2 -->
+<style>
+    :root {
+        --primary-dark: #0f172a;
+        --secondary-dark: #1e293b;
+        --accent-blue: #3b82f6;
+        --accent-green: #10b981;
+        --accent-purple: #8b5cf6;
+        --accent-orange: #f59e0b;
+        --text-light: #f1f5f9;
+        --text-muted: #94a3b8;
+        --glass-bg: rgba(255, 255, 255, 0.05);
+        --glass-border: rgba(255, 255, 255, 0.1);
+    }
+
+    body {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--text-light);
+        overflow-x: hidden;
+    }
+
+    .dashboard-analytics {
+        padding: 2rem;
+        position: relative;
+    }
+
+    .dashboard-analytics::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 60%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .glass-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        pointer-events: none;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.4);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .header-analytics {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .header-analytics h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+    }
+
+    .header-analytics p {
+        color: var(--text-muted);
+        font-size: 1.2rem;
+    }
+
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .kpi-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .kpi-title {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-light);
+        margin: 0.5rem 0;
+    }
+
+    .kpi-change {
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .kpi-change.positive {
+        color: var(--accent-green);
+    }
+
+    .kpi-change.negative {
+        color: #ef4444;
+    }
+
+    .kpi-change.neutral {
+        color: var(--text-muted);
+    }
+
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+    }
+
+    .kpi-icon.blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .kpi-icon.green { background: linear-gradient(135deg, #10b981, #059669); }
+    .kpi-icon.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    .kpi-icon.orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-top: 2rem;
+    }
+
+    .chart-container canvas {
+        border-radius: 12px;
+    }
+
+    .metrics-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .financial-evolution {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 2rem;
+        position: relative;
+    }
+
+    .cost-breakdown {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 2rem;
+        position: relative;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-light);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .alert-section {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .alert-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .alert-item:last-child {
+        border-bottom: none;
+    }
+
+    .alert-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #ef4444;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.9rem;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 1s ease;
+    }
+
+    .progress-fill.excellent { background: linear-gradient(90deg, #10b981, #059669); }
+    .progress-fill.good { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+    .progress-fill.warning { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .progress-fill.danger { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+    @media (max-width: 768px) {
+        .dashboard-analytics {
+            padding: 1rem;
+        }
+        
+        .header-analytics h1 {
+            font-size: 2rem;
+        }
+        
+        .kpi-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .metrics-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-analytics">
+    <!-- Header -->
+    <div class="header-analytics">
+        <h1>Dashboard Analytique</h1>
+        <p>Analyse avancée des performances - Fée Maison</p>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-title">CA Mensuel vs Objectif</div>
+                    <div class="kpi-value">89 400€</div>
+                    <div class="kpi-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        +12.5% vs objectif
+                    </div>
+                </div>
+                <div class="kpi-icon blue">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill excellent" style="width: 89%;"></div>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-title">Marge Brute</div>
+                    <div class="kpi-value">64.2%</div>
+                    <div class="kpi-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        +2.1% vs mois dernier
+                    </div>
+                </div>
+                <div class="kpi-icon green">
+                    <i class="fas fa-percentage"></i>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill good" style="width: 64%;"></div>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-title">Flux de Trésorerie</div>
+                    <div class="kpi-value">+5 847€</div>
+                    <div class="kpi-change negative">
+                        <i class="fas fa-arrow-down"></i>
+                        -8.3% vs prévision
+                    </div>
+                </div>
+                <div class="kpi-icon purple">
+                    <i class="fas fa-coins"></i>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill warning" style="width: 75%;"></div>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-title">Coût Matières Premières</div>
+                    <div class="kpi-value">28 340€</div>
+                    <div class="kpi-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        +15.7% vs budget
+                    </div>
+                </div>
+                <div class="kpi-icon orange">
+                    <i class="fas fa-box"></i>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill danger" style="width: 85%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROI et Indicateurs Avancés -->
+    <div class="glass-card">
+        <div class="section-title">
+            <i class="fas fa-chart-pie"></i>
+            ROI Employés & Indicateurs Avancés
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="kpi-title">ROI Employés</div>
+                <div class="kpi-value">89.4%</div>
+                <div class="kpi-change positive">+23% vs trimestre</div>
+                <div class="kpi-subtitle">Excellent</div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-title">Taux Rotation Stock</div>
+                <div class="kpi-value">12.4x</div>
+                <div class="kpi-change positive">Stable vs objectif</div>
+                <div class="kpi-subtitle">Optimal</div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-title">Prévision Ventes</div>
+                <div class="kpi-value">94 200€</div>
+                <div class="kpi-change positive">+7% vs tendance</div>
+                <div class="kpi-subtitle">Prévision fiable à 89%</div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-title">Indicateur Risques</div>
+                <div class="kpi-value">Medium</div>
+                <div class="kpi-change neutral">3 risques identifiés</div>
+                <div class="kpi-subtitle">Surveillance requise</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphiques et Analyses -->
+    <div class="metrics-row">
+        <div class="financial-evolution">
+            <div class="section-title">
+                <i class="fas fa-chart-area"></i>
+                Évolution Financière - 6 Mois
+            </div>
+            <div class="chart-container">
+                <canvas id="financialChart"></canvas>
+            </div>
+        </div>
+
+        <div class="cost-breakdown">
+            <div class="section-title">
+                <i class="fas fa-chart-pie"></i>
+                Répartition des Coûts
+            </div>
+            <div class="chart-container">
+                <canvas id="costChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertes Financières -->
+    <div class="alert-section">
+        <div class="section-title">
+            <i class="fas fa-exclamation-triangle"></i>
+            Alertes Financières
+        </div>
+        <div class="alert-item">
+            <div class="alert-icon">
+                <i class="fas fa-arrow-up"></i>
+            </div>
+            <div>
+                <strong>Coût matières premières en hausse</strong>
+                <div class="text-muted">Dépassement budget de 15.7% ce mois</div>
+            </div>
+        </div>
+        <div class="alert-item">
+            <div class="alert-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div>
+                <strong>Factures fournisseurs en retard</strong>
+                <div class="text-muted">3 factures à régler sous 48h</div>
+            </div>
+        </div>
+        <div class="alert-item">
+            <div class="alert-icon">
+                <i class="fas fa-target"></i>
+            </div>
+            <div>
+                <strong>Objectif mensuel à risque</strong>
+                <div class="text-muted">Nécessite +8% de ventes sur 10 jours restants</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Rapides -->
+    <div class="glass-card">
+        <div class="section-title">
+            <i class="fas fa-bolt"></i>
+            Actions Analytiques
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-outline-light w-100 mb-2">
+                    <i class="fas fa-calculator me-2"></i>
+                    Tableau de Bord Comptable
+                </a>
+            </div>
+                         <div class="col-md-3">
+                 <a href="{{ url_for('employees.payroll_dashboard') }}" class="btn btn-outline-light w-100 mb-2">
+                     <i class="fas fa-users me-2"></i>
+                     Analytics RH
+                 </a>
+             </div>
+                         <div class="col-md-3">
+                 <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-outline-light w-100 mb-2">
+                     <i class="fas fa-file-alt me-2"></i>
+                     Rapports Avancés
+                 </a>
+             </div>
+             <div class="col-md-3">
+                 <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-outline-light w-100 mb-2">
+                     <i class="fas fa-chart-bar me-2"></i>
+                     Compte de Résultat
+                 </a>
+             </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard Concept 2 (Analytique) chargé');
+    
+    // Graphique d'évolution financière
+    const financialCtx = document.getElementById('financialChart');
+    if (financialCtx) {
+        new Chart(financialCtx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin'],
+                datasets: [
+                    {
+                        label: 'Chiffre d\'Affaires',
+                        data: [78000, 82000, 85000, 87000, 89000, 89400],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Charges',
+                        data: [45000, 47000, 48000, 49000, 50000, 52000],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Bénéfice',
+                        data: [33000, 35000, 37000, 38000, 39000, 37400],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#f1f5f9'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                    },
+                    y: {
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique de répartition des coûts
+    const costCtx = document.getElementById('costChart');
+    if (costCtx) {
+        new Chart(costCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Matières Premières', 'Salaires', 'Charges', 'Marketing', 'Autres'],
+                datasets: [{
+                    data: [45, 30, 15, 7, 3],
+                    backgroundColor: [
+                        '#ef4444',
+                        '#3b82f6',
+                        '#f59e0b',
+                        '#8b5cf6',
+                        '#10b981'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#f1f5f9',
+                            padding: 20
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Animation des barres de progression
+    setTimeout(() => {
+        const progressBars = document.querySelectorAll('.progress-fill');
+        progressBars.forEach(bar => {
+            const width = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => {
+                bar.style.width = width;
+            }, 100);
+        });
+    }, 500);
+});
+</script>
+{% endblock %} 

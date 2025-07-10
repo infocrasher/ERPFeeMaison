@@ -1,0 +1,748 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Fée Maison{% endblock %}
+
+{% block head %}
+<style>
+    .form-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 15px;
+        color: white;
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+    .item-row {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    .item-row:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .action-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 25px;
+        color: white;
+        padding: 10px 20px;
+        transition: all 0.3s ease;
+    }
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        color: white;
+    }
+    .btn-add { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .btn-save { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .btn-remove { background: linear-gradient(135deg, #ff6b6b 0%, #ffa8a8 100%); }
+    
+    .autocomplete-container {
+        position: relative;
+    }
+    .autocomplete-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+    .autocomplete-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.2s ease;
+        color: #333;
+    }
+    .autocomplete-item:hover,
+    .autocomplete-item.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+    
+    .total-section {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        border-radius: 12px;
+        padding: 20px;
+        color: white;
+        text-align: center;
+    }
+    
+    .supplier-info {
+        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        color: white;
+    }
+    
+    .unit-helper {
+        font-size: 0.8em;
+        opacity: 0.9;
+        margin-top: 2px;
+    }
+    .conversion-info {
+        background: rgba(255,255,255,0.2);
+        border-radius: 6px;
+        padding: 8px;
+        margin-top: 5px;
+        font-size: 0.85em;
+    }
+    .unit-badge {
+        background: rgba(255,255,255,0.3);
+        border-radius: 12px;
+        padding: 2px 8px;
+        font-size: 0.75em;
+        margin-left: 5px;
+    }
+    
+    .stock-location-select {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        padding: 8px 12px;
+        font-size: 0.9em;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    .stock-location-select:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .stock-location-select option {
+        background: white;
+        color: #333;
+        padding: 8px;
+        font-weight: normal;
+    }
+    .stock-helper {
+        font-size: 0.75em;
+        opacity: 0.8;
+        margin-top: 3px;
+    }
+    .stock-badge {
+        background: rgba(255,255,255,0.2);
+        border-radius: 8px;
+        padding: 3px 8px;
+        font-size: 0.7em;
+        margin-top: 2px;
+        display: inline-block;
+    }
+    
+    .date-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 8px;
+        padding: 12px;
+        color: white;
+        text-align: center;
+        margin-bottom: 15px;
+    }
+</style>
+
+<script id="template-data" type="application/json">
+{
+    "available_units": [
+        {% for unit in available_units %}
+        {
+            "id": {{ unit.id }},
+            "name": "{{ unit.name }}",
+            "base_unit": "{{ unit.base_unit }}",
+            "conversion_factor": {{ unit.conversion_factor }},
+            "unit_type": "{{ unit.unit_type }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    "available_products": [
+        {% for product in available_products %}
+        {
+            "id": {{ product.id }},
+            "name": "{{ product.name }}",
+            "unit": "{{ product.unit or '' }}",
+            "cost_price": {{ product.cost_price or 0 }},
+            "stock_magasin": {{ product.stock_ingredients_magasin or 0 }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">🛒 Nouveau Bon d'Achat Fournisseur</h1>
+                    <p class="text-muted">Création avec conditionnements réels et conversions automatiques</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('purchases.list_purchases') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Retour Liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ### DEBUT DE LA CORRECTION ### -->
+    <!-- Le bloc de date manuel a été supprimé. Le champ de date est maintenant intégré au formulaire ci-dessous. -->
+    <!-- ### FIN DE LA CORRECTION ### -->
+
+    <form id="purchaseForm" method="POST">
+        {{ form.hidden_tag() }}
+        
+        <!-- Informations Fournisseur -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card form-card">
+                    <h5 class="mb-3"><i class="bi bi-building me-2"></i>Informations Fournisseur</h5>
+                    <div class="row">
+                        <!-- ### DEBUT DE LA CORRECTION ### -->
+                        <!-- Ajout du champ de date WTForms correct, à la place du champ manuel. -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.requested_date.label(class="form-label") }}
+                                {{ form.requested_date(class="form-control") }}
+                                {% if form.requested_date.errors %}
+                                    <div class="text-warning mt-1">{{ form.requested_date.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <!-- ### FIN DE LA CORRECTION ### -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.supplier_name.label(class="form-label") }}
+                                {{ form.supplier_name(class="form-control", placeholder="Nom du fournisseur") }}
+                                {% if form.supplier_name.errors %}
+                                    <div class="text-warning mt-1">{{ form.supplier_name.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                         <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.invoice_number.label(class="form-label") }}
+                                {{ form.invoice_number(class="form-control", placeholder="N° facture (optionnel)") }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.urgency.label(class="form-label") }}
+                                {{ form.urgency(class="form-control") }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                {{ form.notes.label(class="form-label") }}
+                                {{ form.notes(class="form-control", rows="3", placeholder="Notes et remarques...") }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="supplier-info">
+                    <h6><i class="bi bi-magic me-2"></i>Innovation : Conditionnements Réels</h6>
+                    <small>
+                        📦 <strong>Produit :</strong> Unité de base (depuis table products)<br><br>
+                        🎯 <strong>Conditionnement :</strong> Comment vous achetez (25kg, 5L, 250g)<br><br>
+                        🔄 <strong>Conversion auto :</strong> 2 × 25kg = 50kg au stock<br><br>
+                        ✅ <strong>Double traçabilité :</strong> Achat original + conversion<br><br>
+                        🏪 <strong>Stock intelligent :</strong> Choisissez où stocker chaque produit
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lignes d'Achat -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card form-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5><i class="bi bi-cart me-2"></i>Lignes d'Achat avec Conditionnements</h5>
+                        <button type="button" class="action-btn btn-add" id="addItemBtn">
+                            <i class="bi bi-plus-circle me-2"></i>Ajouter Produit
+                        </button>
+                    </div>
+                    
+                    <div id="itemsContainer">
+                        <!-- Les lignes d'achat seront ajoutées ici dynamiquement -->
+                    </div>
+                    
+                    <div class="alert alert-info mt-3" id="emptyItemsMessage">
+                        <i class="bi bi-info-circle me-2"></i>Cliquez sur "Ajouter Produit" pour commencer votre bon d'achat avec conditionnements intelligents
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total et Validation -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="action-btn btn-save" name="submit" value="save">
+                        <i class="bi bi-save me-2"></i>Enregistrer et Réceptionner
+                    </button>
+                    <a href="{{ url_for('purchases.list_purchases') }}" class="btn btn-outline-light">Annuler</a>
+                </div>
+                <small class="text-muted mt-2 d-block">
+                    💡 Le bon sera automatiquement marqué comme "Reçu" et le stock sera mis à jour
+                </small>
+            </div>
+            <div class="col-md-4">
+                <div class="total-section">
+                    <h5>💰 Total Bon d'Achat</h5>
+                    <h3 id="totalAmount">0,00 DA</h3>
+                    <small id="itemCount">0 produit(s)</small>
+                    <div id="conversionSummary" class="mt-2 unit-helper"></div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Template pour ligne d'achat avec sélection stock -->
+<template id="itemRowTemplate">
+    <div class="item-row" data-item-index="">
+        <div class="row align-items-center">
+            <div class="col-md-2">
+                <label class="form-label">🔍 Produit</label>
+                <div class="autocomplete-container">
+                    <input type="text" 
+                           class="form-control product-search" 
+                           placeholder="Tapez 2-3 lettres (ex: FA pour Farine)"
+                           autocomplete="off">
+                    <input type="hidden" class="product-id" name="items[][product_id]">
+                    <input type="hidden" class="item-id" name="items[][id]">
+                    <div class="autocomplete-suggestions"></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">📦 Conditionnement</label>
+                <select class="form-control unit-select" name="items[][unit]">
+                    <option value="">Unité standard</option>
+                    <!-- Options seront ajoutées dynamiquement -->
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">Quantité</label>
+                <input type="number" 
+                       class="form-control item-quantity" 
+                       name="items[][quantity_ordered]" 
+                       placeholder="0"
+                       min="1"
+                       step="1">
+                <small class="quantity-helper text-muted"></small>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Prix Unitaire</label>
+                <input type="number" 
+                       class="form-control item-price" 
+                       name="items[][unit_price]" 
+                       placeholder="0,00"
+                       min="0"
+                       step="0.01">
+                <small class="price-helper text-muted"></small>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">🏪 Stock Destination</label>
+                <select class="form-control stock-location-select" name="items[][stock_location]" required>
+                    <option value="ingredients_magasin">🏪 Stock Magasin</option>
+                    <option value="ingredients_local">🏭 Stock Local</option>
+                    <option value="comptoir">🛒 Stock Comptoir</option>
+                    <option value="consommables">📦 Stock Consommables</option>
+                </select>
+                <small class="stock-helper">Où stocker ce produit</small>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Total</label>
+                <div class="fw-bold item-total">0,00 DA</div>
+                <small class="total-helper text-muted"></small>
+            </div>
+            <div class="col-md-1 text-end">
+                <button type="button" class="action-btn btn-remove remove-item-btn">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="conversion-info" style="display: none;">
+            <div class="row">
+                <div class="col-md-8">
+                    <strong>💡 Conversion automatique :</strong>
+                    <span class="conversion-text"></span>
+                </div>
+                <div class="col-md-4">
+                    <span class="stock-badge">
+                        <i class="bi bi-box me-1"></i>
+                        <span class="stock-destination-display">Stock sélectionné</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let itemIndex = 0;
+let availableProducts = [];
+let availableUnits = [];
+let templateData = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadTemplateData();
+    
+    addItemRow();
+    
+    document.getElementById('addItemBtn').addEventListener('click', addItemRow);
+});
+
+function loadTemplateData() {
+    try {
+        const dataScript = document.getElementById('template-data');
+        templateData = JSON.parse(dataScript.textContent);
+        availableUnits = templateData.available_units;
+        availableProducts = templateData.available_products;
+    } catch (error) {
+        console.error('Erreur chargement données template:', error);
+        availableUnits = [];
+        availableProducts = [];
+    }
+}
+
+function addItemRow() {
+    const container = document.getElementById('itemsContainer');
+    const template = document.getElementById('itemRowTemplate');
+    const clone = template.content.cloneNode(true);
+    
+    const itemRow = clone.querySelector('.item-row');
+    itemRow.setAttribute('data-item-index', itemIndex);
+    
+    const unitSelect = clone.querySelector('.unit-select');
+    availableUnits.forEach(unit => {
+        const option = document.createElement('option');
+        option.value = unit.id;
+        option.textContent = unit.name;
+        option.setAttribute('data-factor', unit.conversion_factor);
+        option.setAttribute('data-base', unit.base_unit);
+        option.setAttribute('data-type', unit.unit_type);
+        unitSelect.appendChild(option);
+    });
+    
+    container.appendChild(clone);
+    
+    const addedRow = container.lastElementChild;
+    setupRowEvents(addedRow, itemIndex);
+    
+    document.getElementById('emptyItemsMessage').style.display = 'none';
+    
+    itemIndex++;
+}
+
+function setupRowEvents(itemRow, index) {
+    const searchInput = itemRow.querySelector('.product-search');
+    const unitSelect = itemRow.querySelector('.unit-select');
+    const quantityInput = itemRow.querySelector('.item-quantity');
+    const priceInput = itemRow.querySelector('.item-price');
+    const stockSelect = itemRow.querySelector('.stock-location-select');
+    const removeBtn = itemRow.querySelector('.remove-item-btn');
+    
+    setupAutocomplete(searchInput, index);
+    
+    quantityInput.addEventListener('input', function() {
+        updateConversionDisplay(index);
+        calculateItemTotal(index);
+    });
+    
+    let priceTimeout;
+    priceInput.addEventListener('input', function() {
+        updateConversionDisplay(index);
+        clearTimeout(priceTimeout);
+        priceTimeout = setTimeout(function() {
+            calculateItemTotal(index);
+        }, 500);
+    });
+
+    unitSelect.addEventListener('change', function() {
+        updateConversionDisplay(index);
+        calculateItemTotal(index);
+    });
+    
+    stockSelect.addEventListener('change', function() {
+        updateStockDisplay(index);
+        updateConversionDisplay(index);
+    });
+    
+    removeBtn.addEventListener('click', function() {
+        removeItemRow(index);
+    });
+    
+    updateStockDisplay(index);
+}
+
+function updateStockDisplay(index) {
+    const row = document.querySelector(`[data-item-index="${index}"]`);
+    if (!row) return;
+    
+    const stockSelect = row.querySelector('.stock-location-select');
+    const stockDisplay = row.querySelector('.stock-destination-display');
+    
+    if (stockSelect && stockDisplay) {
+        const selectedOption = stockSelect.selectedOptions[0];
+        if (selectedOption) {
+            stockDisplay.textContent = selectedOption.textContent;
+        }
+    }
+}
+
+function calculateItemTotal(index) {
+    const row = document.querySelector(`[data-item-index="${index}"]`);
+    if (!row) return;
+    
+    const quantityInput = row.querySelector('.item-quantity');
+    const priceInput = row.querySelector('.item-price');
+    const totalElement = row.querySelector('.item-total');
+    
+    const quantity = parseFloat(quantityInput.value) || 0;
+    const price = parseFloat(priceInput.value) || 0;
+    
+    const total = quantity * price;
+    
+    totalElement.textContent = total.toLocaleString('fr-FR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }) + ' DA';
+    
+    calculateGrandTotal();
+}
+
+function calculateGrandTotal() {
+    let grandTotal = 0;
+    let itemCount = 0;
+    let conversionSummary = [];
+    let stockSummary = {};
+    
+    document.querySelectorAll('.item-row').forEach(function(row) {
+        const quantityInput = row.querySelector('.item-quantity');
+        const priceInput = row.querySelector('.item-price');
+        const unitSelect = row.querySelector('.unit-select');
+        const stockSelect = row.querySelector('.stock-location-select');
+        
+        const quantity = parseFloat(quantityInput.value) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        
+        if (quantity > 0 && price > 0) {
+            grandTotal += quantity * price;
+            itemCount++;
+            
+            if (unitSelect.value) {
+                const selectedOption = unitSelect.selectedOptions[0];
+                const factor = parseFloat(selectedOption.getAttribute('data-factor'));
+                const baseUnit = selectedOption.getAttribute('data-base');
+                const totalBase = quantity * factor;
+                
+                const stockLocation = stockSelect.value;
+                const stockLabel = stockSelect.selectedOptions[0].textContent;
+                
+                if (!stockSummary[stockLocation]) {
+                    stockSummary[stockLocation] = {
+                        label: stockLabel,
+                        items: []
+                    };
+                }
+                
+                stockSummary[stockLocation].items.push(`${totalBase}${baseUnit}`);
+            }
+        }
+    });
+    
+    document.getElementById('totalAmount').textContent = grandTotal.toLocaleString('fr-FR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }) + ' DA';
+    
+    document.getElementById('itemCount').textContent = itemCount + ' produit(s)';
+    
+    const summaryElement = document.getElementById('conversionSummary');
+    if (Object.keys(stockSummary).length > 0) {
+        let summaryText = '📦 Impact stock :<br>';
+        for (const [location, data] of Object.entries(stockSummary)) {
+            summaryText += `${data.label}: ${data.items.join(' + ')}<br>`;
+        }
+        summaryElement.innerHTML = summaryText;
+    } else {
+        summaryElement.innerHTML = '';
+    }
+}
+
+function updateConversionDisplay(index) {
+    const row = document.querySelector(`[data-item-index="${index}"]`);
+    if (!row) return;
+    
+    const unitSelect = row.querySelector('.unit-select');
+    const quantityInput = row.querySelector('.item-quantity');
+    const priceInput = row.querySelector('.item-price');
+    const stockSelect = row.querySelector('.stock-location-select');
+    const quantityHelper = row.querySelector('.quantity-helper');
+    const priceHelper = row.querySelector('.price-helper');
+    const totalHelper = row.querySelector('.total-helper');
+    const conversionInfo = row.querySelector('.conversion-info');
+    const conversionText = row.querySelector('.conversion-text');
+    
+    const quantity = parseFloat(quantityInput.value) || 0;
+    const price = parseFloat(priceInput.value) || 0;
+    
+    if (unitSelect.value && quantity > 0) {
+        const selectedOption = unitSelect.selectedOptions[0];
+        const factor = parseFloat(selectedOption.getAttribute('data-factor'));
+        if (factor > 0) {
+            const baseUnit = selectedOption.getAttribute('data-base');
+            const totalBase = quantity * factor;
+            
+            quantityHelper.textContent = `= ${totalBase.toFixed(3)}${baseUnit} total`;
+            if (price > 0) {
+                priceHelper.textContent = `= ${(price / factor).toFixed(4)} DA/${baseUnit}`;
+            }
+            totalHelper.textContent = `${quantity} × ${selectedOption.textContent}`;
+            
+            const stockLabel = stockSelect.selectedOptions[0].textContent;
+            conversionText.textContent = `${quantity} × ${selectedOption.textContent} = ${totalBase.toFixed(3)}${baseUnit} ajoutés au ${stockLabel}`;
+            conversionInfo.style.display = 'block';
+        } else {
+            conversionInfo.style.display = 'none';
+        }
+    } else {
+        quantityHelper.textContent = '';
+        priceHelper.textContent = '';
+        totalHelper.textContent = '';
+        conversionInfo.style.display = 'none';
+    }
+}
+
+function setupAutocomplete(inputElement, index) {
+    const suggestionsContainer = inputElement.parentNode.querySelector('.autocomplete-suggestions');
+    
+    inputElement.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        
+        if (query.length >= 2) {
+            const filteredProducts = availableProducts.filter(product => 
+                product.name.toLowerCase().includes(query)
+            );
+            showSuggestions(filteredProducts, suggestionsContainer, inputElement, index);
+        } else {
+            hideSuggestions(suggestionsContainer);
+        }
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (!inputElement.contains(e.target)) {
+            hideSuggestions(suggestionsContainer);
+        }
+    });
+}
+
+function showSuggestions(products, container, inputElement, index) {
+    container.innerHTML = '';
+    
+    if (products.length === 0) {
+        container.innerHTML = '<div class="autocomplete-item">Aucun produit trouvé</div>';
+    } else {
+        products.forEach(function(product) {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.innerHTML = `<strong>${product.name}</strong><span class="unit-badge">${product.unit || 'unité'}</span><br>` +
+                           `<small class="text-muted">Stock magasin: ${product.stock_magasin || 0} ${product.unit || 'unités'}</small>`;
+            
+            div.addEventListener('click', function() {
+                selectProduct(inputElement, index, product);
+            });
+            
+            container.appendChild(div);
+        });
+    }
+    
+    container.style.display = 'block';
+}
+
+function hideSuggestions(container) {
+    container.style.display = 'none';
+}
+
+function selectProduct(inputElement, index, productData) {
+    inputElement.value = productData.name;
+    
+    const row = document.querySelector(`[data-item-index="${index}"]`);
+    const hiddenInput = row.querySelector('.product-id');
+    hiddenInput.value = productData.id;
+    
+    hideSuggestions(inputElement.parentNode.querySelector('.autocomplete-suggestions'));
+}
+
+function removeItemRow(index) {
+    const row = document.querySelector(`[data-item-index="${index}"]`);
+    if (row) {
+        row.remove();
+        calculateGrandTotal();
+        
+        const remainingRows = document.querySelectorAll('.item-row');
+        if (remainingRows.length === 0) {
+            document.getElementById('emptyItemsMessage').style.display = 'block';
+        }
+    }
+}
+
+document.getElementById('purchaseForm').addEventListener('submit', function(e) {
+    const rows = document.querySelectorAll('.item-row');
+    let hasValidItems = false;
+    
+    rows.forEach(function(row) {
+        const productId = row.querySelector('.product-id').value;
+        const quantity = row.querySelector('.item-quantity').value;
+        const price = row.querySelector('.item-price').value;
+        const stockLocation = row.querySelector('.stock-location-select').value;
+        
+        if (productId && quantity && price && stockLocation) {
+            hasValidItems = true;
+        }
+    });
+    
+    if (!hasValidItems) {
+        e.preventDefault();
+        alert('Veuillez ajouter au moins un produit avec quantité, prix et destination stock');
+        return false;
+    }
+    
+    const supplierName = document.querySelector('input[name="supplier_name"]').value;
+    if (!supplierName.trim()) {
+        e.preventDefault();
+        alert('Veuillez renseigner le nom du fournisseur');
+        return false;
+    }
+});
+</script>
+{% endblock %}

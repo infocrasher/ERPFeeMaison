@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">{{ title|default('Nouvelle Écriture Comptable') }}</h3>
+        </div>
+        <form method="POST" novalidate id="entry-form">
+            <div class="card-body">
+                {{ form.hidden_tag() }}
+                
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        {{ form.entry_date.label(class="form-label") }}
+                        {{ form.entry_date(class="form-control") }}
+                        {% if form.entry_date.errors %}
+                            <div class="text-danger">
+                                {% for error in form.entry_date.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        {{ form.accounting_date.label(class="form-label") }}
+                        {{ form.accounting_date(class="form-control") }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        {{ form.journal_id.label(class="form-label") }}
+                        {{ form.journal_id(class="form-select") }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        {{ form.reference_document.label(class="form-label") }}
+                        {{ form.reference_document(class="form-control") }}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control") }}
+                </div>
+                
+                <hr>
+                
+                <h5>Lignes d'écriture</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="entry-lines-table">
+                        <thead>
+                            <tr>
+                                <th>Compte</th>
+                                <th>Description</th>
+                                <th>Débit</th>
+                                <th>Crédit</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line_form in form.lines %}
+                                <tr class="entry-line">
+                                    <td>
+                                        {{ line_form.account_id(class="form-select") }}
+                                        {{ line_form.hidden_tag() }}
+                                    </td>
+                                    <td>
+                                        {{ line_form.line_description(class="form-control") }}
+                                    </td>
+                                    <td>
+                                        {{ line_form.debit_amount(class="form-control debit-input", oninput="updateTotals()") }}
+                                    </td>
+                                    <td>
+                                        {{ line_form.credit_amount(class="form-control credit-input", oninput="updateTotals()") }}
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-danger btn-sm remove-line-btn">×</button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2"><strong>Totaux</strong></td>
+                                <td><strong id="total-debit">0.00</strong></td>
+                                <td><strong id="total-credit">0.00</strong></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="mb-3">
+                    <button type="button" class="btn btn-secondary" id="add-line-btn">
+                        <i class="fas fa-plus"></i> Ajouter une ligne
+                    </button>
+                </div>
+                
+                <div class="alert alert-info" id="balance-alert" style="display: none;">
+                    <i class="fas fa-info-circle"></i> L'écriture doit être équilibrée (Total Débit = Total Crédit)
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+                <a href="{{ url_for('accounting.list_entries') }}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function updateTotals() {
+    let totalDebit = 0;
+    let totalCredit = 0;
+    
+    document.querySelectorAll('.debit-input').forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        totalDebit += value;
+    });
+    
+    document.querySelectorAll('.credit-input').forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        totalCredit += value;
+    });
+    
+    document.getElementById('total-debit').textContent = totalDebit.toFixed(2);
+    document.getElementById('total-credit').textContent = totalCredit.toFixed(2);
+    
+    const balanceAlert = document.getElementById('balance-alert');
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+        balanceAlert.style.display = 'block';
+        balanceAlert.className = 'alert alert-warning';
+        balanceAlert.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Écriture déséquilibrée : Débit = ' + totalDebit.toFixed(2) + ', Crédit = ' + totalCredit.toFixed(2);
+    } else if (totalDebit > 0 && totalCredit > 0) {
+        balanceAlert.style.display = 'block';
+        balanceAlert.className = 'alert alert-success';
+        balanceAlert.innerHTML = '<i class="fas fa-check-circle"></i> Écriture équilibrée';
+    } else {
+        balanceAlert.style.display = 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateTotals();
+    
+    // Gestion des boutons de suppression
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-line-btn')) {
+            e.target.closest('tr').remove();
+            updateTotals();
+        }
+    });
+    
+    // Bouton d'ajout de ligne
+    document.getElementById('add-line-btn').addEventListener('click', function() {
+        // Pour l'instant, on affiche un message
+        alert('Fonctionnalité d\'ajout de ligne à implémenter');
+    });
+});
+</script>
+{% endblock %}

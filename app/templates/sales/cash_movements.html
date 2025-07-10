@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Historique des mouvements de caisse – Fée Maison{% endblock %}
+
+{% block head %}
+<style>
+    :root {
+        --primary-color: #2C3E50;
+        --secondary-color: #3498DB;
+        --accent-color: #E74C3C;
+        --success-color: #27AE60;
+        --warning-color: #F39C12;
+        --light-bg: #ECF0F1;
+        --dark-text: #2C3E50;
+        --light-text: #7F8C8D;
+        --white: #FFFFFF;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--light-bg);
+        min-height: 100vh;
+        margin: 0;
+    }
+
+    .pos-container {
+        max-width: 1000px;
+        margin: 40px auto;
+        background: var(--white);
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        padding: 30px;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .page-header h1 {
+        color: var(--primary-color);
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .page-header p {
+        color: var(--light-text);
+        font-size: 1rem;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 30px;
+    }
+
+    .data-table th, .data-table td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .data-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .data-table tr:hover {
+        background: #f8f9fa;
+    }
+
+    .type-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .type-in {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .type-out {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .type-sale {
+        background: #cce5ff;
+        color: #004085;
+    }
+
+    .type-order {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .amount-cell {
+        font-weight: 600;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .amount-in {
+        color: var(--success-color);
+    }
+
+    .amount-out {
+        color: var(--accent-color);
+    }
+
+    .actions-cell {
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .btn-outline {
+        background: transparent;
+        border: 2px solid var(--light-text);
+        color: var(--light-text);
+    }
+
+    .btn-outline:hover {
+        border-color: var(--secondary-color);
+        color: var(--secondary-color);
+    }
+
+    .no-movements {
+        text-align: center;
+        padding: 40px 0;
+        color: var(--light-text);
+    }
+
+    .no-movements i {
+        font-size: 2rem;
+        opacity: 0.6;
+        margin-bottom: 10px;
+    }
+
+    @media (max-width: 768px) {
+        .pos-container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .data-table th, .data-table td {
+            padding: 8px 12px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pos-container">
+    <div class="page-header">
+        <h1><i class="bi bi-cash-coin"></i> Historique des mouvements de caisse</h1>
+        <p>Tous les mouvements d'entrée et de sortie de caisse</p>
+    </div>
+
+    <div class="table-container">
+        {% if movements %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Montant</th>
+                    <th>Motif</th>
+                    <th>Employé</th>
+                    <th>Remarques</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for movement in movements %}
+                <tr>
+                    <td>{{ movement.id }}</td>
+                    <td>{{ movement.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        {% if movement.type == 'entrée' %}
+                            {% if 'Vente POS' in movement.reason %}
+                                <span class="type-badge type-sale"><i class="bi bi-cart-check"></i> Vente POS</span>
+                            {% elif 'Vente commande' in movement.reason %}
+                                <span class="type-badge type-order"><i class="bi bi-receipt"></i> Commande</span>
+                            {% else %}
+                                <span class="type-badge type-in"><i class="bi bi-plus-lg"></i> Entrée</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="type-badge type-out"><i class="bi bi-dash-lg"></i> Sortie</span>
+                        {% endif %}
+                    </td>
+                    <td class="amount-cell {% if movement.type == 'entrée' %}amount-in{% else %}amount-out{% endif %}">
+                        {{ movement.amount|round(2) }} DA
+                    </td>
+                    <td>{{ movement.reason }}</td>
+                    <td>{{ movement.employee.name if movement.employee else 'N/A' }}</td>
+                    <td>{{ movement.notes if movement.notes else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-movements">
+            <i class="bi bi-cash-coin"></i>
+            <div><strong>Aucun mouvement de caisse trouvé</strong></div>
+            <small>Créez un nouveau mouvement pour commencer</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

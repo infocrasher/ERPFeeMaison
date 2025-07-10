@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec retour -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">📊 Analytics - {{ employee.name }}</h1>
+                    <p class="text-muted">{{ employee.get_role_display() }}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('employees.view_employee', employee_id=employee.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🆕 Sélecteur de période -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">📅 Période d'analyse</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="row g-3">
+                        {{ period_form.hidden_tag() }}
+                        
+                        <div class="col-md-4">
+                            {{ period_form.period_type.label(class="form-label") }}
+                            {{ period_form.period_type(class="form-select") }}
+                        </div>
+                        
+                        <div class="col-md-3" id="custom-dates" style="display: none;">
+                            {{ period_form.start_date.label(class="form-label") }}
+                            {{ period_form.start_date(class="form-control") }}
+                        </div>
+                        
+                        <div class="col-md-3" id="custom-dates-end" style="display: none;">
+                            {{ period_form.end_date.label(class="form-label") }}
+                            {{ period_form.end_date(class="form-control") }}
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary d-block">
+                                <i class="fas fa-search"></i> Analyser
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar"></i> 
+                            Période actuelle : {{ kpis.start_date.strftime('%d/%m/%Y') }} - {{ kpis.end_date.strftime('%d/%m/%Y') }}
+                            ({{ kpis.days_in_period }} jours)
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not kpis.can_be_evaluated %}
+    <!-- Message pour employés non évaluables -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="alert alert-info">
+                <h4><i class="fas fa-info-circle"></i> Employé en Support</h4>
+                <p class="mb-0">
+                    Les employés en support ({{ kpis.role_display }}) ne sont pas évalués sur les KPI de performance.
+                    Seuls les indicateurs de présence et ponctualité sont suivis.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    
+    <!-- 🏆 Score Composite -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">🏆 Score de Performance Global</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="score-circle">
+                                <div class="score-value">{{ "%.1f"|format(kpis.composite_score) }}</div>
+                                <div class="score-label">Score Global</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="grade-display">
+                                <div class="grade-value grade-{{ kpis.grade.lower().replace('+', 'plus') }}">{{ kpis.grade }}</div>
+                                <div class="grade-label">Grade</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Basé sur : Productivité (30%), Qualité (25%), Polyvalence (20%), Ponctualité (15%), Présence (10%)
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💰 KPI Financiers -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">💰 Performance Financière</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-success">{{ "{:,.0f}".format(kpis.total_ca) }} DA</div>
+                                <div class="stat-label">CA {% if kpis.is_production %}Produit{% else %}Encaissé{% endif %}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-info">{{ "{:,.0f}".format(kpis.period_cost) }} DA</div>
+                                <div class="stat-label">Coût Période</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card text-center">
+                                <div class="stat-value {% if kpis.profit > 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {{ "{:,.0f}".format(kpis.profit) }} DA
+                                </div>
+                                <div class="stat-label">Profit</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card text-center">
+                                <div class="stat-value {% if kpis.roi_employee > 100 %}text-success{% elif kpis.roi_employee > 50 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(kpis.roi_employee) }}%
+                                </div>
+                                <div class="stat-label">ROI Employé</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-primary">{{ "%.1f"|format(kpis.profitability) }}%</div>
+                                <div class="stat-label">Rentabilité</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-warning">{{ "%.1f"|format(kpis.target_achievement) }}%</div>
+                                <div class="stat-label">Objectif Atteint</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-secondary">{{ "{:,.0f}".format(kpis.ca_per_order) }} DA</div>
+                                <div class="stat-label">CA / Commande</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⚡ KPI Productivité -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">⚡ Productivité</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-primary">{{ kpis.orders_count }}</div>
+                                <div class="stat-label">Commandes {% if kpis.is_production %}Produites{% else %}Traitées{% endif %}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-success">{{ "{:,.0f}".format(kpis.ca_per_hour) }} DA</div>
+                                <div class="stat-label">CA / Heure</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-info">{{ "%.1f"|format(kpis.orders_per_hour) }}</div>
+                                <div class="stat-label">Commandes / Heure</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-secondary">{{ "%.1f"|format(kpis.estimated_hours_per_week) }}h</div>
+                                <div class="stat-label">Heures / Semaine</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 🎯 KPI Qualité & Polyvalence -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">🎯 Qualité & Polyvalence</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="stat-card text-center">
+                                <div class="stat-value {% if kpis.error_rate < 5 %}text-success{% elif kpis.error_rate < 10 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(kpis.error_rate) }}%
+                                </div>
+                                <div class="stat-label">Taux d'Erreur</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-danger">{{ kpis.issues_count }}</div>
+                                <div class="stat-label">Problèmes Détectés</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-primary">{{ "%.1f"|format(kpis.polyvalence_score) }}%</div>
+                                <div class="stat-label">Score Polyvalence</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-info">{{ kpis.distinct_products }}/{{ kpis.total_products }}</div>
+                                <div class="stat-label">Produits Maîtrisés</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📈 Évolution Mensuelle -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">📈 Évolution Mensuelle</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Mois</th>
+                                    <th>CA</th>
+                                    <th>Commandes</th>
+                                    <th>CA / Commande</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for month in kpis.monthly_stats %}
+                                <tr>
+                                    <td>{{ month.month }}</td>
+                                    <td>{{ "{:,.0f}".format(month.ca) }} DA</td>
+                                    <td>{{ month.orders }}</td>
+                                    <td>{{ "{:,.0f}".format(month.ca_per_order) }} DA</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⏰ KPI Temps & Présence (Données Réelles) -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">⏰ Présence & Ponctualité</h5>
+                </div>
+                <div class="card-body">
+                    {% if employee.zk_user_id %}
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-check-circle"></i> Pointeuse ZKTeco configurée</h6>
+                            <p class="mb-0">
+                                ID Pointeuse : <strong>{{ employee.zk_user_id }}</strong> - Données en temps réel disponibles
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Pointeuse non configurée</h6>
+                            <p class="mb-0">
+                                Aucun ID pointeuse configuré pour cet employé. Les données sont estimées.
+                            </p>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="stat-card text-center">
+                                <div class="stat-value {% if kpis.attendance_rate >= 90 %}text-success{% elif kpis.attendance_rate >= 75 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(kpis.attendance_rate) }}%
+                                </div>
+                                <div class="stat-label">Taux de Présence</div>
+                                <small class="text-muted">{% if employee.zk_user_id %}(Réel){% else %}(Estimé){% endif %}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card text-center">
+                                <div class="stat-value {% if kpis.punctuality_rate >= 90 %}text-success{% elif kpis.punctuality_rate >= 75 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(kpis.punctuality_rate) }}%
+                                </div>
+                                <div class="stat-label">Ponctualité</div>
+                                <small class="text-muted">{% if employee.zk_user_id %}(Réel){% else %}(Estimé){% endif %}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card text-center">
+                                <div class="stat-value text-info">{{ "%.1f"|format(kpis.actual_hours_period) }}h</div>
+                                <div class="stat-label">Heures {% if employee.zk_user_id %}Réelles{% else %}Estimées{% endif %}</div>
+                                <small class="text-muted">Sur la période</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card text-center">
+                                <div class="stat-value {% if kpis.overtime_hours > 0 %}text-warning{% else %}text-secondary{% endif %}">
+                                    {{ "%.1f"|format(kpis.overtime_hours) }}h
+                                </div>
+                                <div class="stat-label">Heures Sup.</div>
+                                <small class="text-muted">{% if employee.zk_user_id %}(Réel){% else %}(À venir){% endif %}</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if employee.zk_user_id and kpis.attendance_details %}
+                    <!-- Détails de présence -->
+                    <div class="mt-4">
+                        <h6>Détails de présence</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="stat-card text-center">
+                                    <div class="stat-value text-success">{{ kpis.days_present }}</div>
+                                    <div class="stat-label">Jours Présent</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card text-center">
+                                    <div class="stat-value text-danger">{{ kpis.days_absent }}</div>
+                                    <div class="stat-label">Jours Absent</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card text-center">
+                                    <div class="stat-value text-warning">{{ kpis.late_arrivals }}</div>
+                                    <div class="stat-label">Retards</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% endif %}
+</div>
+
+<style>
+/* Styles pour le score composite */
+.score-circle {
+    display: inline-block;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid #007bff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.score-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.score-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.grade-display {
+    display: inline-block;
+    width: 120px;
+    height: 120px;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.grade-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: white;
+}
+
+.grade-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Grades par couleur */
+.grade-aplus { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+.grade-a { background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%); }
+.grade-b { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); }
+.grade-c { background: linear-gradient(135deg, #fd7e14 0%, #dc3545 100%); }
+.grade-d { background: linear-gradient(135deg, #dc3545 0%, #6f42c1 100%); }
+
+/* Styles pour les stats */
+.stat-card {
+    padding: 1rem;
+    border-radius: 8px;
+    background: #f8f9fa;
+    margin-bottom: 1rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .score-circle, .grade-display {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .score-value, .grade-value {
+        font-size: 1.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.2rem;
+    }
+}
+</style>
+
+<script>
+// Afficher/masquer les champs de date personnalisée
+document.addEventListener('DOMContentLoaded', function() {
+    const periodSelect = document.getElementById('period_type');
+    const customDates = document.getElementById('custom-dates');
+    const customDatesEnd = document.getElementById('custom-dates-end');
+    
+    function toggleCustomDates() {
+        if (periodSelect.value === 'custom') {
+            customDates.style.display = 'block';
+            customDatesEnd.style.display = 'block';
+        } else {
+            customDates.style.display = 'none';
+            customDatesEnd.style.display = 'none';
+        }
+    }
+    
+    periodSelect.addEventListener('change', toggleCustomDates);
+    toggleCustomDates(); // Initialiser
+});
+</script>
+{% endblock %} 
