@@ -8,6 +8,7 @@
 5. [Problèmes Récurrents et Solutions](#5-problèmes-récurrents-et-solutions)
 6. [Roadmap et TODO](#6-roadmap-et-todo)
 7. [Prompts Utiles](#7-prompts-utiles)
+8. [État Actuel du Projet](#8-état-actuel-du-projet)
 
 ---
 
@@ -116,6 +117,14 @@ Le stock est géré sur 4 emplacements distincts :
   - Balance : `/admin/accounting/reports/trial-balance`
   - Compte résultat : `/admin/accounting/reports/profit-loss`
 
+### ✅ **POINTAGE ZKTECO** (Terminé - 10/07/2025)
+- **Fonctionnalités** : Intégration pointeuse ZKTime.Net, récupération données de pointage
+- **Fichiers** : `app/zkteco/`, `CONFIGURATION_POINTEUSE_ZKTECO.md`
+- **Logique** : Connexion TCP/IP à la pointeuse, récupération données de présence
+- **API** : Endpoint `/zkteco/api/test-attendance` pour tester la connexion
+- **Configuration** : IP, port, password configurés dans le fichier de configuration
+- **Intégration RH** : Données de pointage utilisées pour les analytics employés
+
 ---
 
 ## 3. Architecture Technique
@@ -138,6 +147,10 @@ Le stock est géré sur 4 emplacements distincts :
 
 # Modèles employés (app/employees/models.py)
 - Employee : Employés et gestion RH
+- WorkHours : Heures de travail
+- Payroll : Bulletins de paie
+- OrderIssue : Problèmes de commandes
+- AbsenceRecord : Absences et congés
 
 # Modèles livreurs (app/deliverymen/models.py)
 - Deliveryman : Livreurs indépendants
@@ -148,6 +161,10 @@ Le stock est géré sur 4 emplacements distincts :
 - JournalEntry : Écritures comptables
 - JournalEntryLine : Lignes d'écritures
 - FiscalYear : Exercices comptables
+
+# Modèles dettes (models.py)
+- DeliveryDebt : Dettes des livreurs
+```
 
 ### 🛣️ **Routes Flask (Blueprints)**
 ```python
@@ -164,11 +181,13 @@ app/
 ├── sales/         # Ventes et POS
 ├── employees/     # Gestion RH
 ├── deliverymen/   # Gestion livreurs
-└── accounting/    # Comptabilité générale
+├── accounting/    # Comptabilité générale
+└── zkteco/        # Intégration pointeuse
+```
 
 ### 📊 **Base de Données**
-- **Moteur** : SQLite (développement)
-- **Migrations** : Alembic
+- **Moteur** : PostgreSQL (production), SQLite (développement)
+- **Migrations** : Alembic avec 15+ migrations
 - **Structure** : Tables normalisées avec relations
 - **Stock** : Colonnes séparées par emplacement + valeur
 
@@ -198,647 +217,174 @@ stock_ingredients_local    # Production (Labo B)
 stock_consommables      # Matériel/emballages
 
 # Valeurs de stock
+valeur_stock_comptoir
 valeur_stock_ingredients_magasin
 valeur_stock_ingredients_local
-total_stock_value
+valeur_stock_consommables
 ```
 
-### 🧮 **Calculs Métier**
-- **PMP** : Prix Moyen Pondéré recalculé à chaque achat
-- **Valeur stock** : Stock × PMP par emplacement
-- **POS** : Pas de TVA, total = sous-total
-- **Commandes** : Workflow avec statuts
-- **Profit Net** : `CLASSE 7 (Produits) - CLASSE 6 (Charges)`
-- **Marge Bénéficiaire** : `(Résultat Net / Chiffre d'Affaires) × 100`
-- **Balance comptable** : `Total Débit = Total Crédit` (équilibre obligatoire)
-
-### 🔧 **Développement**
-- **Linter Cursor** : Ajouter en haut des templates Jinja2 :
-  ```html
-  <!-- eslint-disable -->
-  <!-- @ts-nocheck -->
-  ```
-- **Migrations** : Une migration par modification de modèle
-- **Tests** : Scripts de test dans `/tests/`
+### 🔐 **Authentification**
+- **Rôles** : admin, manager, employee
+- **Décorateurs** : `@login_required`, `@admin_required`
+- **Sessions** : Flask-Login
 
 ---
 
 ## 5. Problèmes Récurrents et Solutions
 
-### ❌ **Erreur Alembic "Working outside of application context"**
-```bash
-# Solution : Utiliser flask db au lieu d'alembic directement
-flask db revision --autogenerate -m "description"
-flask db upgrade
-```
-
-### ❌ **Linter Cursor sur templates Jinja2**
-```html
-<!-- Solution : Ajouter en haut du fichier -->
-<!-- eslint-disable -->
-<!-- @ts-nocheck -->
-```
-
-### ❌ **Import circulaire module comptabilité**
-```python
-# Problème : Import des routes dans __init__.py
-from . import routes
-
-# Solution : Import dans app/__init__.py
-from app.accounting import bp as accounting_blueprint
-from app.accounting import routes as accounting_routes
-app.register_blueprint(accounting_blueprint)
-```
-
-### ❌ **Endpoints manquants dans templates**
-```bash
-# Solution : Utiliser le script de diagnostic
-python test_all_endpoints_and_suggest.py
-# Puis ajouter les endpoints manquants dans routes.py
-```
-
-### ❌ **Erreur AttributeError sur formulaires**
-```python
-# Problème : Noms de champs incorrects
-form.start_date.data  # Erreur
-
-# Solution : Vérifier les noms dans forms.py
-form.date_from.data   # Correct
-```
-
-### ❌ **Stock non décrémenté**
-- Vérifier la clé d'emplacement (`stock_comptoir`, `stock_ingredients_magasin`, etc.)
-- Vérifier le mapping dans `get_stock_by_location_type()`
-- Tester avec `print()` pour débugger
-
-### ❌ **Erreur ForeignKey**
-- Vérifier que la table référencée existe
-- Vérifier le nom de la colonne (`employees.id` vs `users.id`)
-
-### ❌ **Erreur "invalid keyword argument" pour Order**
-- **Problème** : `'deliveryman_id' is an invalid keyword argument for Order`
-- **Cause** : Le modèle `Order` n'a pas encore la colonne `deliveryman_id`
-- **Solution** : Vérifier que la migration a été appliquée correctement
-- **Vérification** : `\d orders` dans PostgreSQL pour voir les colonnes
-
-### ❌ **Problème de migration**
-```bash
-# Si migration cassée
-flask db stamp head
-flask db migrate
-flask db upgrade
-```
-
-### [2025-06-30] Bug persistant sur la création de recette (product_id)
-
-- **Contexte :**
-  - Lors de la création d'une recette, tout fonctionne côté front (autocomplétion, coût affiché, champs bien remplis).
-  - À la soumission, le serveur affiche :
-    - "Le formulaire contient des erreurs. Veuillez les corriger."
-    - Erreur de validation WTForms : {'ingredients': [{'product_id': ['Veuillez choisir un ingrédient valide.']}, {}, {}, ...]}
-  - Après POST, tous les coûts ligne passent à 0 DA.
-
-- **Actions déjà tentées :**
-  - Vérification du JS/autocomplétion : le champ caché est bien rempli avant POST.
-  - Correction du type du champ `product_id` (IntegerField + filtre int/None).
-  - Vérification du template : les noms des champs sont corrects.
-  - Le problème persiste malgré le filtre WTForms.
-
-- **Hypothèses restantes :**
-  - Problème de structure du POST (données mal envoyées ou mal reconstruites par WTForms ?)
-  - Problème de synchronisation entre le JS et le FieldList WTForms lors du POST.
-  - Autre bug dans la logique de parsing côté Flask/WTForms.
-
-- **À faire à la reprise :**
-  - Inspecter le payload POST exact envoyé au serveur (via l'onglet Réseau).
-  - Ajouter des logs côté Flask pour afficher la valeur reçue pour chaque `product_id` dans `form.ingredients.data`.
-  - Vérifier la reconstruction du FieldList côté serveur.
-
-### [2025-07-01] Résolution du bug de validation du champ product_id dans le formulaire de recette
-
-- **Cause trouvée :**
-  - Le champ caché `product_id` généré par WTForms n'avait pas la classe `ingredient-id-input` attendue par le JavaScript.
-  - Résultat : le JS ne remplissait jamais la valeur du champ caché lors de la sélection d'un ingrédient, donc le POST envoyait une valeur vide et la validation WTForms échouait systématiquement.
-
-- **Solution appliquée :**
-  - Ajout de `class_='ingredient-id-input'` dans le template Jinja sur le champ caché `product_id`.
-  - Le JS peut désormais remplir correctement la valeur lors de la sélection d'un ingrédient.
-  - La validation WTForms passe, la recette est créée et tous les coûts sont calculés correctement.
-
-- **À retenir :**
-  - Toujours synchroniser les classes JS attendues entre les templates générés par WTForms et les templates JS dynamiques.
-  - Vérifier systématiquement la valeur des champs cachés dans le DOM avant soumission en cas de bug de validation côté serveur.
-
-### [2025-07-01] ✅ Finalisation de l'intégration caisse-commandes
-
-- **Fonctionnalités ajoutées :**
-  - Bouton "Encaisser" sur la liste des commandes (`list_orders.html`)
-  - Bouton "Encaisser" sur le dashboard shop (`shop_dashboard.html`)
-  - Bouton "Encaisser" sur la fiche commande (`view_order.html`)
-  - Vérification automatique si commande déjà encaissée
-  - Création automatique du mouvement de caisse lors de l'encaissement
-
-- **Logique d'affichage :**
-  - Commande client uniquement (`order.delivery_debts|length > 0`)
-  - Session de caisse ouverte (`cash_session_open`)
-  - Pas de mouvement de caisse existant pour cette commande
-  - Confirmation utilisateur avant encaissement
-
-- **Corrections techniques :**
-  - Correction erreur template `view_order.html` : vérification `order.delivery_debts|length > 0`
-  - Ajout vérifications sécurisées dans tous les templates
-  - Passage de `cash_session_open` aux routes `list_orders` et `shop_dashboard`
-
-- **Workflow complet :**
-  1. Commande client créée → Statut "En attente" ou "En production"
-  2. Production terminée → Statut "Prête au magasin"
-  3. Réception au magasin → Statut "Prête à livrer"
-  4. Livraison → Statut "Livrée"
-  5. Encaissement → Mouvement de caisse créé automatiquement
-
-- **Prochaines étapes (demain) :**
-  - **RÉSOLUTION URGENTE** : Corriger l'erreur `deliveryman_id` dans le modèle Order
-  - Tester le workflow complet : création → production → réception → livraison → encaissement
-  - Vérifier l'intégration avec les dettes livreurs
-  - Tester les différents scénarios (retrait magasin vs livraison)
-  - Optimiser l'interface utilisateur si nécessaire
-
-### [2025-07-01] ✅ Mise en place des tests automatisés Selenium
-
-- **Tests créés:**
-  - `test_workflow_selenium.py` : Test de base du workflow complet
-  - `advanced_workflow_analyzer.py` : Test avancé avec vérifications logique métier
-  - `analyze_test_logs.py` : Analyseur automatique des logs d'erreurs
-  - `run_selenium_tests.py` : Script de démarrage rapide
-
-- **Fonctionnalités des tests:**
-  - **Test de base** : Simulation complète du workflow via l'interface
-  - **Test avancé** : Vérifications automatiques de la logique métier :
-    - Incrémentations/décrémentations de stock
-    - Calculs de valeurs de stock
-    - Création de mouvements de caisse
-    - Vérification des montants et descriptions
-    - Validation des statuts de commande
-
-- **Vérifications logique métier:**
-  - Stock comptoir inchangé lors de création de commande
-  - Stock comptoir incrémenté lors du statut "Prête au magasin"
-  - Stock comptoir décrémenté lors du statut "Livrée"
-  - Mouvement de caisse créé avec montant correct
-  - Valeurs de stock mises à jour correctement
-
-- **Rapports générés:**
-  - Logs détaillés avec timestamps
-  - Rapports JSON avec métriques
-  - Analyse automatique des erreurs
-  - Suggestions de corrections
-
-- **Utilisation:**
-  ```bash
-  # Installation et exécution complète
-  python run_selenium_tests.py
-  
-  # Test de base uniquement
-  python test_workflow_selenium.py
-  
-  # Test avancé avec vérifications métier
-  python advanced_workflow_analyzer.py
-  
-  # Analyse des logs
-  python analyze_test_logs.py
-  ```
-
-- **Prochaines étapes:**
-  - Exécuter les tests pour valider le workflow complet
-  - Corriger les erreurs identifiées automatiquement
-  - Optimiser les performances des tests
-  - Ajouter des tests pour d'autres modules (achats, production, etc.)
-
-### [2025-07-02] ✅ Implémentation du système de gestion des livreurs
-
-**🎯 Objectif :** Ajouter un champ "livreur" indépendant des employés pour suivre qui livre quoi, sans lier ce champ à la table des employés.
-
-**📋 Travail réalisé :**
-
-#### **1. Création du modèle Deliveryman**
-- **Fichier** : `app/deliverymen/models.py`
-- **Modèle** : `Deliveryman` avec champs `name`, `phone`, `created_at`
-- **Relations** : `orders` (one-to-many avec Order)
-- **Migration** : `5a7dc22f426f_add_deliveryman_table_and_deliveryman_`
-
-#### **2. Routes et interface de gestion**
-- **Fichier** : `app/deliverymen/routes.py`
-- **Routes CRUD** :
-  - `GET /admin/deliverymen` : Liste des livreurs
-  - `GET/POST /admin/deliverymen/new` : Créer un livreur
-  - `GET/POST /admin/deliverymen/<id>/edit` : Modifier un livreur
-  - `POST /admin/deliverymen/<id>/delete` : Supprimer un livreur
-- **Sécurité** : Vérification des commandes associées avant suppression
-
-#### **3. Templates d'interface**
-- **Liste** : `app/templates/deliverymen/list_deliverymen.html`
-  - Tableau avec actions (modifier/supprimer)
-  - Modal de confirmation pour suppression
-  - Compteur de commandes par livreur
-- **Formulaire** : `app/templates/deliverymen/deliveryman_form.html`
-  - Formulaire réutilisable (création/modification)
-  - Validation côté client et serveur
-
-#### **4. Intégration dans les commandes**
-- **Modification formulaires** : `app/orders/forms.py`
-  - Ajout champ `deliveryman` dans `OrderForm` et `CustomerOrderForm`
-  - Population dynamique des choix de livreurs
-  - Champ optionnel (pas obligatoire)
-- **Modification routes** : `app/orders/routes.py`
-  - Traitement du `deliveryman_id` lors de la création de commande
-- **Modification templates** :
-  - `app/templates/orders/customer_order_form.html` : Ajout du champ livreur
-  - `app/templates/orders/view_order.html` : Affichage du livreur assigné
-
-#### **5. Enregistrement du blueprint**
-- **Fichier** : `app/__init__.py`
-- **URL prefix** : `/admin` (même espace que les autres modules admin)
-
-#### **6. Intégration dans le menu**
-- **Fichier** : `app/templates/base.html`
-- **Emplacement** : Menu "Gestion > Livreurs"
-- **Icône** : `bi-truck`
-
-**🔧 Problème technique rencontré :**
-- **Erreur** : `'deliveryman_id' is an invalid keyword argument for Order`
-- **Cause** : Le modèle `Order` n'a pas encore la colonne `deliveryman_id`
-- **Statut** : À résoudre demain en vérifiant l'application de la migration
-
-**✅ Fonctionnalités opérationnelles :**
-- Interface de gestion des livreurs complète
-- Intégration dans les formulaires de commande
-- Affichage du livreur dans les vues de commande
-- Menu de navigation fonctionnel
-
-**🚀 Prochaines étapes (03/07/2025) :**
-1. **Résoudre l'erreur de migration** : Vérifier que la colonne `deliveryman_id` existe dans la table `orders`
-2. **Tester la création de commande** avec assignation de livreur
-3. **Valider le workflow complet** : création → assignation → affichage
-4. **Ajouter des fonctionnalités avancées** si nécessaire (statistiques, planning, etc.)
-
-### [2025-07-03] ✅ Finalisation complète du workflow livreur - Fin de Phase 5
-
-**🎯 Objectif atteint :** Système complet de gestion des livreurs avec workflow de bout en bout.
-
-**📋 Travail finalisé :**
-
-#### **1. Système de statuts complet**
-- `waiting_for_pickup` = "En attente de retrait"
-- `delivered_unpaid` = "Livrée Non Payé" 
-- `ready_at_shop` = "Prêt à livrer"
-- Logique de transition selon `delivery_option` (pickup/delivery)
-
-#### **2. Dashboard shop opérationnel**
-- **5 sections distinctes** : En Production, En Attente Retrait, Prêt à Livrer, Au Comptoir, Livré Non Payé
-- **Boutons conditionnels** : Reçu, Encaisser, Assigner Livreur selon statut et session caisse
-- **Statistiques temps réel** : Compteurs par section
-
-#### **3. Page "Assigner livreur" fonctionnelle**
-- **Formulaire complet** : Sélection livreur + statut paiement + notes
-- **Logique métier** : Distinction produits vs frais de livraison
-- **Validation** : CSRF token, validation WTForms
-- **Intégration caisse** : Mouvement automatique si payé
-
-#### **4. Système de dettes livreur**
-- **Table `delivery_debts`** : Référence correcte vers `deliverymen`
-- **Migration** : Correction clé étrangère `employees` → `deliverymen`
-- **Logique financière** : Dette = montant produits (sans frais livraison)
-
-#### **5. Tests et validation**
-- **Workflow complet testé** : Création → Production → Assignation → Livraison → Encaissement
-- **Logs détaillés** : Vérification stock, mouvements caisse, calculs
-- **Interface utilisateur** : Navigation fluide, messages clairs
-
-**💾 Sauvegarde effectuée :**
-- **Base de données** : `FM_Gestion_DB_20250703_031114.backup`
-- **Code source** : `FM_Gestion_APP_20250703_031116.zip`
-- **Tables CSV** : 22 tables sauvegardées individuellement
-
-**✅ Phase 5 TERMINÉE - Prêt pour Phase 6**
-
-### [2025-07-05] ✅ Finalisation complète du Module Paie - Phase 7 RH
-
-**🎯 Objectif atteint :** Module paie 100% opérationnel avec toutes les fonctionnalités avancées.
-
-**📋 Fonctionnalités développées :**
-
-#### **1. Dashboard Paie Central**
-- **URL** : `/employees/payroll/dashboard`
-- **Fonctionnalités** :
-  - Vue d'ensemble des KPI paie (employés actifs, paies validées, en attente)
-  - Statistiques financières (masse salariale, charges, net à payer)
-  - Actions rapides (nouvelles paies, exports, rapports)
-  - Liens vers tous les modules paie
-
-#### **2. Gestion des Heures de Travail**
-- **URL** : `/employees/payroll/work-hours`
-- **Fonctionnalités** :
-  - Saisie heures normales et supplémentaires
-  - Gestion des absences (maladie, congé, autres)
-  - Primes (performance, transport, repas)
-  - Déductions (avances, autres)
-  - Historique complet des heures par employé
-
-#### **3. Calcul Automatique de Paie**
-- **URL** : `/employees/payroll/calculate`
-- **Fonctionnalités** :
-  - Sélection employé et période
-  - Calcul automatique taux horaire (base 173.33h/mois)
-  - Majoration heures supplémentaires (50%)
-  - Calcul charges sociales automatique :
-    - Sécurité sociale : 9%
-    - Assurance chômage : 1.5%
-    - Retraite : 7%
-  - Salaire brut et net calculés automatiquement
-
-#### **4. Génération de Bulletins de Paie**
-- **URL** : `/employees/payroll/generate-payslips`
-- **Fonctionnalités** :
-  - Génération individuelle ou en lot
-  - Formats PDF et Excel
-  - Paramètres personnalisables
-  - Historique des générations
-
-#### **5. Analytics Employé Avancés**
-- **URL** : `/employees/{id}/analytics`
-- **Fonctionnalités** :
-  - Sélecteur de période flexible (semaine, mois, trimestre, semestre, année, personnalisé)
-  - KPI adaptés par rôle (Production vs Vente vs Support)
-  - Score composite avec grades A+ à D
-  - Sections détaillées :
-    - Score global avec performance
-    - Performance financière (CA, objectifs)
-    - Productivité (commandes, taux succès)
-    - Qualité & Polyvalence
-    - Évolution mensuelle
-    - Présence (placeholder pointeuse)
-
-#### **6. Planification et Horaires**
-- **URL** : `/employees/{id}/schedule`
-- **Fonctionnalités** :
-  - Gestion des horaires de travail
-  - Planification des équipes
-  - Suivi des présences
-  - Interface moderne avec calendrier
-
-#### **7. Résumé de Période**
-- **URL** : `/employees/payroll/period-summary/{month}/{year}`
-- **Fonctionnalités** :
-  - Résumé financier par période
-  - Statistiques détaillées (employés, paies validées, en attente)
-  - Tableaux des paies par statut
-  - Actions globales (génération, impression)
-
-**🛠️ Modèles de Données Créés :**
-
-#### **1. Modèles Paie**
-```python
-# Modèles principaux (app/employees/models.py)
-- WorkHours : Heures de travail par employé
-- Payroll : Bulletins de paie
-- OrderIssue : Problèmes qualité sur commandes
-- AbsenceRecord : Enregistrement des absences
-```
-
-#### **2. Formulaires WTForms**
-```python
-# Formulaires (app/employees/forms.py)
-- AnalyticsPeriodForm : Sélection période analytics
-- OrderIssueForm : Signalement problèmes qualité
-- AbsenceRecordForm : Enregistrement absences
-```
-
-**🎨 Templates Créés (12 templates) :**
-
-1. **`payroll_dashboard.html`** : Dashboard principal paie
-2. **`work_hours.html`** : Gestion heures de travail
-3. **`payroll_calculation.html`** : Interface calcul paie
-4. **`generate_payslips.html`** : Génération bulletins
-5. **`view_payroll.html`** : Affichage bulletin détaillé
-6. **`payroll_period_summary.html`** : Résumé période
-7. **`employee_analytics.html`** : Analytics employé avancés
-8. **`work_schedule.html`** : Planification horaires
-9. **Autres templates** : Support et compléments
-
-**📊 Fonctionnalités Avancées :**
-
-#### **1. Système de Scoring**
-- **Grades** : A+, A, B+, B, C+, C, D (basé sur performance globale)
-- **Critères** : Performance financière, productivité, qualité, présence
-- **Adaptation par rôle** : Production, Vente, Support (femme ménage, livreur)
-
-#### **2. Calculs Automatiques**
-- **Taux horaire** : Salaire fixe / 173.33 heures
-- **Heures supplémentaires** : Majoration 50%
-- **Charges sociales** : Calcul automatique selon taux légaux
-- **Salaire net** : Brut - charges - déductions + primes
-
-#### **3. Validation et Traçabilité**
-- **Système de validation** : Paies validées vs en attente
-- **Notes de validation** : Commentaires et justifications
-- **Historique** : Suivi complet des modifications
-
-**🔗 Intégration Menu Principal :**
-- **Section "Employés & RH"** avec sous-menu "Module Paie"
-- **7 liens principaux** : Dashboard, Heures, Calcul, Bulletins, Analytics, Planning, Résumé
-- **Navigation fluide** entre tous les modules
-
-**✅ État Final :**
-- **100% fonctionnel** : Tous les templates et routes opérationnels
-- **Interface moderne** : Bootstrap 5, responsive, UX optimisée
-- **Calculs précis** : Logique métier complète et testée
-- **Prêt production** : Système complet pour gestion paie
-
-**🚀 Évolutions futures possibles :**
-- **Pointeuse biométrique** : Intégration ZKTeco
-- **Exports avancés** : Formats comptables, CNSS
-- **Notifications** : Alertes paie, échéances
-- **Rapports RH** : Statistiques avancées, tableaux de bord
+### ❌ **Erreurs SQLAlchemy Import Circulaire**
+**Problème** : `Table 'users' is already defined for this MetaData instance`
+**Solution** : 
+- Vérifier les imports dans `models.py`
+- Éviter les imports circulaires entre modules
+- Utiliser `extend_existing=True` si nécessaire
+
+### ❌ **Erreurs Type Decimal/Float**
+**Problème** : `TypeError: unsupported operand type(s) for /: 'decimal.Decimal' and 'float'`
+**Solution** :
+- Convertir explicitement : `float(decimal_value)`
+- Utiliser `Decimal` pour tous les calculs financiers
+- Gérer les conversions dans les calculs d'analytics
+
+### ❌ **Erreurs Méthodes Manquantes**
+**Problème** : `AttributeError: 'WorkScheduleForm' object has no attribute 'load_from_schedule'`
+**Solution** :
+- Vérifier les noms des méthodes dans les formulaires
+- Utiliser `populate_from_schedule` au lieu de `load_from_schedule`
+- Maintenir la cohérence entre formulaires et routes
+
+### ❌ **Erreurs Templates Jinja2**
+**Problème** : Variables non définies dans les templates
+**Solution** :
+- Passer toutes les variables nécessaires depuis les routes
+- Utiliser des valeurs par défaut : `{{ variable|default('') }}`
+- Vérifier la structure des données passées aux templates
+
+### ❌ **Problèmes Git Push**
+**Problème** : Erreur HTTP 500 lors du push vers GitHub
+**Solution** :
+- Augmenter le buffer HTTP : `git config http.postBuffer 524288000`
+- Vérifier la connexion internet
+- Essayer avec différents protocoles (HTTPS/SSH)
+- Attendre et réessayer (problème temporaire GitHub)
 
 ---
 
-## 6. État Actuel du Projet (05/07/2025)
+## 6. Roadmap et TODO
 
-### ✅ **Phase 7 - Module Paie RH : TERMINÉE**
-- **Module paie complet** : Dashboard, heures, calcul, bulletins, analytics
-- **7 routes principales** : Toutes fonctionnelles avec templates modernes
-- **Calculs automatiques** : Taux horaire, heures sup, charges sociales, salaire net
-- **Analytics avancés** : Scoring A+ à D, KPI par rôle, performance globale
-- **Système de validation** : Paies validées, traçabilité complète
-- **Interface moderne** : Bootstrap 5, responsive, UX optimisée
-- **Intégration menu** : Section "Employés & RH" avec sous-menu "Module Paie"
-- **Prêt production** : Système 100% opérationnel
+### 🚀 **Déploiement Production**
+- [x] Configuration VPS Ubuntu 24.10
+- [x] Scripts de déploiement créés
+- [x] Configuration PostgreSQL
+- [x] Fichier .env de production
+- [ ] Déploiement effectif sur VPS
+- [ ] Configuration Nginx
+- [ ] Configuration SSL/HTTPS
+- [ ] Tests de charge
 
-### 🎯 **Modules Opérationnels**
-1. ✅ **Stock** - Gestion multi-emplacements
-2. ✅ **Achats** - Incrémentation stock + PMP
-3. ✅ **Production** - Recettes et transformation
-4. ✅ **Ventes (POS)** - Interface tactile moderne
-5. ✅ **Caisse** - Sessions et mouvements
-6. ✅ **Commandes** - Workflow complet
-7. ✅ **Livreurs** - Gestion indépendante
-8. ✅ **Comptabilité** - Module complet
-9. ✅ **RH & Paie** - Module complet avec analytics
+### 🔧 **Améliorations Techniques**
+- [x] Correction erreurs SQLAlchemy
+- [x] Correction erreurs templates
+- [x] Intégration pointeuse ZKTeco
+- [ ] Optimisation performances
+- [ ] Tests unitaires complets
+- [ ] Documentation API
 
-### 🎉 **Prochaines Étapes**
-- **Optimisations** : Performance et cache
-- **Rapports** : Tableaux de bord métier avancés
-- **Intégrations** : Pointeuse biométrique, exports CNSS
-- **Documentation** : Guide utilisateur complet
-
-## 7. Roadmap et TODO
-
-### ✅ **PHASE 1 : FOUNDATION (TERMINÉE)**
-- [x] Infrastructure Flask + SQLAlchemy
-- [x] Modèles de base (User, Product, Category)
-- [x] Authentification et rôles
-- [x] Interface d'administration
-
-### ✅ **PHASE 2 : GESTION STOCK (TERMINÉE)**
-- [x] Stock multi-emplacements
-- [x] Valeur de stock et PMP
-- [x] Alertes et seuils
-- [x] Dashboards par emplacement
-
-### ✅ **PHASE 3 : ACHATS & PRODUCTION (TERMINÉE)**
-- [x] Gestion des achats
-- [x] Calcul automatique PMP
-- [x] Système de recettes
-- [x] Production et transformation
-
-### ✅ **PHASE 4 : VENTES & POS (TERMINÉE)**
-- [x] Interface POS moderne
-- [x] Gestion de caisse
-- [x] Sessions et mouvements
-- [x] Validation stock
-
-### ✅ **PHASE 5 : COMMANDES & LIVREURS (TERMINÉE - 03/07/2025)**
-- [x] Système de commandes
-- [x] Workflow production complet
-- [x] Gestion des livreurs (02/07/2025)
-- [x] Système de dettes livreur (03/07/2025)
-- [x] Dashboard shop 5 sections (03/07/2025)
-- [x] Page assignation livreur (03/07/2025)
-
-### ✅ **PHASE 6 : COMPTABILITÉ (TERMINÉE - 03/07/2025)**
-- [x] **Modèles comptables** : Account, Journal, JournalEntry, JournalEntryLine, FiscalYear
-- [x] **Plan comptable** : Structure hiérarchique avec classes 1-7, nature débit/crédit
-- [x] **Saisie d'écritures** : Interface complète avec validation équilibre
-- [x] **Rapports financiers** : Balance générale, dashboard KPIs
-- [x] **Templates HTML** : CRUD complet pour toutes les entités
-- [x] **Migration BDD** : 5 nouvelles tables avec préfixe accounting_
-- [x] **Corrections techniques** : Import circulaire, endpoints manquants, champs formulaires
-
-### ✅ **PHASE 6.5 : DASHBOARD COMPTABILITÉ (TERMINÉE - 04/07/2025)**
-- [x] **Calcul profit net** : Formule automatique `Produits (Classe 7) - Charges (Classe 6)`
-- [x] **Balance enrichie** : Affichage total produits, charges, résultat net avec type (Bénéfice/Perte)
-- [x] **Compte de résultat** : Page dédiée avec détail produits vs charges et marge bénéficiaire
-- [x] **Page rapports** : Hub central avec accès balance générale et compte de résultat
-- [x] **Templates avancés** : `trial_balance.html`, `profit_loss.html`, `reports.html`
-- [x] **Routes nouvelles** : `/reports/profit-loss`, `/reports` avec logique calcul intégrée
-- [x] **Intégration dashboard** : Lien "Rapports" ajouté dans dashboard comptable
-- [x] **Analyse financière** : Marge bénéficiaire, ratios, visualisation colorée par résultat
-
-### ✅ **PHASE 7 : MODULE PAIE RH (TERMINÉE - 05/07/2025)**
-- [x] **Dashboard paie central** : KPI, statistiques, actions rapides
-- [x] **Gestion heures travail** : Saisie, absences, primes, déductions
-- [x] **Calcul automatique** : Taux horaire, heures sup, charges sociales
-- [x] **Génération bulletins** : Formats PDF/Excel, paramètres personnalisables
-- [x] **Analytics employé** : Scoring A+ à D, KPI par rôle, performance globale
-- [x] **Planification horaires** : Gestion équipes, suivi présences
-- [x] **Résumé période** : Statistiques détaillées, actions globales
-- [x] **Modèles données** : WorkHours, Payroll, OrderIssue, AbsenceRecord
-- [x] **Templates modernes** : 12 templates Bootstrap 5 responsive
-- [x] **Intégration menu** : Section "Employés & RH" avec sous-menu "Module Paie"
-- [x] **Validation système** : Paies validées, traçabilité, historique
-- [x] **Calculs métier** : Base 173.33h/mois, majoration 50%, charges légales
-
-### ⏳ **PHASE 8 : OPTIMISATION (À VENIR)**
-- [ ] Performance et cache
-- [ ] Sauvegarde automatique
-- [ ] Monitoring et logs
-- [ ] Formation utilisateurs
-- [ ] Intégrations avancées (pointeuse, exports)
+### 📊 **Nouvelles Fonctionnalités**
+- [ ] Module reporting avancé
+- [ ] Export données (Excel, PDF)
+- [ ] Notifications push
+- [ ] API REST complète
+- [ ] Application mobile
 
 ---
 
 ## 7. Prompts Utiles
 
-### 🎨 **Design et UI**
+### 🛠️ **Développement**
 ```
-"Modern POS interface design for bakery, touch-friendly, responsive, 
-basket management, product categories, no VAT calculation, French style, 
-Bootstrap 5, mobile-first"
-```
-
-### 🔧 **Développement Cursor**
-```
-"Ajoute les directives linter en haut des templates Jinja2 pour éviter 
-les erreurs JavaScript/TypeScript dans Cursor"
+"Corrige l'erreur SQLAlchemy dans le fichier models.py"
+"Optimise les requêtes de base de données pour les analytics"
+"Améliore l'interface utilisateur du dashboard RH"
+"Implémente l'export Excel des rapports de vente"
 ```
 
-### 📊 **Base de Données**
+### 🐛 **Debugging**
 ```
-"Crée une migration Alembic pour ajouter le champ X au modèle Y, 
-avec gestion des valeurs par défaut et contraintes"
-```
-
-### 🧪 **Tests**
-```
-"Crée un script de test pour vérifier que la route X fonctionne 
-correctement avec les données Y et retourne Z"
+"Analyse l'erreur TypeError dans les calculs d'analytics"
+"Vérifie les imports circulaires dans le module employees"
+"Teste la connexion à la pointeuse ZKTeco"
+"Valide la cohérence des données de stock"
 ```
 
----
-
-## 📚 **Fichiers de Référence**
-
-### 📄 **Architecture**
-- `ERP_CORE_ARCHITECTURE.md` : Architecture détaillée
-- `structure.txt` : Structure complète du projet
-- `models.py` : Tous les modèles SQLAlchemy
-
-### 🔧 **Configuration**
-- `config.py` : Configuration Flask
-- `extensions.py` : Extensions Flask
-- `alembic.ini` : Configuration migrations
-
-### 🧪 **Tests**
-- `tests/` : Tests unitaires
-- `test_*.py` : Scripts de test spécifiques
-- `run_diagnostics.py` : Diagnostic complet
-
-### 💾 **Sauvegarde**
-- `Save_Project.py` : Script de sauvegarde
-- `backup_*.sql` : Sauvegardes base de données
-
----
-
-## 🚀 **Commandes Utiles**
-
-```bash
-# Démarrage
-flask run
-
-# Migrations
-flask db revision --autogenerate -m "description"
-flask db upgrade
-
-# Tests
-python -m pytest tests/
-python run_diagnostics.py
-
-# Sauvegarde
-python Save_Project.py
+### 📈 **Analytics**
+```
+"Calcule les KPI de performance par employé"
+"Génère un rapport de rentabilité par produit"
+"Analyse les tendances de vente mensuelles"
+"Évalue l'efficacité des recettes de production"
 ```
 
 ---
 
-**💡 À chaque évolution majeure, pense à mettre à jour ce fichier !**
+## 8. État Actuel du Projet
 
-*Dernière mise à jour : 03/07/2025 - Phase 6 Comptabilité terminée* 
+### 📅 **Dernière Mise à Jour** : 10/07/2025
+
+### ✅ **Modules Fonctionnels**
+- **Stock** : 100% opérationnel
+- **Achats** : 100% opérationnel  
+- **Production** : 100% opérationnel
+- **Ventes (POS)** : 100% opérationnel
+- **Caisse** : 100% opérationnel
+- **Commandes** : 100% opérationnel
+- **Livreurs** : 100% opérationnel
+- **RH & Paie** : 100% opérationnel
+- **Comptabilité** : 100% opérationnel
+- **Pointage ZKTeco** : 100% opérationnel
+
+### 🔧 **Corrections Récentes**
+- **10/07/2025** : Correction erreurs type Decimal/float dans analytics
+- **10/07/2025** : Correction méthode `load_from_schedule` → `populate_from_schedule`
+- **09/07/2025** : Intégration pointeuse ZKTeco fonctionnelle
+- **09/07/2025** : Correction erreurs import circulaire SQLAlchemy
+- **09/07/2025** : Nettoyage fichiers de test et optimisation
+
+### 📊 **Statistiques Projet**
+- **Fichiers** : 300 fichiers au total
+- **Lignes de code** : ~50,000 lignes
+- **Migrations** : 15+ migrations Alembic
+- **Templates** : 50+ templates Jinja2
+- **Routes** : 100+ endpoints Flask
+
+### 🚀 **Préparation Déploiement**
+- **VPS** : Ubuntu 24.10 configuré
+- **Base de données** : PostgreSQL configuré
+- **Scripts** : Scripts de déploiement prêts
+- **Configuration** : Fichier .env de production créé
+- **Documentation** : Guides de déploiement complets
+
+### 🎯 **Prochaines Étapes**
+1. **Déploiement** : Mise en production sur VPS
+2. **Tests** : Validation complète en environnement réel
+3. **Formation** : Formation utilisateurs finaux
+4. **Maintenance** : Support et améliorations continues
+
+---
+
+## 📞 **Contact et Support**
+
+### 🔧 **Développement**
+- **Repository** : https://github.com/infocrasher/fee-maison-erp.git
+- **Environnement** : Flask + SQLAlchemy + PostgreSQL
+- **Version** : 1.0.0 (Production Ready)
+
+### 📋 **Documentation**
+- **Architecture** : `ERP_CORE_ARCHITECTURE.md`
+- **Concepts Dashboard** : `GUIDE_CONCEPTS_DASHBOARD.md`
+- **Configuration Pointeuse** : `CONFIGURATION_POINTEUSE_ZKTECO.md`
+- **Déploiement** : `vps_preparation_guide.md`
+
+---
+
+*Dernière mise à jour : 10/07/2025 - ERP Fée Maison v1.0.0* 
