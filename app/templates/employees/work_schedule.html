@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Horaires - {{ employee.name }}{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .schedule-container {
+        background: rgba(255,255,255,0.95);
+        border-radius: 20px;
+        margin: 2rem auto;
+        max-width: 1000px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+    }
+    
+    .schedule-header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 3rem 2rem;
+        text-align: center;
+        border-radius: 20px 20px 0 0;
+    }
+    
+    .day-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    
+    .day-card.active {
+        border-color: #28a745;
+        background: linear-gradient(135deg, rgba(40, 167, 69, 0.05) 0%, white 100%);
+    }
+    
+    .day-toggle {
+        width: 60px;
+        height: 30px;
+        background: #ccc;
+        border-radius: 15px;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .day-toggle.active {
+        background: #28a745;
+    }
+    
+    .day-toggle::after {
+        content: '';
+        position: absolute;
+        width: 26px;
+        height: 26px;
+        background: white;
+        border-radius: 50%;
+        top: 2px;
+        left: 2px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .day-toggle.active::after {
+        transform: translateX(30px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="schedule-container">
+    <div class="schedule-header">
+        <h1>{{ employee.name }}</h1>
+        <p>Configuration des horaires de travail</p>
+    </div>
+    
+    <div class="p-4">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            {% set days = [
+                ('monday', 'Lundi'),
+                ('tuesday', 'Mardi'),
+                ('wednesday', 'Mercredi'),
+                ('thursday', 'Jeudi'),
+                ('friday', 'Vendredi'),
+                ('saturday', 'Samedi'),
+                ('sunday', 'Dimanche')
+            ] %}
+            
+            {% for day_key, day_name in days %}
+            <div class="day-card" id="{{ day_key }}_card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>{{ day_name }}</h5>
+                    <div class="day-toggle" id="{{ day_key }}_toggle" onclick="toggleDay('{{ day_key }}')">
+                        {{ form[day_key + '_active'](style="display: none;") }}
+                    </div>
+                </div>
+                
+                <div class="row" id="{{ day_key }}_times">
+                    <div class="col-md-6">
+                        <label class="form-label">Début</label>
+                        {{ form[day_key + '_start'](class="form-control", id=day_key + "_start") }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Fin</label>
+                        {{ form[day_key + '_end'](class="form-control", id=day_key + "_end") }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-circle me-2"></i>Enregistrer
+                </button>
+                <a href="{{ url_for('employees.view_employee', employee_id=employee.id) }}" class="btn btn-secondary btn-lg ms-2">
+                    Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.toggleDay = function(day) {
+    const checkbox = document.getElementById(day + '_active');
+    const toggle = document.getElementById(day + '_toggle');
+    const card = document.getElementById(day + '_card');
+    const startInput = document.getElementById(day + '_start');
+    const endInput = document.getElementById(day + '_end');
+    
+    checkbox.checked = !checkbox.checked;
+    
+    if (checkbox.checked) {
+        toggle.classList.add('active');
+        card.classList.add('active');
+        startInput.disabled = false;
+        endInput.disabled = false;
+        if (!startInput.value) startInput.value = '08:00';
+        if (!endInput.value) endInput.value = '17:00';
+    } else {
+        toggle.classList.remove('active');
+        card.classList.remove('active');
+        startInput.disabled = true;
+        endInput.disabled = true;
+    }
+};
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    days.forEach(day => {
+        const checkbox = document.getElementById(day + '_active');
+        const toggle = document.getElementById(day + '_toggle');
+        const card = document.getElementById(day + '_card');
+        const startInput = document.getElementById(day + '_start');
+        const endInput = document.getElementById(day + '_end');
+        
+        if (checkbox.checked) {
+            toggle.classList.add('active');
+            card.classList.add('active');
+            startInput.disabled = false;
+            endInput.disabled = false;
+        } else {
+            startInput.disabled = true;
+            endInput.disabled = true;
+        }
+    });
+});
+</script>
+{% endblock %} 

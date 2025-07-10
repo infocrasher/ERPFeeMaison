@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+
+{% block title %}Dépôt en Banque (Cashout){% endblock %}
+
+{% block extra_css %}
+<style>
+    .cashout-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .balance-display {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .balance-amount {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .balance-label {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    .btn-cashout {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-cashout:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        color: white;
+    }
+    
+    .info-card {
+        background: #f8f9fa;
+        border-left: 4px solid #17a2b8;
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .amount-input {
+        font-size: 1.2rem;
+        font-weight: 600;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-bank text-primary me-2"></i>
+                        Dépôt en Banque
+                    </h1>
+                    <p class="text-muted mb-0">Transfert de caisse vers compte bancaire</p>
+                </div>
+                <a href="{{ url_for('sales.cash_status') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Retour
+                </a>
+            </div>
+
+            <!-- Solde Caisse -->
+            <div class="alert alert-success text-center">
+                <h4>Solde Caisse Disponible</h4>
+                <h2 class="text-success">{{ "{:,.0f}".format(theoretical_balance) }} DZD</h2>
+                <small>Session #{{ session.id }} - Ouverte le {{ session.opened_at.strftime('%d/%m/%Y à %H:%M') }}</small>
+            </div>
+
+            <!-- Informations -->
+            <div class="info-card">
+                <h6 class="mb-2">
+                    <i class="bi bi-info-circle text-info me-2"></i>
+                    À propos du Cashout
+                </h6>
+                <p class="mb-0 small">
+                    Le cashout permet de déposer les espèces de la caisse vers votre compte bancaire. 
+                    Cette opération créera automatiquement un mouvement de caisse (sortie) et une écriture comptable 
+                    de transfert (Débit Banque, Crédit Caisse).
+                </p>
+            </div>
+
+            <!-- Formulaire Cashout -->
+            <div class="card cashout-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-arrow-right-circle me-2"></i>
+                        Effectuer un Dépôt
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="cashoutForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="amount" class="form-label">
+                                    <i class="bi bi-currency-exchange me-1"></i>
+                                    Montant à déposer (DZD) <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" 
+                                           class="form-control amount-input" 
+                                           id="amount" 
+                                           name="amount" 
+                                           min="1" 
+                                           max="{{ theoretical_balance }}"
+                                           step="0.01" 
+                                           required
+                                           placeholder="0.00">
+                                    <span class="input-group-text">DZD</span>
+                                </div>
+                                <div class="form-text">
+                                    Maximum disponible: {{ "{:,.0f}".format(theoretical_balance) }} DZD
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="percentage" class="form-label">
+                                    <i class="bi bi-percent me-1"></i>
+                                    Raccourcis
+                                </label>
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPercentage(25)">
+                                        25%
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPercentage(50)">
+                                        50%
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPercentage(75)">
+                                        75%
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="setPercentage(100)">
+                                        Tout
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">
+                                <i class="bi bi-journal-text me-1"></i>
+                                Notes (optionnel)
+                            </label>
+                            <textarea class="form-control" 
+                                      id="notes" 
+                                      name="notes" 
+                                      rows="3" 
+                                      placeholder="Motif du dépôt, remarques..."></textarea>
+                        </div>
+
+                        <!-- Récapitulatif -->
+                        <div class="row" id="summary" style="display: none;">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <h6 class="mb-2">
+                                        <i class="bi bi-clipboard-check me-2"></i>
+                                        Récapitulatif de l'opération
+                                    </h6>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Montant à déposer:</strong><br>
+                                            <span id="summaryAmount" class="text-primary fs-5">0 DZD</span>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>Solde restant en caisse:</strong><br>
+                                            <span id="summaryRemaining" class="text-success fs-5">0 DZD</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('sales.cash_status') }}" class="btn btn-outline-secondary me-md-2">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Annuler
+                            </a>
+                            <button type="submit" class="btn btn-cashout" id="submitBtn" disabled>
+                                <i class="bi bi-bank me-2"></i>
+                                Effectuer le Dépôt
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Historique récent des dépôts -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Derniers Dépôts de cette Session
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% set recent_deposits = session.movements|selectattr('reason', 'equalto', 'Dépôt en banque (Cashout)')|list %}
+                    {% if recent_deposits %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Heure</th>
+                                        <th>Montant</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for deposit in recent_deposits[-5:] %}
+                                    <tr>
+                                        <td>{{ deposit.created_at.strftime('%H:%M') }}</td>
+                                        <td>{{ "{:,.0f}".format(deposit.amount) }} DZD</td>
+                                        <td>{{ deposit.notes or '-' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center mb-0">
+                            <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                            Aucun dépôt effectué dans cette session
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const maxAmount = {{ theoretical_balance }};
+    const amountInput = document.getElementById('amount');
+    const submitBtn = document.getElementById('submitBtn');
+    const summary = document.getElementById('summary');
+    const summaryAmount = document.getElementById('summaryAmount');
+    const summaryRemaining = document.getElementById('summaryRemaining');
+
+    // Fonction pour définir un pourcentage
+    function setPercentage(percent) {
+        const amount = Math.floor(maxAmount * percent / 100);
+        amountInput.value = amount;
+        updateSummary();
+    }
+
+    // Mise à jour du récapitulatif
+    function updateSummary() {
+        const amount = parseFloat(amountInput.value) || 0;
+        
+        if (amount > 0 && amount <= maxAmount) {
+            submitBtn.disabled = false;
+            summary.style.display = 'block';
+            
+            summaryAmount.textContent = new Intl.NumberFormat('fr-FR').format(amount) + ' DZD';
+            summaryRemaining.textContent = new Intl.NumberFormat('fr-FR').format(maxAmount - amount) + ' DZD';
+        } else {
+            submitBtn.disabled = true;
+            summary.style.display = 'none';
+        }
+    }
+
+    // Événements
+    amountInput.addEventListener('input', updateSummary);
+    amountInput.addEventListener('change', updateSummary);
+
+    // Validation du formulaire
+    document.getElementById('cashoutForm').addEventListener('submit', function(e) {
+        const amount = parseFloat(amountInput.value);
+        
+        if (amount <= 0) {
+            e.preventDefault();
+            alert('Le montant doit être supérieur à 0.');
+            return;
+        }
+        
+        if (amount > maxAmount) {
+            e.preventDefault();
+            alert(`Le montant ne peut pas dépasser ${new Intl.NumberFormat('fr-FR').format(maxAmount)} DZD.`);
+            return;
+        }
+        
+        // Confirmation
+        const confirmation = confirm(
+            `Confirmer le dépôt de ${new Intl.NumberFormat('fr-FR').format(amount)} DZD vers la banque ?`
+        );
+        
+        if (!confirmation) {
+            e.preventDefault();
+        }
+    });
+
+    // Focus automatique sur le champ montant
+    amountInput.focus();
+</script>
+{% endblock %} 

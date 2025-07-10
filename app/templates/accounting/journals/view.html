@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title">Détails du Journal : {{ journal.name }} ({{ journal.code }})</h3>
+            <div>
+                <a href="{{ url_for('accounting.edit_journal', journal_id=journal.id) }}" class="btn btn-warning me-2">Éditer</a>
+                <a href="{{ url_for('accounting.list_journals') }}" class="btn btn-secondary">Retour à la liste</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Code:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ journal.code }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Libellé:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ journal.name }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Type:</strong>
+                </div>
+                <div class="col-md-6">
+                    <span class="badge bg-secondary">{{ journal.type }}</span>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Date de création:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ journal.created_at.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Dernière modification:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ journal.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

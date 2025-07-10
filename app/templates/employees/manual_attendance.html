@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-hand-point-up"></i> {{ title }}</h1>
+                <div>
+                    <a href="{{ url_for('employees.live_attendance') }}" class="btn btn-info">
+                        <i class="fas fa-broadcast-tower"></i> Temps Réel
+                    </a>
+                    <a href="{{ url_for('employees.attendance_dashboard') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-edit"></i> Ajouter un Pointage Manuel</h5>
+                    <small class="text-muted">Utilisez ce formulaire pour corriger ou ajouter des pointages manuellement</small>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="employee_id" class="form-label">
+                                        <i class="fas fa-user"></i> Employé *
+                                    </label>
+                                    <select class="form-control" id="employee_id" name="employee_id" required>
+                                        <option value="">Sélectionner un employé...</option>
+                                        {% for employee in active_employees %}
+                                            <option value="{{ employee.id }}">
+                                                {{ employee.name }} - {{ employee.get_role_display() }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="punch_type" class="form-label">
+                                        <i class="fas fa-exchange-alt"></i> Type de Pointage *
+                                    </label>
+                                    <select class="form-control" id="punch_type" name="punch_type" required>
+                                        <option value="">Sélectionner le type...</option>
+                                        <option value="in">
+                                            <i class="fas fa-sign-in-alt"></i> Entrée
+                                        </option>
+                                        <option value="out">
+                                            <i class="fas fa-sign-out-alt"></i> Sortie
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="timestamp" class="form-label">
+                                        <i class="fas fa-calendar-alt"></i> Date et Heure *
+                                    </label>
+                                    <input type="datetime-local" class="form-control" id="timestamp" name="timestamp" 
+                                           value="{{ current_datetime }}" required>
+                                    <small class="form-text text-muted">
+                                        Format : JJ/MM/AAAA HH:MM
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="notes" class="form-label">
+                                        <i class="fas fa-sticky-note"></i> Notes (optionnel)
+                                    </label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                              placeholder="Raison du pointage manuel, correction, etc."></textarea>
+                                    <small class="form-text text-muted">
+                                        Expliquez pourquoi ce pointage est ajouté manuellement
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Information :</strong> 
+                                    Ce pointage sera marqué comme "saisie manuelle" dans le système. 
+                                    Assurez-vous que les informations sont correctes avant de valider.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group text-center">
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-save"></i> Enregistrer le Pointage
+                                    </button>
+                                    <a href="{{ url_for('employees.live_attendance') }}" class="btn btn-secondary btn-lg ml-2">
+                                        <i class="fas fa-times"></i> Annuler
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pointages rapides -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-bolt"></i> Pointages Rapides</h5>
+                    <small class="text-muted">Cliquez sur un employé pour un pointage rapide à l'heure actuelle</small>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for employee in active_employees %}
+                            <div class="col-md-3 mb-3">
+                                <div class="card employee-quick-card">
+                                    <div class="card-body text-center p-2">
+                                        <div class="employee-avatar-small mb-2">
+                                            {{ employee.name[:2].upper() }}
+                                        </div>
+                                        <h6 class="card-title mb-1">{{ employee.name }}</h6>
+                                        <p class="card-text small text-muted mb-2">{{ employee.get_role_display() }}</p>
+                                        
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-success btn-sm quick-punch" 
+                                                    data-employee-id="{{ employee.id }}" 
+                                                    data-employee-name="{{ employee.name }}"
+                                                    data-punch-type="in">
+                                                <i class="fas fa-sign-in-alt"></i> Entrée
+                                            </button>
+                                            <button type="button" class="btn btn-warning btn-sm quick-punch" 
+                                                    data-employee-id="{{ employee.id }}" 
+                                                    data-employee-name="{{ employee.name }}"
+                                                    data-punch-type="out">
+                                                <i class="fas fa-sign-out-alt"></i> Sortie
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.employee-quick-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+}
+
+.employee-quick-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-color: #007bff;
+}
+
+.employee-avatar-small {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin: 0 auto;
+}
+
+.quick-punch {
+    transition: all 0.2s ease;
+}
+
+.quick-punch:hover {
+    transform: scale(1.05);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des pointages rapides
+    document.querySelectorAll('.quick-punch').forEach(button => {
+        button.addEventListener('click', function() {
+            const employeeId = this.dataset.employeeId;
+            const employeeName = this.dataset.employeeName;
+            const punchType = this.dataset.punchType;
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 16); // Format YYYY-MM-DDTHH:MM
+            
+            // Confirmation
+            const punchTypeText = punchType === 'in' ? 'Entrée' : 'Sortie';
+            const timeText = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            
+            if (confirm(`Confirmer le pointage ${punchTypeText} pour ${employeeName} à ${timeText} ?`)) {
+                // Créer un formulaire temporaire et le soumettre
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+                
+                // Champs du formulaire
+                const fields = {
+                    'employee_id': employeeId,
+                    'punch_type': punchType,
+                    'timestamp': timestamp,
+                    'notes': `Pointage rapide - ${punchTypeText} à ${timeText}`
+                };
+                
+                for (const [name, value] of Object.entries(fields)) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = value;
+                    form.appendChild(input);
+                }
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    });
+    
+    // Auto-complétion intelligente
+    const employeeSelect = document.getElementById('employee_id');
+    const punchTypeSelect = document.getElementById('punch_type');
+    
+    employeeSelect.addEventListener('change', function() {
+        if (this.value) {
+            // Pré-sélectionner le type de pointage basé sur le statut actuel de l'employé
+            // (Cette logique pourrait être améliorée avec un appel AJAX)
+            punchTypeSelect.focus();
+        }
+    });
+    
+    // Validation du formulaire
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const employeeId = document.getElementById('employee_id').value;
+        const punchType = document.getElementById('punch_type').value;
+        const timestamp = document.getElementById('timestamp').value;
+        
+        if (!employeeId || !punchType || !timestamp) {
+            e.preventDefault();
+            alert('Veuillez remplir tous les champs obligatoires.');
+            return false;
+        }
+        
+        // Vérifier que la date n'est pas dans le futur
+        const selectedDate = new Date(timestamp);
+        const now = new Date();
+        
+        if (selectedDate > now) {
+            e.preventDefault();
+            alert('La date et l\'heure ne peuvent pas être dans le futur.');
+            return false;
+        }
+        
+        return true;
+    });
+});
+</script>
+{% endblock %} 

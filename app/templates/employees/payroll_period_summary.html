@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.summary-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 25px;
+    color: white;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+
+.kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease;
+    border-left: 4px solid #3498db;
+}
+
+.kpi-card:hover {
+    transform: translateY(-5px);
+}
+
+.kpi-card.success {
+    border-left-color: #27ae60;
+}
+
+.kpi-card.warning {
+    border-left-color: #f39c12;
+}
+
+.kpi-card.danger {
+    border-left-color: #e74c3c;
+}
+
+.kpi-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.kpi-label {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.payroll-table {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.payroll-table th {
+    background: #f8f9fa;
+    color: #2c3e50;
+    font-weight: 600;
+    padding: 15px;
+    border: none;
+}
+
+.payroll-table td {
+    padding: 15px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.status-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-validated {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn-action {
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.btn-view {
+    background: #3498db;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #2980b9;
+    color: white;
+}
+
+.btn-edit {
+    background: #f39c12;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #e67e22;
+    color: white;
+}
+
+.section-title {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.global-actions {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.global-actions .btn {
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+    .kpi-value {
+        font-size: 2rem;
+    }
+    
+    .payroll-table {
+        font-size: 0.9rem;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec résumé principal -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="summary-card">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="mb-0">📊 Résumé de Paie - {{ summary.period }}</h2>
+                        <p class="mb-0 mt-2 opacity-75">
+                            Synthèse complète des calculs de paie pour la période sélectionnée
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="d-flex justify-content-end align-items-center">
+                            <i class="fas fa-calendar-alt fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="kpi-card">
+                <div class="kpi-value text-primary">{{ summary.total_employees }}</div>
+                <div class="kpi-label">👥 Employés Total</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="kpi-card success">
+                <div class="kpi-value text-success">{{ summary.validated_count }}</div>
+                <div class="kpi-label">✅ Paies Validées</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="kpi-card warning">
+                <div class="kpi-value text-warning">{{ summary.pending_count }}</div>
+                <div class="kpi-label">⏳ En Attente</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="kpi-card">
+                <div class="kpi-value text-info">{{ "{:,.0f}".format(summary.total_net) }}</div>
+                <div class="kpi-label">💰 Total Net (DA)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques financières -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="kpi-card">
+                <div class="kpi-value text-success">{{ "{:,.0f}".format(summary.total_gross) }}</div>
+                <div class="kpi-label">💵 Total Brut (DA)</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="kpi-card danger">
+                <div class="kpi-value text-danger">{{ "{:,.0f}".format(summary.total_charges) }}</div>
+                <div class="kpi-label">📊 Total Charges (DA)</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="kpi-card">
+                <div class="kpi-value text-info">{{ "{:,.0f}".format(summary.average_net) }}</div>
+                <div class="kpi-label">📈 Moyenne Net (DA)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions globales -->
+    <div class="global-actions">
+        <h5 class="section-title">🔧 Actions Globales</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <a href="{{ url_for('employees.generate_payslips') }}?period_month={{ summary.period.split('/')[0] }}&period_year={{ summary.period.split('/')[1] }}" 
+                   class="btn btn-primary">
+                    <i class="fas fa-file-pdf"></i> Générer Bulletins PDF
+                </a>
+                <a href="{{ url_for('employees.generate_payslips') }}?period_month={{ summary.period.split('/')[0] }}&period_year={{ summary.period.split('/')[1] }}&format=excel" 
+                   class="btn btn-success">
+                    <i class="fas fa-file-excel"></i> Export Excel
+                </a>
+            </div>
+            <div class="col-md-6 text-end">
+                <button class="btn btn-outline-primary" onclick="window.print()">
+                    <i class="fas fa-print"></i> Imprimer Résumé
+                </button>
+                <a href="{{ url_for('employees.payroll_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des paies validées -->
+    {% if validated_payrolls %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="payroll-table">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th colspan="8" class="text-center bg-success text-white">
+                                    <h6 class="mb-0">✅ Paies Validées ({{ validated_payrolls|length }})</h6>
+                                </th>
+                            </tr>
+                            <tr>
+                                <th>Employé</th>
+                                <th>Poste</th>
+                                <th>Heures</th>
+                                <th>Salaire Brut</th>
+                                <th>Charges</th>
+                                <th>Salaire Net</th>
+                                <th>Validé le</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payroll in validated_payrolls %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center">
+                                            {{ payroll.employee.name[:2].upper() }}
+                                        </div>
+                                        <strong>{{ payroll.employee.name }}</strong>
+                                    </div>
+                                </td>
+                                <td>{{ payroll.employee.poste or 'Non défini' }}</td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        {{ payroll.work_hours.total_hours if payroll.work_hours else 0 }}h
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong class="text-success">{{ "{:,.0f}".format(payroll.gross_salary) }} DA</strong>
+                                </td>
+                                <td>
+                                    <span class="text-danger">{{ "{:,.0f}".format(payroll.total_charges) }} DA</span>
+                                </td>
+                                <td>
+                                    <strong class="text-primary">{{ "{:,.0f}".format(payroll.net_salary) }} DA</strong>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ payroll.validated_at.strftime('%d/%m/%Y') if payroll.validated_at else 'N/A' }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{{ url_for('employees.view_payroll', payroll_id=payroll.id) }}" 
+                                           class="btn-action btn-view">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tableau des paies en attente -->
+    {% if pending_payrolls %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="payroll-table">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th colspan="8" class="text-center bg-warning text-dark">
+                                    <h6 class="mb-0">⏳ Paies en Attente de Validation ({{ pending_payrolls|length }})</h6>
+                                </th>
+                            </tr>
+                            <tr>
+                                <th>Employé</th>
+                                <th>Poste</th>
+                                <th>Heures</th>
+                                <th>Salaire Brut</th>
+                                <th>Charges</th>
+                                <th>Salaire Net</th>
+                                <th>Créé le</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payroll in pending_payrolls %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-warning text-dark rounded-circle me-2 d-flex align-items-center justify-content-center">
+                                            {{ payroll.employee.name[:2].upper() }}
+                                        </div>
+                                        <strong>{{ payroll.employee.name }}</strong>
+                                    </div>
+                                </td>
+                                <td>{{ payroll.employee.poste or 'Non défini' }}</td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        {{ payroll.work_hours.total_hours if payroll.work_hours else 0 }}h
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong class="text-success">{{ "{:,.0f}".format(payroll.gross_salary) }} DA</strong>
+                                </td>
+                                <td>
+                                    <span class="text-danger">{{ "{:,.0f}".format(payroll.total_charges) }} DA</span>
+                                </td>
+                                <td>
+                                    <strong class="text-primary">{{ "{:,.0f}".format(payroll.net_salary) }} DA</strong>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ payroll.created_at.strftime('%d/%m/%Y') if payroll.created_at else 'N/A' }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{{ url_for('employees.view_payroll', payroll_id=payroll.id) }}" 
+                                           class="btn-action btn-view">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('employees.calculate_payroll') }}?employee_id={{ payroll.employee_id }}&month={{ payroll.period_month }}&year={{ payroll.period_year }}" 
+                                           class="btn-action btn-edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Message si aucune paie -->
+    {% if not validated_payrolls and not pending_payrolls %}
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">Aucune paie trouvée</h4>
+                <p class="text-muted">Aucun calcul de paie n'a été effectué pour cette période.</p>
+                <a href="{{ url_for('employees.calculate_payroll') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Calculer une Paie
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Fonction pour rafraîchir les données
+function refreshData() {
+    location.reload();
+}
+
+// Auto-refresh toutes les 5 minutes
+setInterval(refreshData, 300000);
+
+// Confirmation avant actions
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteButtons = document.querySelectorAll('.btn-delete');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette paie ?')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

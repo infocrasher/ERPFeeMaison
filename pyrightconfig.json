@@ -1,0 +1,15 @@
+{
+  "venvPath": "./",
+  "venv": "venv",
+  "include": ["app", "."],
+  "exclude": ["venv", "tests", "**/*.html", "**/templates/**"],
+  "reportMissingImports": false,
+  "reportMissingModuleSource": false,
+  "pythonVersion": "3.10",
+  "typeCheckingMode": "basic",
+  "reportAttributeAccessIssue": false,
+  "reportCallIssue": false,
+  "reportArgumentType": false,
+  "reportOptionalMemberAccess": false,
+  "reportGeneralTypeIssues": false
+} 
