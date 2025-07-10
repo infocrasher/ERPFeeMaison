@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Mouvement de caisse – Fée Maison{% endblock %}
+
+{% block head %}
+<style>
+    :root {
+        --primary-color: #2C3E50;
+        --secondary-color: #3498DB;
+        --accent-color: #E74C3C;
+        --success-color: #27AE60;
+        --warning-color: #F39C12;
+        --light-bg: #ECF0F1;
+        --dark-text: #2C3E50;
+        --light-text: #7F8C8D;
+        --white: #FFFFFF;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--light-bg);
+        min-height: 100vh;
+        margin: 0;
+    }
+
+    .pos-container {
+        max-width: 800px;
+        margin: 40px auto;
+        background: var(--white);
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        padding: 30px;
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .form-header h1 {
+        color: var(--primary-color);
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .form-header p {
+        color: var(--light-text);
+        font-size: 1rem;
+    }
+
+    .form-body {
+        margin-bottom: 30px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--dark-text);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: var(--secondary-color);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+    }
+
+    .form-control[type="number"] {
+        font-weight: 600;
+        color: var(--success-color);
+        text-align: right;
+    }
+
+    .radio-group {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .radio-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .radio-label input {
+        width: 18px;
+        height: 18px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: flex-end;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: var(--secondary-color);
+        color: var(--white);
+    }
+
+    .btn-primary:hover {
+        background: #2980B9;
+        transform: translateY(-2px);
+    }
+
+    .btn-outline {
+        background: transparent;
+        border: 2px solid var(--light-text);
+        color: var(--light-text);
+    }
+
+    .btn-outline:hover {
+        border-color: var(--secondary-color);
+        color: var(--secondary-color);
+    }
+
+    @media (max-width: 768px) {
+        .pos-container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .form-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .radio-group {
+            flex-direction: column;
+            gap: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pos-container">
+    <div class="form-header">
+        <h1><i class="bi bi-cash-coin"></i> Mouvement de caisse</h1>
+        <p>Enregistrer une entrée ou une sortie de caisse</p>
+    </div>
+
+    <form method="POST" id="cashMovementForm" class="form-body">
+        <div class="radio-group">
+            <label class="radio-label">
+                <input type="radio" name="type" value="entrée" required checked>
+                <i class="bi bi-plus-lg text-success"></i> Entrée
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="type" value="sortie">
+                <i class="bi bi-dash-lg text-danger"></i> Sortie
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label for="amount">Montant (DA)</label>
+            <input type="number" class="form-control" id="amount" name="amount" min="0.01" step="0.01" required>
+        </div>
+
+        <div class="form-group">
+            <label for="reason">Motif</label>
+            <input type="text" class="form-control" id="reason" name="reason" required>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Remarques (optionnel)</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Ex: Achat de fournitures"></textarea>
+        </div>
+    </form>
+
+    <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="history.back()">
+            <i class="bi bi-arrow-left"></i> Retour
+        </button>
+        <button type="submit" form="cashMovementForm" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Valider
+        </button>
+    </div>
+</div>
+{% endblock %}

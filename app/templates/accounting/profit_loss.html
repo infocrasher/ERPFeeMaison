@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Compte de Résultat</h1>
+        <div class="btn-group">
+            <a href="{{ url_for('accounting.reports') }}" class="btn btn-secondary">Retour</a>
+            <button class="btn btn-primary" onclick="window.print()">Imprimer</button>
+        </div>
+    </div>
+
+    <!-- Résultat Net -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card {% if resultat_type == 'Bénéfice' %}bg-success{% elif resultat_type == 'Perte' %}bg-danger{% else %}bg-secondary{% endif %} text-white">
+                <div class="card-body text-center">
+                    <h2 class="card-title">{{ resultat_type }}</h2>
+                    <p class="card-text display-4 fw-bold">{{ "%.2f"|format(resultat_net) }} DZD</p>
+                    <p class="text-light">Formule : Produits - Charges = {{ "%.2f"|format(total_produits) }} - {{ "%.2f"|format(total_charges) }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Détail Produits et Charges -->
+    <div class="row">
+        <!-- Produits (Classe 7) -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-arrow-up"></i> PRODUITS (Classe 7)
+                        <span class="float-end">{{ "%.2f"|format(total_produits) }} DZD</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if produits_data %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Compte</th>
+                                    <th class="text-end">Montant</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in produits_data %}
+                                <tr>
+                                    <td><code>{{ item.account.code }}</code></td>
+                                    <td>{{ item.account.name }}</td>
+                                    <td class="text-end fw-bold text-success">{{ "%.2f"|format(item.balance) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-info">
+                                    <th colspan="2">TOTAL PRODUITS</th>
+                                    <th class="text-end">{{ "%.2f"|format(total_produits) }} DZD</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Aucun produit enregistré
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Charges (Classe 6) -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-arrow-down"></i> CHARGES (Classe 6)
+                        <span class="float-end">{{ "%.2f"|format(total_charges) }} DZD</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if charges_data %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Compte</th>
+                                    <th class="text-end">Montant</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in charges_data %}
+                                <tr>
+                                    <td><code>{{ item.account.code }}</code></td>
+                                    <td>{{ item.account.name }}</td>
+                                    <td class="text-end fw-bold text-danger">{{ "%.2f"|format(item.balance) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-warning">
+                                    <th colspan="2">TOTAL CHARGES</th>
+                                    <th class="text-end">{{ "%.2f"|format(total_charges) }} DZD</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Aucune charge enregistrée
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analyse du Résultat -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Analyse du Résultat</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Chiffre d'Affaires</h6>
+                                <p class="fs-5 fw-bold text-info">{{ "%.2f"|format(total_produits) }} DZD</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Total Charges</h6>
+                                <p class="fs-5 fw-bold text-warning">{{ "%.2f"|format(total_charges) }} DZD</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Marge Bénéficiaire</h6>
+                                {% if total_produits > 0 %}
+                                    {% set marge = ((total_produits - total_charges) / total_produits * 100) %}
+                                    <p class="fs-5 fw-bold {% if marge >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {{ "%.1f"|format(marge) }}%
+                                    </p>
+                                {% else %}
+                                    <p class="fs-5 fw-bold text-muted">N/A</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0">Notes</h6>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li><strong>Produits :</strong> Tous les comptes de classe 7 (ventes, produits divers, etc.)</li>
+                <li><strong>Charges :</strong> Tous les comptes de classe 6 (achats, charges diverses, etc.)</li>
+                <li><strong>Résultat Net :</strong> Différence entre les produits et les charges</li>
+                <li><strong>Marge :</strong> Pourcentage de bénéfice par rapport au chiffre d'affaires</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn-group, .card:last-child {
+        display: none !important;
+    }
+    
+    .container-fluid {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .table {
+        font-size: 12px;
+    }
+}
+</style>
+{% endblock %} 

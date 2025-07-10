@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-file-earmark-pdf text-primary me-2"></i>
+                    Génération des Bulletins de Paie
+                </h1>
+                <a href="{{ url_for('employees.payroll_dashboard') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left me-2"></i>Retour Dashboard
+                </a>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear me-2"></i>
+                        Paramètres de Génération
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.period_month.label(class="form-label fw-bold") }}
+                                {{ form.period_month(class="form-select") }}
+                                {% if form.period_month.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.period_month.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.period_year.label(class="form-label fw-bold") }}
+                                {{ form.period_year(class="form-control") }}
+                                {% if form.period_year.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.period_year.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.employee_ids.label(class="form-label fw-bold") }}
+                                {{ form.employee_ids(class="form-select", multiple=True, size="8") }}
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Maintenez Ctrl/Cmd pour sélectionner plusieurs employés. Laissez vide pour tous les employés.
+                                </div>
+                                {% if form.employee_ids.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.employee_ids.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.output_format.label(class="form-label fw-bold") }}
+                                    {{ form.output_format(class="form-select") }}
+                                    {% if form.output_format.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.output_format.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        {{ form.include_inactive(class="form-check-input") }}
+                                        {{ form.include_inactive.label(class="form-check-label") }}
+                                    </div>
+                                    {% if form.include_inactive.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.include_inactive.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-file-earmark-pdf me-2"></i>Générer les Bulletins
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Informations sur la génération -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="bi bi-info-circle me-2"></i>Formats de Sortie
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2">
+                                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                                    <strong>PDF :</strong> Bulletins individuels prêts à imprimer
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-file-earmark-excel text-success me-2"></i>
+                                    <strong>Excel :</strong> Tableau récapitulatif pour la comptabilité
+                                </li>
+                                <li>
+                                    <i class="bi bi-files text-primary me-2"></i>
+                                    <strong>Les deux :</strong> PDF + Excel dans un archive ZIP
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Prérequis
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2">
+                                    <i class="bi bi-clock text-warning me-2"></i>
+                                    Les heures de travail doivent être saisies
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-calculator text-info me-2"></i>
+                                    La paie doit être calculée
+                                </li>
+                                <li>
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    La paie doit être validée
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validation du formulaire
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+</script>
+{% endblock %} 

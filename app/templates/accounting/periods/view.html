@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title">Détails de l'Exercice Comptable</h3>
+            <div>
+                <a href="{{ url_for('accounting.edit_period', period_id=period.id) }}" class="btn btn-warning me-2">Éditer</a>
+                <a href="{{ url_for('accounting.list_periods') }}" class="btn btn-secondary">Retour à la liste</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>ID:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ period.id }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Date de début:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ period.start_date.strftime('%d/%m/%Y') }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Date de fin:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ period.end_date.strftime('%d/%m/%Y') }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Statut:</strong>
+                </div>
+                <div class="col-md-6">
+                    {% if period.is_closed %}
+                        <span class="badge bg-danger">Clôturé</span>
+                    {% else %}
+                        <span class="badge bg-success">Ouvert</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Date de création:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ period.created_at.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Dernière modification:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ period.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

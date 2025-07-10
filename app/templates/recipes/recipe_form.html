@@ -1,0 +1,563 @@
+{% extends "base.html" %}
+
+{% from "_form_macros.html" import render_field with context %}
+
+{% block title %}{{ title or 'Formulaire de Recette' }}{% endblock %}
+
+{% block head %}
+<style>
+    .ingredient-search-container {
+        position: relative;
+    }
+    
+    .ingredient-search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 0 0 4px 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+    
+    .ingredient-search-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .ingredient-search-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .ingredient-search-item.selected {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .ingredient-info {
+        font-size: 0.875em;
+        color: #6c757d;
+    }
+    
+    .cost-info {
+        float: right;
+        font-weight: bold;
+        color: #28a745;
+    }
+    
+    .recipe-cost-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .line-cost {
+        font-weight: bold;
+        color: #28a745;
+    }
+    
+    .ingredient-id-hidden {
+        display: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">🍳 {{ title }}</h1>
+                    <p class="text-muted">Gestion des recettes avec calcul automatique des coûts</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Retour Liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Résumé des coûts -->
+    <div class="recipe-cost-summary">
+        <div class="row">
+            <div class="col-md-3">
+                <h6>💰 Coût Total</h6>
+                <h4 id="totalRecipeCost">0,00 DA</h4>
+            </div>
+            <div class="col-md-3">
+                <h6>📊 Coût par Unité</h6>
+                <h4 id="costPerUnit">0,00 DA</h4>
+            </div>
+            <div class="col-md-3">
+                <h6>🔢 Quantité Produite</h6>
+                <span id="yieldDisplay">1 pièce(s)</span>
+            </div>
+            <div class="col-md-3">
+                <h6>📦 Ingrédients</h6>
+                <span id="ingredientCount">0 ingrédient(s)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ CORRECTION : Données pour JavaScript -->
+    <div id="recipeData" 
+         data-initial-ingredient-count="{{ form.ingredients|length }}" 
+         data-api-url="{{ url_for('recipes.api_ingredients_search') }}" 
+         style="display: none;"></div>
+
+    <form method="POST" id="recipeForm">
+        {{ form.hidden_tag() }}
+
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Informations générales -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5><i class="bi bi-info-circle me-2"></i>Informations Générales</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ render_field(form.name) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ render_field(form.production_location) }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ render_field(form.yield_quantity) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ render_field(form.yield_unit) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ render_field(form.finished_product) }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                {{ render_field(form.description) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Liste des ingrédients -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-list-task me-2"></i>Ingrédients</h5>
+                        <button type="button" class="btn btn-primary btn-sm" id="addIngredientBtn">
+                            <i class="bi bi-plus-circle me-1"></i>Ajouter un ingrédient
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="ingredientsList">
+                            {% for ingredient in form.ingredients %}
+                            <div class="ingredient-row mb-3" data-ingredient-index="{{ loop.index0 }}">
+                                <div class="row align-items-center">
+                                    <div style="display: none;">
+                                        {{ ingredient.id }}
+                                        {{ ingredient.product_id(class_='ingredient-id-input') }}
+                                    </div>
+                                    
+                                    <div class="col-md-5">
+                                        <label class="form-label">🔍 Ingrédient</label>
+                                        <div class="ingredient-search-container">
+                                            {{ ingredient.product_search(class="form-control ingredient-search-field") }}
+                                            <div class="ingredient-search-results"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Quantité</label>
+                                        {{ ingredient.quantity_needed(class="form-control ingredient-quantity") }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Unité</label>
+                                        {{ ingredient.unit(class="form-control unit-input", readonly=True) }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Coût Ligne</label>
+                                        <div class="form-control-plaintext line-cost">0,00 DA</div>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <label class="form-label">&nbsp;</label>
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient-btn">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div id="noIngredientsMessage" class="text-muted text-center py-3" style="display: none;">
+                            <i class="bi bi-info-circle me-2"></i>Cliquez sur "Ajouter un ingrédient" pour commencer
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Actions -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5><i class="bi bi-gear me-2"></i>Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form.submit(class="btn btn-primary w-100 mb-2") }}
+                        <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary w-100">Annuler</a>
+                    </div>
+                </div>
+
+                <!-- Aide -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="bi bi-question-circle me-2"></i>Aide</h6>
+                    </div>
+                    <div class="card-body">
+                        <small class="text-muted">
+                            • Tapez quelques lettres pour rechercher un ingrédient<br>
+                            • L'unité et le prix seront remplis automatiquement<br>
+                            • Le coût de la recette se calcule en temps réel
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<template id="ingredientRowTemplate">
+    <div class="ingredient-row mb-3" data-ingredient-index="">
+        <div class="row align-items-center">
+            <input type="hidden" name="ingredients-__INDEX__-id" class="ingredient-id-hidden">
+            <input type="hidden" name="ingredients-__INDEX__-product_id" class="ingredient-id-input">
+            
+            <div class="col-md-5">
+                <label class="form-label">🔍 Ingrédient</label>
+                <div class="ingredient-search-container">
+                    <input type="text" name="ingredients-__INDEX__-product_search" class="form-control ingredient-search-field" placeholder="Tapez pour rechercher...">
+                    <div class="ingredient-search-results"></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Quantité</label>
+                <input type="number" name="ingredients-__INDEX__-quantity_needed" class="form-control ingredient-quantity" step="0.001" min="0.001">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Unité</label>
+                <input type="text" name="ingredients-__INDEX__-unit" class="form-control unit-input" readonly>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Coût Ligne</label>
+                <div class="form-control-plaintext line-cost">0,00 DA</div>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient-btn">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ✅ CORRECTION : Récupération des données depuis l'attribut data
+    const recipeData = document.getElementById('recipeData');
+    let ingredientIndex = parseInt(recipeData.getAttribute('data-initial-ingredient-count')) || 0;
+    const apiUrl = recipeData.getAttribute('data-api-url');
+    
+    let searchTimeout = {};
+    
+    initializeExistingRows();
+    updateCostSummary();
+    updateIngredientCount();
+    updateYieldDisplay();
+    
+    document.getElementById('addIngredientBtn').addEventListener('click', function() {
+        addIngredientRow();
+    });
+    
+    const yieldQuantity = document.querySelector('input[name="yield_quantity"]');
+    const yieldUnit = document.querySelector('input[name="yield_unit"]');
+    
+    if (yieldQuantity) {
+        yieldQuantity.addEventListener('input', updateYieldDisplay);
+        yieldQuantity.addEventListener('input', updateCostSummary);
+    }
+    if (yieldUnit) {
+        yieldUnit.addEventListener('input', updateYieldDisplay);
+    }
+    
+    function initializeExistingRows() {
+        const existingRows = document.querySelectorAll('.ingredient-row');
+        existingRows.forEach(function(row, index) {
+            setupIngredientRow(row, index);
+        });
+    }
+    
+    function addIngredientRow() {
+        const template = document.getElementById('ingredientRowTemplate');
+        const clone = template.content.cloneNode(true);
+        
+        const templateHTML = clone.querySelector('.ingredient-row').outerHTML;
+        const html = templateHTML.replace(/__INDEX__/g, ingredientIndex);
+        
+        const container = document.getElementById('ingredientsList');
+        container.insertAdjacentHTML('beforeend', html);
+        
+        const newRow = container.lastElementChild;
+        newRow.setAttribute('data-ingredient-index', ingredientIndex);
+        
+        setupIngredientRow(newRow, ingredientIndex);
+        
+        ingredientIndex++;
+        updateIngredientCount();
+        hideNoIngredientsMessage();
+    }
+    
+    function setupIngredientRow(row, index) {
+        const searchField = row.querySelector('.ingredient-search-field');
+        const resultsContainer = row.querySelector('.ingredient-search-results');
+        const productIdField = row.querySelector('.ingredient-id-input');
+        const unitField = row.querySelector('.unit-input');
+        const quantityField = row.querySelector('.ingredient-quantity');
+        const removeBtn = row.querySelector('.remove-ingredient-btn');
+        
+        if (searchField && resultsContainer) {
+            setupAutocompletion(searchField, resultsContainer, productIdField, unitField, row);
+        }
+        
+        if (quantityField) {
+            quantityField.addEventListener('input', function() {
+                calculateLineCost(row);
+                updateCostSummary();
+            });
+        }
+        
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                row.remove();
+                updateIngredientCount();
+                updateCostSummary();
+                showNoIngredientsMessageIfNeeded();
+            });
+        }
+    }
+    
+    function setupAutocompletion(searchField, resultsContainer, productIdField, unitField, row) {
+        let selectedIndex = -1;
+        
+        searchField.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            if (query.length < 2) {
+                hideResults();
+                clearSelection();
+                return;
+            }
+            
+            clearTimeout(searchTimeout[searchField]);
+            searchTimeout[searchField] = setTimeout(function() {
+                searchIngredients(query, resultsContainer, searchField, productIdField, unitField, row);
+            }, 300);
+        });
+        
+        searchField.addEventListener('keydown', function(e) {
+            const items = resultsContainer.querySelectorAll('.ingredient-search-item');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                updateSelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateSelection(items);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (selectedIndex >= 0 && items[selectedIndex]) {
+                    selectIngredient(items[selectedIndex], searchField, productIdField, unitField, row);
+                }
+            } else if (e.key === 'Escape') {
+                hideResults();
+            }
+        });
+        
+        searchField.addEventListener('blur', function() {
+            setTimeout(function() { 
+                hideResults(); 
+            }, 200);
+        });
+        
+        function updateSelection(items) {
+            items.forEach(function(item, index) {
+                item.classList.toggle('selected', index === selectedIndex);
+            });
+        }
+        
+        function hideResults() {
+            resultsContainer.style.display = 'none';
+            selectedIndex = -1;
+        }
+        
+        function clearSelection() {
+            if (productIdField) productIdField.value = '';
+            if (unitField) unitField.value = '';
+            searchField.removeAttribute('data-cost-price');
+            calculateLineCost(row);
+            updateCostSummary();
+        }
+    }
+    
+    function searchIngredients(query, resultsContainer, searchField, productIdField, unitField, row) {
+        // ✅ CORRECTION : Utilisation de la variable apiUrl
+        const url = apiUrl + '?q=' + encodeURIComponent(query);
+        
+        fetch(url)
+            .then(function(response) { 
+                return response.json(); 
+            })
+            .then(function(data) {
+                displayResults(data, resultsContainer, searchField, productIdField, unitField, row);
+            })
+            .catch(function(error) {
+                console.error('Erreur lors de la recherche:', error);
+                resultsContainer.style.display = 'none';
+            });
+    }
+    
+    function displayResults(ingredients, resultsContainer, searchField, productIdField, unitField, row) {
+        if (ingredients.length === 0) {
+            resultsContainer.innerHTML = '<div class="ingredient-search-item">Aucun ingrédient trouvé</div>';
+            resultsContainer.style.display = 'block';
+            return;
+        }
+        
+        let html = '';
+        ingredients.forEach(function(ingredient) {
+            html += '<div class="ingredient-search-item" ' +
+                    'data-id="' + ingredient.id + '" ' +
+                    'data-name="' + ingredient.name + '" ' +
+                    'data-unit="' + ingredient.unit + '" ' +
+                    'data-cost-price="' + ingredient.cost_price + '">' +
+                    '<div class="d-flex justify-content-between">' +
+                    '<div>' +
+                    '<strong>' + ingredient.name + '</strong>' +
+                    '<div class="ingredient-info">Unité: ' + ingredient.unit + '</div>' +
+                    '</div>' +
+                    '<div class="cost-info">' + ingredient.cost_price + ' DA/' + ingredient.unit + '</div>' +
+                    '</div>' +
+                    '</div>';
+        });
+        
+        resultsContainer.innerHTML = html;
+        resultsContainer.style.display = 'block';
+        
+        resultsContainer.querySelectorAll('.ingredient-search-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+                selectIngredient(this, searchField, productIdField, unitField, row);
+            });
+        });
+    }
+    
+    function selectIngredient(item, searchField, productIdField, unitField, row) {
+        const id = item.getAttribute('data-id');
+        const name = item.getAttribute('data-name');
+        const unit = item.getAttribute('data-unit');
+        const costPrice = item.getAttribute('data-cost-price');
+        
+        if (id && name) {
+            searchField.value = name;
+            if (productIdField) productIdField.value = id;
+            if (unitField) unitField.value = unit || '';
+            
+            searchField.setAttribute('data-cost-price', costPrice || '0');
+            item.closest('.ingredient-search-results').style.display = 'none';
+            
+            calculateLineCost(row);
+            updateCostSummary();
+        }
+    }
+    
+    function calculateLineCost(row) {
+        const searchField = row.querySelector('.ingredient-search-field');
+        const quantityField = row.querySelector('.ingredient-quantity');
+        const costDisplay = row.querySelector('.line-cost');
+        
+        if (!searchField || !quantityField || !costDisplay) return;
+        
+        const costPrice = parseFloat(searchField.getAttribute('data-cost-price') || '0');
+        const quantity = parseFloat(quantityField.value || '0');
+        
+        const lineCost = costPrice * quantity;
+        costDisplay.textContent = lineCost.toFixed(2) + ' DA';
+    }
+    
+    function updateCostSummary() {
+        let totalCost = 0;
+        
+        document.querySelectorAll('.ingredient-row').forEach(function(row) {
+            const searchField = row.querySelector('.ingredient-search-field');
+            const quantityField = row.querySelector('.ingredient-quantity');
+            
+            if (searchField && quantityField) {
+                const costPrice = parseFloat(searchField.getAttribute('data-cost-price') || '0');
+                const quantity = parseFloat(quantityField.value || '0');
+                totalCost += costPrice * quantity;
+            }
+        });
+        
+        document.getElementById('totalRecipeCost').textContent = totalCost.toFixed(2) + ' DA';
+        
+        const yieldQuantityField = document.querySelector('input[name="yield_quantity"]');
+        const yieldQuantity = parseFloat(yieldQuantityField ? yieldQuantityField.value : '1') || 1;
+        const costPerUnit = yieldQuantity > 0 ? totalCost / yieldQuantity : 0;
+        document.getElementById('costPerUnit').textContent = costPerUnit.toFixed(2) + ' DA';
+    }
+    
+    function updateIngredientCount() {
+        const count = document.querySelectorAll('.ingredient-row').length;
+        document.getElementById('ingredientCount').textContent = count + ' ingrédient(s)';
+    }
+    
+    function updateYieldDisplay() {
+        const quantityField = document.querySelector('input[name="yield_quantity"]');
+        const unitField = document.querySelector('input[name="yield_unit"]');
+        const quantity = quantityField ? quantityField.value : '1';
+        const unit = unitField ? unitField.value : 'pièce(s)';
+        document.getElementById('yieldDisplay').textContent = quantity + ' ' + unit;
+    }
+    
+    function hideNoIngredientsMessage() {
+        const message = document.getElementById('noIngredientsMessage');
+        if (message) message.style.display = 'none';
+    }
+    
+    function showNoIngredientsMessageIfNeeded() {
+        const count = document.querySelectorAll('.ingredient-row').length;
+        const message = document.getElementById('noIngredientsMessage');
+        if (message && count === 0) {
+            message.style.display = 'block';
+        }
+    }
+    
+    showNoIngredientsMessageIfNeeded();
+}); // ✅ CORRECTION : Syntaxe correcte pour la fermeture
+</script>
+{% endblock %}
