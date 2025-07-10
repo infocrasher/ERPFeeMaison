@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-chart-pie"></i> {{ title }}</h1>
+                <div>
+                    <a href="{{ url_for('employees.live_attendance') }}" class="btn btn-info">
+                        <i class="fas fa-broadcast-tower"></i> Temps Réel
+                    </a>
+                    <a href="{{ url_for('employees.manual_attendance') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Pointage Manuel
+                    </a>
+                    <a href="{{ url_for('employees.list_employees') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Employés
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélecteur de date -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row align-items-center">
+                        <div class="col-md-3">
+                            <label for="date" class="form-label">Date à consulter</label>
+                            <input type="date" class="form-control" id="date" name="date" 
+                                   value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Consulter
+                            </button>
+                            <a href="{{ url_for('employees.attendance_dashboard') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-calendar-day"></i> Aujourd'hui
+                            </a>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <div class="btn-group">
+                                <a href="?date={{ previous_date.strftime('%Y-%m-%d') }}" 
+                                   class="btn btn-outline-primary">
+                                    <i class="fas fa-chevron-left"></i> Hier
+                                </a>
+                                <a href="?date={{ next_date.strftime('%Y-%m-%d') }}" 
+                                   class="btn btn-outline-primary">
+                                    Demain <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques générales -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ stats.total_employees }}</h3>
+                    <small class="text-muted">Total Employés</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ stats.present_employees }}</h3>
+                    <small class="text-muted">Présents</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger">{{ stats.absent_employees }}</h3>
+                    <small class="text-muted">Absents</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-info">{{ stats.attendance_rate }}%</h3>
+                    <small class="text-muted">Taux Présence</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ "%.1f"|format(stats.total_hours_worked) }}h</h3>
+                    <small class="text-muted">Total Heures</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-secondary">{{ selected_date.strftime('%d/%m') }}</h3>
+                    <small class="text-muted">{{ selected_date.strftime('%A') | capitalize }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Tableau de présence consolidé -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-table"></i> Tableau de Présence - {{ selected_date.strftime('%d/%m/%Y') }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if daily_summary or employees_without_attendance %}
+                        <div class="table-responsive">
+                            <table class="table table-hover attendance-table">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th><i class="fas fa-user"></i> Employé</th>
+                                        <th><i class="fas fa-sign-in-alt"></i> Entrée</th>
+                                        <th><i class="fas fa-sign-out-alt"></i> Sortie</th>
+                                        <th><i class="fas fa-clock"></i> Heures Travaillées</th>
+                                        <th><i class="fas fa-info-circle"></i> Statut</th>
+                                        <th><i class="fas fa-cog"></i> Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for emp_id, data in daily_summary.items() %}
+                                        {% set employee = data.employee %}
+                                        {% set first_in = data.records | selectattr('punch_type', 'equalto', 'in') | first %}
+                                        {% set last_out = data.records | selectattr('punch_type', 'equalto', 'out') | list | last %}
+                                        <tr class="attendance-row">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="employee-avatar-modern mr-3">
+                                                        {{ employee.name[:2].upper() }}
+                                                    </div>
+                                                    <div>
+                                                        <strong class="employee-name">{{ employee.name }}</strong>
+                                                        <br><small class="text-muted">{{ employee.get_role_display() }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if first_in %}
+                                                    <span class="time-badge time-in">
+                                                        <i class="fas fa-arrow-right"></i> {{ first_in.formatted_time }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if last_out %}
+                                                    <span class="time-badge time-out">
+                                                        <i class="fas fa-arrow-left"></i> {{ last_out.formatted_time }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="hours-badge">
+                                                    <i class="fas fa-hourglass-half"></i> 
+                                                    {% if data.total_hours > 0 %}
+                                                        {{ "%.0f"|format(data.total_hours) }}h{{ "%02d"|format(((data.total_hours % 1) * 60)|int) }}m
+                                                    {% else %}
+                                                        0h00m
+                                                    {% endif %}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if data.status == 'present' %}
+                                                    <span class="status-badge status-present">
+                                                        <i class="fas fa-check-circle"></i> En cours
+                                                    </span>
+                                                {% elif last_out %}
+                                                    <span class="status-badge status-finished">
+                                                        <i class="fas fa-check-double"></i> Terminé
+                                                    </span>
+                                                {% else %}
+                                                    <span class="status-badge status-absent">
+                                                        <i class="fas fa-times-circle"></i> Absent
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{{ url_for('employees.employee_attendance', employee_id=employee.id) }}" 
+                                                       class="btn btn-outline-primary btn-sm" title="Historique">
+                                                        <i class="fas fa-history"></i>
+                                                    </a>
+                                                    <a href="{{ url_for('employees.view_employee', employee_id=employee.id) }}" 
+                                                       class="btn btn-outline-info btn-sm" title="Profil">
+                                                        <i class="fas fa-user"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    
+                                    <!-- Employés sans pointage -->
+                                    {% for employee in employees_without_attendance %}
+                                        <tr class="attendance-row absent-row">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="employee-avatar-modern mr-3 bg-secondary">
+                                                        {{ employee.name[:2].upper() }}
+                                                    </div>
+                                                    <div>
+                                                        <strong class="employee-name">{{ employee.name }}</strong>
+                                                        <br><small class="text-muted">{{ employee.get_role_display() }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td><span class="text-muted">-</span></td>
+                                            <td><span class="text-muted">-</span></td>
+                                            <td><span class="hours-badge hours-zero">0h00m</span></td>
+                                            <td>
+                                                <span class="status-badge status-absent">
+                                                    <i class="fas fa-times-circle"></i> Absent
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{{ url_for('employees.manual_attendance') }}?employee_id={{ employee.id }}" 
+                                                       class="btn btn-outline-success btn-sm" title="Ajouter pointage">
+                                                        <i class="fas fa-plus"></i>
+                                                    </a>
+                                                    <a href="{{ url_for('employees.view_employee', employee_id=employee.id) }}" 
+                                                       class="btn btn-outline-info btn-sm" title="Profil">
+                                                        <i class="fas fa-user"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Aucun pointage pour cette date</h5>
+                            <p class="text-muted">Aucun employé n'a pointé le {{ selected_date.strftime('%d/%m/%Y') }}.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphique de présence -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-pie"></i> Répartition</h5>
+                </div>
+                <div class="card-body text-center">
+                    <canvas id="attendanceChart" width="200" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Tableau de présence moderne */
+.attendance-table {
+    margin-bottom: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.attendance-table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    text-align: center;
+    padding: 15px 10px;
+    border: none;
+    font-size: 0.9rem;
+}
+
+.attendance-row {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.attendance-row:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.attendance-row.absent-row {
+    background-color: #fff5f5;
+}
+
+.attendance-row.absent-row:hover {
+    background-color: #fed7d7;
+}
+
+/* Avatar moderne */
+.employee-avatar-modern {
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.employee-avatar-modern.bg-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+}
+
+.employee-name {
+    color: #2d3748;
+    font-size: 1rem;
+}
+
+/* Badges de temps */
+.time-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.time-in {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+}
+
+.time-out {
+    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+    color: white;
+}
+
+/* Badge d'heures */
+.hours-badge {
+    display: inline-block;
+    padding: 8px 15px;
+    background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+    color: white;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.hours-zero {
+    background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+}
+
+/* Badges de statut */
+.status-badge {
+    display: inline-block;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.status-present {
+    background: linear-gradient(135deg, #f6e05e 0%, #d69e2e 100%);
+    color: #744210;
+}
+
+.status-finished {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+}
+
+.status-absent {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .attendance-table {
+        font-size: 0.8rem;
+    }
+    
+    .employee-avatar-modern {
+        width: 35px;
+        height: 35px;
+        font-size: 0.8rem;
+    }
+    
+    .time-badge, .hours-badge, .status-badge {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+    }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Graphique de présence
+    const ctx = document.getElementById('attendanceChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Présents', 'Absents'],
+            datasets: [{
+                data: [{{ stats.present_employees }}, {{ stats.absent_employees }}],
+                backgroundColor: [
+                    '#28a745',
+                    '#dc3545'
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Auto-refresh si on regarde aujourd'hui
+    const selectedDate = new Date('{{ selected_date.strftime('%Y-%m-%d') }}');
+    const today = new Date();
+    
+    if (selectedDate.toDateString() === today.toDateString()) {
+        // Actualiser toutes les 2 minutes
+        setInterval(function() {
+            location.reload();
+        }, 120000);
+    }
+});
+</script>
+{% endblock %} 
