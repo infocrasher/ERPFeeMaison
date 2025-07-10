@@ -157,3 +157,18 @@ logs/
 
 # backup files
 *.db.backup
+
+# Configuration files with sensitive data
+env_production.txt
+env_production.sh
+*.env.local
+*.env.production
+config_production.py
+config_local.py
+
+# Scripts with hardcoded passwords (for security)
+postgresql_setup.sh
+postgresql_validation.sh
+postgresql_troubleshooting.sh
+deploy_setup.sh
+deploy_app.sh

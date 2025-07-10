@@ -1,0 +1,41 @@
+# ========================================
+# CONFIGURATION PRODUCTION - EXEMPLE
+# ========================================
+# ⚠️  COPIEZ CE FICHIER VERS .env ET REMPLACEZ LES VALEURS
+# ========================================
+
+# CONFIGURATION FLASK
+FLASK_APP=app
+FLASK_ENV=production
+SECRET_KEY=your_super_secret_key_here_change_this
+DEBUG=False
+
+# CONFIGURATION BASE DE DONNÉES POSTGRESQL
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=fee_maison_db
+DB_USER=erp_user
+POSTGRES_PASSWORD=your_secure_password_here
+
+# CONFIGURATION REDIS (OPTIONNEL)
+REDIS_URL=redis://localhost:6379/0
+
+# CONFIGURATION POINTEUSE ZKTECO
+ZK_IP=192.168.1.100
+ZK_PORT=4370
+ZK_PASSWORD=your_zk_password_here
+ZK_API_PASSWORD=your_zk_api_password_here
+
+# CONFIGURATION EMAIL (OPTIONNEL)
+# ⚠️  ATTENTION: Ne jamais commiter de vrais identifiants !
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=True
+MAIL_USE_SSL=False
+MAIL_USERNAME=your_email@gmail.com
+MAIL_PASSWORD=your_app_password_here
+
+# CONFIGURATION NGINX (OPTIONNEL)
+NGINX_SERVER_NAME=your_domain.com
+NGINX_SSL_CERT_PATH=/path/to/ssl/cert.pem
+NGINX_SSL_KEY_PATH=/path/to/ssl/key.pem 
