@@ -33,7 +33,6 @@ cd erp-fee-maison
 sudo -u www-data python3.13 -m venv venv
 sudo -u www-data venv/bin/pip install --upgrade pip
 sudo -u www-data venv/bin/pip install -r requirements.txt
-sudo -u www-data venv/bin/pip install gunicorn
 ```
 
 ## 🔐 Configuration Sécurisée
@@ -82,6 +81,10 @@ chmod +x setup_nginx.sh
 ## 🗄️ Configuration de la Base de Données
 
 ```bash
+# Créer le répertoire de logs
+sudo mkdir -p /var/log/erp-fee-maison
+sudo chown www-data:www-data /var/log/erp-fee-maison
+
 # Appliquer les migrations
 sudo -u www-data venv/bin/flask db upgrade
 
@@ -89,7 +92,17 @@ sudo -u www-data venv/bin/flask db upgrade
 sudo -u www-data venv/bin/python seed.py
 ```
 
+## 🔍 Test de Diagnostic
+
+```bash
+# Exécuter le diagnostic complet
+chmod +x diagnostic_erp.py
+python3 diagnostic_erp.py
+```
+
 ## 🚀 Démarrage du Service
+
+### Option 1: Service Systemd (Recommandé)
 
 ```bash
 # Installer le service systemd
@@ -102,6 +115,14 @@ sudo systemctl start erp-fee-maison
 
 # Vérifier le statut
 sudo systemctl status erp-fee-maison
+```
+
+### Option 2: Démarrage Manuel (Pour tests)
+
+```bash
+# Utiliser le script de démarrage alternatif
+chmod +x start_erp.sh
+./start_erp.sh
 ```
 
 ## 🔍 Vérification
@@ -186,37 +207,76 @@ sudo systemctl start erp-fee-maison
 
 ### Problèmes courants
 
-1. **Service ne démarre pas**
-   ```bash
-   sudo systemctl status erp-fee-maison
-   sudo journalctl -u erp-fee-maison -n 50
-   ```
+#### 1. Service systemd échoue
+```bash
+# Vérifier les logs détaillés
+sudo journalctl -u erp-fee-maison -n 50
 
-2. **Erreur de base de données**
-   ```bash
-   sudo -u postgres psql -d fee_maison_db -c "SELECT version();"
-   ```
+# Vérifier la configuration
+sudo systemctl cat erp-fee-maison
 
-3. **Problème de permissions**
-   ```bash
-   sudo chown -R www-data:www-data /var/www/erp-fee-maison
-   sudo chmod -R 755 /var/www/erp-fee-maison
-   ```
+# Tester manuellement
+cd /var/www/erp-fee-maison
+source venv/bin/activate
+python3 diagnostic_erp.py
+```
 
-4. **Port déjà utilisé**
-   ```bash
-   sudo netstat -tlnp | grep :8080
-   sudo lsof -i :8080
-   ```
+#### 2. Erreur de connexion à la base de données
+```bash
+# Vérifier PostgreSQL
+sudo systemctl status postgresql
+
+# Tester la connexion
+sudo -u postgres psql -d fee_maison_db -c "SELECT 1;"
+
+# Vérifier les variables d'environnement
+sudo -u www-data env | grep POSTGRES
+```
+
+#### 3. Erreur de permissions
+```bash
+# Corriger les permissions
+sudo chown -R www-data:www-data /var/www/erp-fee-maison
+sudo chmod -R 755 /var/www/erp-fee-maison
+sudo chmod 644 /var/www/erp-fee-maison/.env
+```
+
+#### 4. Port déjà utilisé
+```bash
+# Vérifier les ports utilisés
+sudo netstat -tulpn | grep :8080
+
+# Arrêter les processus conflictuels
+sudo pkill -f gunicorn
+```
+
+### Commandes de diagnostic
+
+```bash
+# Test complet de l'application
+python3 diagnostic_erp.py
+
+# Test de connexion à la base
+sudo -u www-data venv/bin/python -c "
+from app import create_app
+from extensions import db
+app = create_app('production')
+with app.app_context():
+    db.engine.execute('SELECT 1')
+    print('Connexion OK')
+"
+
+# Test du fichier WSGI
+sudo -u www-data venv/bin/python -c "
+from wsgi import app
+print('WSGI OK')
+"
+```
 
 ## 📞 Support
 
 En cas de problème :
-1. Vérifier les logs : `sudo journalctl -u erp-fee-maison -f`
-2. Vérifier la configuration : `sudo nginx -t`
-3. Tester la base de données : `sudo -u postgres psql -d fee_maison_db`
-4. Vérifier les permissions : `ls -la /var/www/erp-fee-maison`
-
----
-
-**⚠️ Important :** Gardez toujours une copie de sauvegarde de votre base de données et de vos fichiers de configuration ! 
+1. Exécuter `python3 diagnostic_erp.py`
+2. Vérifier les logs : `sudo journalctl -u erp-fee-maison -f`
+3. Consulter ce guide de dépannage
+4. Contacter l'équipe de développement 

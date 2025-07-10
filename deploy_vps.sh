@@ -137,6 +137,7 @@ cat > erp-fee-maison.service << EOF
 [Unit]
 Description=ERP Fée Maison Flask Application
 After=network.target postgresql.service
+Wants=postgresql.service
 
 [Service]
 Type=simple
@@ -144,11 +145,18 @@ User=www-data
 Group=www-data
 WorkingDirectory=/var/www/erp-fee-maison
 Environment=PATH=/var/www/erp-fee-maison/venv/bin
-Environment=FLASK_APP=app
+Environment=FLASK_APP=wsgi.py
 Environment=FLASK_ENV=production
-ExecStart=/var/www/erp-fee-maison/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8080 app:app
+Environment=POSTGRES_USER=erp_user
+Environment=POSTGRES_PASSWORD=${DB_PASSWORD}
+Environment=POSTGRES_HOST=localhost
+Environment=POSTGRES_PORT=5432
+Environment=POSTGRES_DB_NAME=fee_maison_db
+Environment=SECRET_KEY=${SECRET_KEY}
+ExecStart=/var/www/erp-fee-maison/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8080 --timeout 120 --access-logfile /var/log/erp-fee-maison/access.log --error-logfile /var/log/erp-fee-maison/error.log wsgi:app
 ExecReload=/bin/kill -s HUP \$MAINPID
 Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target

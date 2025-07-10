@@ -44,25 +44,20 @@ class ProductionConfig(Config):
     WTF_CSRF_ENABLED = True
     TESTING = False
     
-    # Récupérer les variables d'environnement au niveau de la classe
-    POSTGRES_USER = os.environ.get('POSTGRES_USER')
-    POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
-    POSTGRES_HOST = os.environ.get('POSTGRES_HOST')
-    POSTGRES_PORT = os.environ.get('POSTGRES_PORT')
-    POSTGRES_DB_NAME = os.environ.get('POSTGRES_DB_NAME')
+    # Récupérer les variables d'environnement PostgreSQL
+    POSTGRES_USER = os.environ.get('POSTGRES_USER') or os.environ.get('DB_USER')
+    POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD') or os.environ.get('POSTGRES_PASSWORD')
+    POSTGRES_HOST = os.environ.get('POSTGRES_HOST') or os.environ.get('DB_HOST', 'localhost')
+    POSTGRES_PORT = os.environ.get('POSTGRES_PORT') or os.environ.get('DB_PORT', '5432')
+    POSTGRES_DB_NAME = os.environ.get('POSTGRES_DB_NAME') or os.environ.get('DB_NAME')
 
-    # Construire l'URI. La vérification se fera si FLASK_ENV est 'production'
-    # lors de la sélection de la configuration dans app.py
+    # Construire l'URI PostgreSQL
     if POSTGRES_USER and POSTGRES_PASSWORD and POSTGRES_HOST and POSTGRES_PORT and POSTGRES_DB_NAME:
         SQLALCHEMY_DATABASE_URI = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB_NAME}"
     else:
-        # Si nous sommes en train de charger ce fichier (par exemple, pour `flask db`),
-        # et que FLASK_ENV n'est pas 'production', nous ne voulons pas d'erreur ici.
-        # Nous mettons une valeur placeholder ou None. L'erreur sera levée dans create_app si on essaie d'utiliser cette config.
-        SQLALCHEMY_DATABASE_URI = None 
-        # La vérification réelle que ces variables sont définies pour la production
-        # devrait idéalement se faire au moment où l'application est configurée
-        # avec ProductionConfig dans create_app.
+        # Fallback vers SQLite si les variables PostgreSQL ne sont pas définies
+        SQLITE_DB_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fee_maison_prod.db')
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{SQLITE_DB_PATH}'
 
 # Dictionnaire pour accéder aux configurations par leur nom.
 config_by_name = dict(
