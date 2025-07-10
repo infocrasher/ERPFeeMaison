@@ -1,0 +1,119 @@
+2025-05-31 03:11:53,424 INFO: Démarrage de Fée Maison [in /Users/sofiane/Documents/fee_maison_gestion/app.py:63]
+2025-05-31 03:12:01,205 ERROR: Exception on / [GET] [in /Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py:1414]
+Traceback (most recent call last):
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/sofiane/Documents/fee_maison_gestion/app.py", line 76, in hello_world
+    x = 1 / 0 # Décommentez pour tester l'erreur 500
+        ~~^~~
+ZeroDivisionError: division by zero
+2025-05-31 03:12:01,210 ERROR: Erreur interne du serveur (500) : 500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application. pour http://127.0.0.1:5000/ [in /Users/sofiane/Documents/fee_maison_gestion/app.py:142]
+Traceback (most recent call last):
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/sofiane/Documents/fee_maison_gestion/app.py", line 76, in hello_world
+    x = 1 / 0 # Décommentez pour tester l'erreur 500
+        ~~^~~
+ZeroDivisionError: division by zero
+2025-05-31 03:12:04,978 ERROR: Exception on /home [GET] [in /Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py:1414]
+Traceback (most recent call last):
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/sofiane/Documents/fee_maison_gestion/app.py", line 76, in hello_world
+    x = 1 / 0 # Décommentez pour tester l'erreur 500
+        ~~^~~
+ZeroDivisionError: division by zero
+2025-05-31 03:12:04,980 ERROR: Erreur interne du serveur (500) : 500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application. pour http://127.0.0.1:5000/home [in /Users/sofiane/Documents/fee_maison_gestion/app.py:142]
+Traceback (most recent call last):
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/sofiane/Documents/fee_maison_gestion/app.py", line 76, in hello_world
+    x = 1 / 0 # Décommentez pour tester l'erreur 500
+        ~~^~~
+ZeroDivisionError: division by zero
+2025-05-31 03:14:40,765 ERROR: Exception on /home [GET] [in /Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py:1414]
+Traceback (most recent call last):
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/sofiane/Documents/fee_maison_gestion/app.py", line 76, in hello_world
+    # x = 1 / 0 # Décommentez pour tester l'erreur 500
+ZeroDivisionError: division by zero
+2025-05-31 03:14:40,767 ERROR: Erreur interne du serveur (500) : 500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application. pour http://127.0.0.1:5000/home [in /Users/sofiane/Documents/fee_maison_gestion/app.py:142]
+Traceback (most recent call last):
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/sofiane/Documents/fee_maison_gestion/app.py", line 76, in hello_world
+    # x = 1 / 0 # Décommentez pour tester l'erreur 500
+ZeroDivisionError: division by zero
+2025-05-31 03:14:46,206 ERROR: Exception on / [GET] [in /Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py:1414]
+Traceback (most recent call last):
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/sofiane/Documents/fee_maison_gestion/app.py", line 76, in hello_world
+    # x = 1 / 0 # Décommentez pour tester l'erreur 500
+ZeroDivisionError: division by zero
+2025-05-31 03:14:46,208 ERROR: Erreur interne du serveur (500) : 500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application. pour http://127.0.0.1:5000/ [in /Users/sofiane/Documents/fee_maison_gestion/app.py:142]
+Traceback (most recent call last):
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/sofiane/Documents/fee_maison_gestion/venv/lib/python3.13/site-packages/flask/app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/sofiane/Documents/fee_maison_gestion/app.py", line 76, in hello_world
+    # x = 1 / 0 # Décommentez pour tester l'erreur 500
+ZeroDivisionError: division by zero
+2025-05-31 03:48:04,321 INFO: Démarrage de Fée Maison [in /Users/sofiane/Documents/fee_maison_gestion/app.py:63]
+2025-05-31 03:57:38,500 INFO: Démarrage de Fée Maison [in /Users/sofiane/Documents/fee_maison_gestion/app.py:63]
