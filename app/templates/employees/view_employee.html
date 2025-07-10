@@ -288,6 +288,65 @@
         margin-top: 0.5rem;
     }
     
+    /* Styles pour la section pointage */
+    .attendance-status {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin-bottom: 1rem;
+    }
+    
+    .status-present {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+    }
+    
+    .status-absent {
+        background: linear-gradient(135deg, #6c757d, #495057);
+        color: white;
+    }
+    
+    .status-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .attendance-timeline {
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+    
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.8rem;
+        padding: 0.5rem;
+        background: white;
+        border-radius: 8px;
+        border-left: 3px solid #667eea;
+    }
+    
+    .timeline-badge {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-right: 1rem;
+    }
+    
+    .timeline-badge.punch-in {
+        background: linear-gradient(135deg, #28a745, #20c997);
+    }
+    
+    .timeline-badge.punch-out {
+        background: linear-gradient(135deg, #ffc107, #fd7e14);
+    }
+    
     /* Responsive */
     @media (max-width: 768px) {
         .info-grid {
@@ -411,7 +470,7 @@
             <div class="info-card">
                 <div class="card-title">
                     <i class="bi bi-graph-up"></i>
-                    Performance - {{ moment().strftime('%B %Y') if moment else 'Ce mois' }}
+                    Performance - Ce mois
                 </div>
                 
                 <div class="performance-score">
@@ -439,6 +498,59 @@
                         </span>
                         <div class="stat-mini-label">CA/Cmd</div>
                     </div>
+                </div>
+            </div>
+            
+            <!-- 🆕 Section Pointage & Présence -->
+            <div class="info-card">
+                <div class="card-title">
+                    <i class="bi bi-clock-history"></i>
+                    Pointage & Présence
+                </div>
+                
+                <!-- Statut actuel -->
+                <div class="attendance-status {% if current_status == 'present' %}status-present{% else %}status-absent{% endif %}">
+                    <div class="status-icon">
+                        {% if current_status == 'present' %}
+                            <i class="bi bi-check-circle-fill"></i>
+                        {% else %}
+                            <i class="bi bi-x-circle-fill"></i>
+                        {% endif %}
+                    </div>
+                    <h5>{{ 'PRÉSENT' if current_status == 'present' else 'ABSENT' }}</h5>
+                    <small>Statut actuel</small>
+                </div>
+                
+                <!-- Pointages d'aujourd'hui -->
+                <div>
+                    <h6 class="mb-3">Pointages d'aujourd'hui</h6>
+                    {% if today_attendance %}
+                        <div class="attendance-timeline">
+                            {% for record in today_attendance %}
+                                <div class="timeline-item">
+                                    <div class="timeline-badge {% if record.punch_type == 'in' %}punch-in{% else %}punch-out{% endif %}">
+                                        {{ record.formatted_time }}
+                                    </div>
+                                    <div>
+                                        <strong>{{ record.get_punch_type_display() }}</strong>
+                                        <br><small class="text-muted">{{ record.timestamp.strftime('%d/%m/%Y') }}</small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="bi bi-clock mb-2" style="font-size: 2rem;"></i>
+                            <p>Aucun pointage aujourd'hui</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Lien vers l'historique -->
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('employees.employee_attendance', employee_id=employee.id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-calendar-week"></i> Voir l'historique complet
+                    </a>
                 </div>
             </div>
             
@@ -619,6 +731,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 scoreCircle.style.transform = 'scale(1)';
             }, 200);
         }, 800);
+    }
+    
+    // Animation de la section pointage
+    const attendanceStatus = document.querySelector('.attendance-status');
+    if (attendanceStatus) {
+        setTimeout(() => {
+            attendanceStatus.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                attendanceStatus.style.transition = 'transform 0.3s ease';
+                attendanceStatus.style.transform = 'scale(1)';
+            }, 300);
+        }, 1000);
     }
 });
 </script>

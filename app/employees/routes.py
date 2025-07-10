@@ -7,14 +7,16 @@ Routes pour la gestion des employés
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
 from extensions import db
-from app.employees.models import Employee
+from app.employees.models import Employee, AttendanceRecord
 from app.employees.forms import EmployeeForm, EmployeeSearchForm, WorkScheduleForm, AnalyticsPeriodForm, WorkHoursForm, PayrollCalculationForm
 from decorators import admin_required
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, text
 from decimal import Decimal
 
-# Imports pour analytics seront fait dynamiquement
+# Imports pour analytics - imports conditionnels pour éviter les conflits
+ORDER_AVAILABLE = False
+Product = None
 
 employees_bp = Blueprint('employees', __name__)
 
@@ -119,11 +121,23 @@ def view_employee(employee_id):
     productivity_score = employee.get_productivity_score(current_year, current_year)
     orders_count = employee.get_orders_count(current_year, current_month)
     
+    # 🆕 Données de pointage
+    today_attendance = employee.get_today_attendance()
+    current_status = employee.get_current_status()
+    
+    # Pointages de la semaine
+    today = date.today()
+    start_of_week = today - timedelta(days=today.weekday())
+    week_attendance = employee.get_attendance_for_period(start_of_week, today)
+    
     return render_template('employees/view_employee.html',
                          employee=employee,
                          monthly_revenue=monthly_revenue,
                          productivity_score=productivity_score,
                          orders_count=orders_count,
+                         today_attendance=today_attendance,
+                         current_status=current_status,
+                         week_attendance=week_attendance,
                          title=f"Employé - {employee.name}")
 
 @employees_bp.route('/<int:employee_id>/edit', methods=['GET', 'POST'])
@@ -174,44 +188,274 @@ def toggle_employee_status(employee_id):
     
     return redirect(url_for('employees.view_employee', employee_id=employee_id))
 
-# API pour les dashboards
-@employees_bp.route('/api/production-staff')
-@login_required
-@admin_required
-def get_production_staff():
-    """API pour récupérer les employés de production actifs"""
-    
-    employees = Employee.query.filter(
-        Employee.is_active == True,
-        Employee.role.in_(['production', 'chef_production', 'assistant_production', 'patissier'])
-    ).order_by(Employee.name).all()
-    
-    return jsonify([{
-        'id': emp.id,
-        'name': emp.name,
-        'role': emp.role,
-        'role_display': emp.role.replace('_', ' ').title()
-    } for emp in employees])
+# 🆕 ROUTES POUR LA GESTION DES POINTAGES
 
-@employees_bp.route('/api/stats')
+@employees_bp.route('/<int:employee_id>/attendance')
 @login_required
 @admin_required
-def get_employees_stats():
-    """API pour les statistiques employés"""
+def employee_attendance(employee_id):
+    """Page des pointages d'un employé"""
     
-    current_month = datetime.utcnow().month
-    current_year = datetime.utcnow().year
+    employee = Employee.query.get_or_404(employee_id)
+    
+    # Paramètres de période
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    # Par défaut : derniers 7 jours
+    if not start_date or not end_date:
+        end_date = date.today()
+        start_date = end_date - timedelta(days=7)
+    else:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+    # Récupérer les pointages
+    attendance_records = employee.get_attendance_for_period(start_date, end_date)
+    
+    # Grouper par jour
+    daily_attendance = {}
+    for record in attendance_records:
+        day = record.timestamp.date()
+        if day not in daily_attendance:
+            daily_attendance[day] = []
+        daily_attendance[day].append(record)
+    
+    # Calculer les statistiques
+    total_days = (end_date - start_date).days + 1
+    days_worked = len(daily_attendance)
+    total_hours = sum(employee.get_work_hours_for_date(day) for day in daily_attendance.keys())
     
     stats = {
-        'total_employees': Employee.query.count(),
-        'active_employees': Employee.query.filter(Employee.is_active == True).count(),
-        'production_staff': Employee.query.filter(
-            Employee.is_active == True,
-            Employee.role.in_(['production', 'chef_production', 'assistant_production', 'patissier'])
-        ).count()
+        'total_days': total_days,
+        'days_worked': days_worked,
+        'days_absent': total_days - days_worked,
+        'total_hours': round(total_hours, 2),
+        'average_hours': round(total_hours / days_worked, 2) if days_worked > 0 else 0,
+        'attendance_rate': round((days_worked / total_days) * 100, 1) if total_days > 0 else 0
     }
     
-    return jsonify(stats)
+    # Calculer les dates de raccourci pour les boutons
+    today = date.today()
+    date_shortcuts = {
+        'week_start': (today - timedelta(days=6)).strftime('%Y-%m-%d'),
+        'week_end': today.strftime('%Y-%m-%d'),
+        'month_start': (today - timedelta(days=29)).strftime('%Y-%m-%d'),
+        'month_end': today.strftime('%Y-%m-%d')
+    }
+    
+    # Calculer la liste des jours pour le tableau
+    days_in_period = []
+    current_date = start_date
+    while current_date <= end_date:
+        days_in_period.append(current_date)
+        current_date += timedelta(days=1)
+    
+    return render_template('employees/employee_attendance.html',
+                         employee=employee,
+                         daily_attendance=daily_attendance,
+                         stats=stats,
+                         start_date=start_date,
+                         end_date=end_date,
+                         date_shortcuts=date_shortcuts,
+                         days_in_period=days_in_period,
+                         title=f"Pointages - {employee.name}")
+
+@employees_bp.route('/attendance/dashboard')
+@login_required
+@admin_required
+def attendance_dashboard():
+    """Dashboard général des pointages"""
+    
+    # Date sélectionnée (par défaut aujourd'hui)
+    selected_date = request.args.get('date')
+    if selected_date:
+        selected_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+    else:
+        selected_date = date.today()
+    
+    # Récupérer le résumé des pointages du jour
+    daily_summary = AttendanceRecord.get_daily_summary(selected_date)
+    
+    # Statistiques générales
+    total_employees = Employee.query.filter(Employee.is_active == True).count()
+    present_employees = len([emp for emp in daily_summary.values() if emp['status'] == 'present'])
+    absent_employees = total_employees - present_employees
+    
+    # Employés sans pointage
+    employees_with_attendance = set(daily_summary.keys())
+    all_active_employees = Employee.query.filter(Employee.is_active == True).all()
+    employees_without_attendance = [emp for emp in all_active_employees if emp.id not in employees_with_attendance]
+    
+    stats = {
+        'total_employees': total_employees,
+        'present_employees': present_employees,
+        'absent_employees': absent_employees,
+        'attendance_rate': round((present_employees / total_employees) * 100, 1) if total_employees > 0 else 0,
+        'total_hours_worked': sum(emp['total_hours'] for emp in daily_summary.values())
+    }
+    
+    # Calcul des dates précédente et suivante pour la navigation
+    previous_date = selected_date - timedelta(days=1)
+    next_date = selected_date + timedelta(days=1)
+    
+    return render_template('employees/attendance_dashboard.html',
+                         daily_summary=daily_summary,
+                         employees_without_attendance=employees_without_attendance,
+                         stats=stats,
+                         selected_date=selected_date,
+                         previous_date=previous_date,
+                         next_date=next_date,
+                         title="Dashboard Pointages")
+
+@employees_bp.route('/attendance/live')
+@login_required
+@admin_required
+def live_attendance():
+    """Page de pointages en temps réel"""
+    
+    # Récupérer les pointages d'aujourd'hui
+    today = date.today()
+    today_records = AttendanceRecord.query.filter(
+        db.func.date(AttendanceRecord.timestamp) == today
+    ).order_by(AttendanceRecord.timestamp.desc()).limit(50).all()
+    
+    # Statut actuel de tous les employés
+    active_employees = Employee.query.filter(Employee.is_active == True).all()
+    employee_status = {}
+    
+    for employee in active_employees:
+        status = employee.get_current_status()
+        last_punch = employee.get_today_attendance()
+        last_punch_time = last_punch[-1].timestamp if last_punch else None
+        
+        employee_status[employee.id] = {
+            'employee': employee,
+            'status': status,
+            'last_punch_time': last_punch_time,
+            'today_hours': employee.get_work_hours_for_date(today)
+        }
+    
+    # Heure actuelle pour l'affichage
+    current_time = datetime.now().strftime('%H:%M:%S')
+    
+    return render_template('employees/live_attendance.html',
+                         today_records=today_records,
+                         employee_status=employee_status,
+                         current_time=current_time,
+                         title="Pointages en Temps Réel")
+
+@employees_bp.route('/attendance/manual', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manual_attendance():
+    """Saisie manuelle de pointage"""
+    
+    if request.method == 'POST':
+        try:
+            employee_id = request.form.get('employee_id')
+            punch_type = request.form.get('punch_type')
+            timestamp_str = request.form.get('timestamp')
+            notes = request.form.get('notes', '')
+            
+            # Validation
+            if not employee_id or not punch_type or not timestamp_str:
+                flash('Tous les champs sont requis', 'error')
+                return redirect(url_for('employees.manual_attendance'))
+            
+            employee = Employee.query.get_or_404(employee_id)
+            timestamp = datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M')
+            
+            # Créer l'enregistrement
+            record = AttendanceRecord(
+                employee_id=employee_id,
+                timestamp=timestamp,
+                punch_type=punch_type,
+                raw_data=f'{{"source": "manual", "notes": "{notes}"}}'
+            )
+            
+            db.session.add(record)
+            db.session.commit()
+            
+            flash(f'Pointage manuel ajouté pour {employee.name}', 'success')
+            return redirect(url_for('employees.live_attendance'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erreur lors de l\'ajout : {str(e)}', 'error')
+    
+    # Récupérer les employés actifs
+    active_employees = Employee.query.filter(Employee.is_active == True).order_by(Employee.name).all()
+    
+    # Date actuelle pour le formulaire
+    current_datetime = datetime.now().strftime('%Y-%m-%dT%H:%M')
+    
+    return render_template('employees/manual_attendance.html',
+                         active_employees=active_employees,
+                         current_datetime=current_datetime,
+                         title="Pointage Manuel")
+
+# API pour les pointages
+@employees_bp.route('/api/attendance/today')
+@login_required
+@admin_required
+def api_attendance_today():
+    """API pour récupérer les pointages du jour"""
+    
+    today = date.today()
+    
+    # Récupérer tous les pointages du jour
+    records = AttendanceRecord.query.filter(
+        db.func.date(AttendanceRecord.timestamp) == today
+    ).order_by(AttendanceRecord.timestamp.desc()).all()
+    
+    result = {
+        'date': today.isoformat(),
+        'count': len(records),
+        'attendance': [{
+            'employee_id': record.employee_id,
+            'employee_name': record.employee.name,
+            'time': record.formatted_time,
+            'punch_type': record.punch_type,
+            'punch_type_display': record.get_punch_type_display()
+        } for record in records]
+    }
+    
+    return jsonify(result)
+
+@employees_bp.route('/api/attendance/employee/<int:employee_id>')
+@login_required
+@admin_required
+def api_employee_attendance(employee_id):
+    """API pour récupérer les pointages d'un employé"""
+    
+    employee = Employee.query.get_or_404(employee_id)
+    
+    # Paramètres
+    days = request.args.get('days', 7, type=int)
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days-1)
+    
+    # Récupérer les pointages
+    records = employee.get_attendance_for_period(start_date, end_date)
+    
+    result = {
+        'employee_id': employee.id,
+        'employee_name': employee.name,
+        'current_status': employee.get_current_status(),
+        'period': {
+            'start_date': start_date.isoformat(),
+            'end_date': end_date.isoformat()
+        },
+        'records': [{
+            'date': record.formatted_date,
+            'time': record.formatted_time,
+            'type': record.punch_type,
+            'type_display': record.get_punch_type_display()
+        } for record in records]
+    }
+    
+    return jsonify(result)
 
 @employees_bp.route('/<int:employee_id>/schedule', methods=['GET', 'POST'])
 @login_required
@@ -226,7 +470,7 @@ def work_schedule(employee_id):
         # Charger les horaires existants
         current_schedule = employee.get_work_schedule()
         if current_schedule:
-            form.load_from_schedule(current_schedule)
+            form.populate_from_schedule(current_schedule)
     
     if form.validate_on_submit():
         try:
@@ -309,12 +553,13 @@ def employee_analytics(employee_id):
     
     employee = Employee.query.get_or_404(employee_id)
     
-    # Import dynamique pour éviter les conflits de métadonnées
-    try:
-        from models import Order
-    except ImportError as e:
-        flash(f"Module commandes non disponible: {str(e)}", "error")
-        return redirect(url_for('employees.view_employee', employee_id=employee_id))
+    # SOLUTION DÉFINITIVE : Accès via Registry SQLAlchemy
+    mapper_registry = db.Model.registry
+    Order = mapper_registry._class_registry.get('Order')
+    Product = mapper_registry._class_registry.get('Product')
+    
+    # Vérifier la disponibilité des modèles
+    ORDER_AVAILABLE = Order is not None and Product is not None
     
     # 🆕 Formulaire de sélection de période
     period_form = AnalyticsPeriodForm()
@@ -331,14 +576,96 @@ def employee_analytics(employee_id):
     start_datetime = datetime.combine(start_date, datetime.min.time())
     end_datetime = datetime.combine(end_date, datetime.max.time())
     
-    # 🆕 Vérifier si l'employé peut être évalué
-    if not employee.can_be_evaluated():
-        flash(f"Les employés en support ({employee.get_role_display()}) ne sont pas évalués sur la performance.", "info")
+    # Importer les modèles nécessaires pour les analytics
+    from app.employees.models import AttendanceRecord, OrderIssue
+    
+    # 🆕 Vérifier si l'employé peut être évalué ou si les analytics sont disponibles
+    if not employee.can_be_evaluated() or not ORDER_AVAILABLE:
+        if not ORDER_AVAILABLE:
+            flash("Analytics temporairement désactivés pour éviter les conflits système.", "warning")
+        else:
+            flash(f"Les employés en support ({employee.get_role_display()}) ne sont pas évalués sur la performance.", "info")
+        
+        # Calculer quand même les KPI de présence pour les employés non évaluables
+        days_in_period = (end_date - start_date).days + 1
+        
+        # Récupérer les enregistrements d'assiduité pour la période
+        attendance_records = AttendanceRecord.query.filter(
+            AttendanceRecord.employee_id == employee.id,
+            AttendanceRecord.timestamp >= start_datetime,
+            AttendanceRecord.timestamp <= end_datetime
+        ).all()
+        
+        # Calculer les KPI de présence
+        total_work_days = days_in_period
+        days_present = len(set(record.timestamp.date() for record in attendance_records if record.punch_type == 'in'))
+        days_absent = total_work_days - days_present
+        
+        # Taux de présence
+        attendance_rate = (days_present / total_work_days * 100) if total_work_days > 0 else 0
+        
+        # Calculer la ponctualité
+        late_arrivals = 0
+        actual_hours_period = 0
+        overtime_hours = 0
+        
+        # Regrouper les pointages par date pour calculer les heures travaillées
+        daily_records = {}
+        for record in attendance_records:
+            date_key = record.timestamp.date()
+            if date_key not in daily_records:
+                daily_records[date_key] = {'in': [], 'out': []}
+            daily_records[date_key][record.punch_type].append(record.timestamp)
+        
+        # Calculer les heures travaillées par jour
+        for date_key, records in daily_records.items():
+            if records['in'] and records['out']:
+                # Prendre le premier pointage d'entrée et le dernier de sortie
+                first_in = min(records['in'])
+                last_out = max(records['out'])
+                
+                work_duration = (last_out - first_in).total_seconds() / 3600
+                actual_hours_period += work_duration
+                
+                # Vérifier si en retard (après 8h00)
+                if first_in.time() > datetime.strptime('08:00', '%H:%M').time():
+                    late_arrivals += 1
+                
+                # Calculer les heures supplémentaires (plus de 8h par jour)
+                if work_duration > 8:
+                    overtime_hours += (work_duration - 8)
+        
+        punctuality_rate = ((days_present - late_arrivals) / days_present * 100) if days_present > 0 else 0
+        
+        # Si pas de données réelles, utiliser les estimations
+        if not attendance_records:
+            attendance_rate = 90.0
+            punctuality_rate = 85.0
+            work_schedule = employee.get_work_schedule()
+            estimated_hours_per_week = employee.get_weekly_hours()
+            weeks_in_period = days_in_period / 7
+            actual_hours_period = estimated_hours_per_week * weeks_in_period
+            overtime_hours = 0
+            days_present = int(total_work_days * 0.9)
+            days_absent = total_work_days - days_present
+            late_arrivals = int(days_present * 0.15)
+        
         kpis = {
-            'can_be_evaluated': False,
+            'can_be_evaluated': employee.can_be_evaluated() and ORDER_AVAILABLE,
             'role_display': employee.get_role_display(),
             'start_date': start_date,
-            'end_date': end_date
+            'end_date': end_date,
+            'days_in_period': days_in_period,
+            'order_available': ORDER_AVAILABLE,
+            # Données de présence pour tous les employés
+            'attendance_rate': attendance_rate,
+            'punctuality_rate': punctuality_rate,
+            'actual_hours_period': actual_hours_period,
+            'overtime_hours': overtime_hours,
+            'days_present': days_present,
+            'days_absent': days_absent,
+            'late_arrivals': late_arrivals,
+            'attendance_details': len(attendance_records) > 0,
         }
         return render_template('employees/employee_analytics.html',
                              employee=employee,
@@ -399,7 +726,7 @@ def employee_analytics(employee_id):
     estimated_hours_period = estimated_hours_per_week * weeks_in_period
     
     # CA par heure (estimation)
-    ca_per_hour = float(orders_ca / estimated_hours_period) if estimated_hours_period > 0 else 0
+    ca_per_hour = float(orders_ca / Decimal(str(estimated_hours_period))) if estimated_hours_period > 0 else 0
     
     # Commandes par heure
     orders_per_hour = (orders_count / estimated_hours_period) if estimated_hours_period > 0 else 0
@@ -408,7 +735,6 @@ def employee_analytics(employee_id):
     if employee.is_production_role() or employee.is_sales_role():
         # Calculer le nombre de produits différents travaillés
         try:
-            from models import Product
             
             distinct_products = db.session.query(func.count(func.distinct(Product.id))).select_from(
                 Order
@@ -420,8 +746,7 @@ def employee_analytics(employee_id):
             
             total_products = Product.query.count()
             polyvalence_score = (distinct_products / total_products * 100) if total_products > 0 else 0
-            
-        except ImportError:
+        except Exception:
             distinct_products = 0
             total_products = 1
             polyvalence_score = 0
@@ -431,7 +756,6 @@ def employee_analytics(employee_id):
         polyvalence_score = 0
     
     # 🔍 KPI QUALITÉ (problèmes détectés)
-    from app.employees.models import OrderIssue
     
     issues_count = OrderIssue.query.filter(
         OrderIssue.employee_id == employee.id,
@@ -440,6 +764,67 @@ def employee_analytics(employee_id):
     ).count()
     
     error_rate = (issues_count / orders_count * 100) if orders_count > 0 else 0
+    
+    # ⏰ KPI PRÉSENCE ET PONCTUALITÉ (Données réelles)
+    
+    # Récupérer les enregistrements d'assiduité pour la période
+    attendance_records = AttendanceRecord.query.filter(
+        AttendanceRecord.employee_id == employee.id,
+        AttendanceRecord.timestamp >= start_datetime,
+        AttendanceRecord.timestamp <= end_datetime
+    ).all()
+    
+    # Calculer les KPI de présence
+    total_work_days = days_in_period  # Simplification, peut être affiné avec les jours ouvrables
+    days_present = len(set(record.timestamp.date() for record in attendance_records if record.punch_type == 'in'))
+    days_absent = total_work_days - days_present
+    
+    # Taux de présence
+    attendance_rate = (days_present / total_work_days * 100) if total_work_days > 0 else 0
+    
+    # Calculer la ponctualité (arrivées à l'heure)
+    late_arrivals = 0
+    actual_hours_period = 0
+    overtime_hours = 0
+    
+    # Regrouper les pointages par date pour calculer les heures travaillées
+    daily_records = {}
+    for record in attendance_records:
+        date_key = record.timestamp.date()
+        if date_key not in daily_records:
+            daily_records[date_key] = {'in': [], 'out': []}
+        daily_records[date_key][record.punch_type].append(record.timestamp)
+    
+    # Calculer les heures travaillées par jour
+    for date_key, records in daily_records.items():
+        if records['in'] and records['out']:
+            # Prendre le premier pointage d'entrée et le dernier de sortie
+            first_in = min(records['in'])
+            last_out = max(records['out'])
+            
+            work_duration = (last_out - first_in).total_seconds() / 3600
+            actual_hours_period += work_duration
+            
+            # Vérifier si en retard (après 8h00)
+            if first_in.time() > datetime.strptime('08:00', '%H:%M').time():
+                late_arrivals += 1
+            
+            # Calculer les heures supplémentaires (plus de 8h par jour)
+            if work_duration > 8:
+                overtime_hours += (work_duration - 8)
+    
+    # Taux de ponctualité
+    punctuality_rate = ((days_present - late_arrivals) / days_present * 100) if days_present > 0 else 0
+    
+    # Si pas de données réelles, utiliser les estimations
+    if not attendance_records:
+        attendance_rate = 90.0  # Estimation
+        punctuality_rate = 85.0  # Estimation
+        actual_hours_period = estimated_hours_period
+        overtime_hours = 0
+        days_present = int(total_work_days * 0.9)
+        days_absent = total_work_days - days_present
+        late_arrivals = int(days_present * 0.15)
     
     # 📈 ÉVOLUTION MENSUELLE (3 derniers mois de la période)
     monthly_stats = []
@@ -497,8 +882,8 @@ def employee_analytics(employee_id):
         productivity_score = min(100, roi_employee / 2)  # ROI/2 pour normaliser
         quality_score = max(0, 100 - error_rate * 10)  # Moins d'erreurs = meilleur score
         polyvalence_normalized = polyvalence_score
-        punctuality_score = 85  # À calculer avec les données de pointage
-        presence_score = 90     # À calculer avec les données de pointage
+        punctuality_score = punctuality_rate  # Utiliser les données réelles
+        presence_score = attendance_rate     # Utiliser les données réelles
         
         # Score composite pondéré
         composite_score = (
@@ -563,6 +948,16 @@ def employee_analytics(employee_id):
         'estimated_hours_period': estimated_hours_period,
         'estimated_hours_per_week': estimated_hours_per_week,
         'days_in_period': days_in_period,
+        
+        # Présence et ponctualité (données réelles)
+        'attendance_rate': attendance_rate,
+        'punctuality_rate': punctuality_rate,
+        'actual_hours_period': actual_hours_period,
+        'overtime_hours': overtime_hours,
+        'days_present': days_present,
+        'days_absent': days_absent,
+        'late_arrivals': late_arrivals,
+        'attendance_details': len(attendance_records) > 0,  # Indique si on a des données réelles
         
         # Évolution
         'monthly_stats': monthly_stats,

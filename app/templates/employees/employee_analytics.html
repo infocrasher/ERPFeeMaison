@@ -295,7 +295,7 @@
         </div>
     </div>
 
-    <!-- ⏰ KPI Temps & Présence (Placeholder) -->
+    <!-- ⏰ KPI Temps & Présence (Données Réelles) -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -303,44 +303,85 @@
                     <h5 class="card-title mb-0">⏰ Présence & Ponctualité</h5>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-clock"></i> En attente de la pointeuse</h6>
-                        <p class="mb-0">
-                            Les KPI de présence et ponctualité seront disponibles une fois la pointeuse ZKTeco configurée.
-                            Données estimées actuellement basées sur les horaires configurés.
-                        </p>
-                    </div>
+                    {% if employee.zk_user_id %}
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-check-circle"></i> Pointeuse ZKTeco configurée</h6>
+                            <p class="mb-0">
+                                ID Pointeuse : <strong>{{ employee.zk_user_id }}</strong> - Données en temps réel disponibles
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Pointeuse non configurée</h6>
+                            <p class="mb-0">
+                                Aucun ID pointeuse configuré pour cet employé. Les données sont estimées.
+                            </p>
+                        </div>
+                    {% endif %}
                     
                     <div class="row">
                         <div class="col-md-3">
                             <div class="stat-card text-center">
-                                <div class="stat-value text-success">90%</div>
+                                <div class="stat-value {% if kpis.attendance_rate >= 90 %}text-success{% elif kpis.attendance_rate >= 75 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(kpis.attendance_rate) }}%
+                                </div>
                                 <div class="stat-label">Taux de Présence</div>
-                                <small class="text-muted">(Estimé)</small>
+                                <small class="text-muted">{% if employee.zk_user_id %}(Réel){% else %}(Estimé){% endif %}</small>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="stat-card text-center">
-                                <div class="stat-value text-info">85%</div>
+                                <div class="stat-value {% if kpis.punctuality_rate >= 90 %}text-success{% elif kpis.punctuality_rate >= 75 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(kpis.punctuality_rate) }}%
+                                </div>
                                 <div class="stat-label">Ponctualité</div>
-                                <small class="text-muted">(Estimé)</small>
+                                <small class="text-muted">{% if employee.zk_user_id %}(Réel){% else %}(Estimé){% endif %}</small>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="stat-card text-center">
-                                <div class="stat-value text-warning">{{ "%.1f"|format(kpis.estimated_hours_period) }}h</div>
-                                <div class="stat-label">Heures Estimées</div>
-                                <small class="text-muted">(Basé horaires)</small>
+                                <div class="stat-value text-info">{{ "%.1f"|format(kpis.actual_hours_period) }}h</div>
+                                <div class="stat-label">Heures {% if employee.zk_user_id %}Réelles{% else %}Estimées{% endif %}</div>
+                                <small class="text-muted">Sur la période</small>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="stat-card text-center">
-                                <div class="stat-value text-secondary">0h</div>
+                                <div class="stat-value {% if kpis.overtime_hours > 0 %}text-warning{% else %}text-secondary{% endif %}">
+                                    {{ "%.1f"|format(kpis.overtime_hours) }}h
+                                </div>
                                 <div class="stat-label">Heures Sup.</div>
-                                <small class="text-muted">(À venir)</small>
+                                <small class="text-muted">{% if employee.zk_user_id %}(Réel){% else %}(À venir){% endif %}</small>
                             </div>
                         </div>
                     </div>
+                    
+                    {% if employee.zk_user_id and kpis.attendance_details %}
+                    <!-- Détails de présence -->
+                    <div class="mt-4">
+                        <h6>Détails de présence</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="stat-card text-center">
+                                    <div class="stat-value text-success">{{ kpis.days_present }}</div>
+                                    <div class="stat-label">Jours Présent</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card text-center">
+                                    <div class="stat-value text-danger">{{ kpis.days_absent }}</div>
+                                    <div class="stat-label">Jours Absent</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card text-center">
+                                    <div class="stat-value text-warning">{{ kpis.late_arrivals }}</div>
+                                    <div class="stat-label">Retards</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

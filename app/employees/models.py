@@ -186,32 +186,206 @@ class Employee(db.Model):
         total_salary = float(self.salaire_fixe or 0) + float(self.prime or 0)
         return f"{total_salary:,.2f} DA"
     
+    # 🆕 Méthodes pour les pointages
+    def get_today_attendance(self):
+        """Récupère les pointages du jour pour cet employé"""
+        from datetime import date
+        today = date.today()
+        return self.attendance_records.filter(
+            db.func.date(AttendanceRecord.timestamp) == today
+        ).order_by(AttendanceRecord.timestamp).all()
+    
+    def get_attendance_for_date(self, target_date):
+        """Récupère les pointages pour une date donnée"""
+        return self.attendance_records.filter(
+            db.func.date(AttendanceRecord.timestamp) == target_date
+        ).order_by(AttendanceRecord.timestamp).all()
+    
+    def get_attendance_for_period(self, start_date, end_date):
+        """Récupère les pointages pour une période donnée"""
+        return self.attendance_records.filter(
+            db.func.date(AttendanceRecord.timestamp) >= start_date,
+            db.func.date(AttendanceRecord.timestamp) <= end_date
+        ).order_by(AttendanceRecord.timestamp).all()
+    
+    def get_current_status(self):
+        """Détermine le statut actuel de l'employé (présent/absent)"""
+        today_records = self.get_today_attendance()
+        if not today_records:
+            return 'absent'
+        
+        last_record = today_records[-1]
+        return 'present' if last_record.punch_type == 'in' else 'absent'
+    
+    def get_work_hours_for_date(self, target_date):
+        """Calcule les heures travaillées pour une date donnée"""
+        records = self.get_attendance_for_date(target_date)
+        total_hours = 0
+        in_time = None
+        
+        for record in records:
+            if record.punch_type == 'in':
+                in_time = record.timestamp
+            elif record.punch_type == 'out' and in_time:
+                duration = record.timestamp - in_time
+                total_hours += duration.total_seconds() / 3600
+                in_time = None
+        
+        return round(total_hours, 2)
+    
+    def get_weekly_attendance_summary(self):
+        """Résumé de présence de la semaine"""
+        from datetime import date, timedelta
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())
+        
+        summary = []
+        for i in range(7):
+            day = week_start + timedelta(days=i)
+            records = self.get_attendance_for_date(day)
+            hours = self.get_work_hours_for_date(day)
+            
+            summary.append({
+                'date': day,
+                'records_count': len(records),
+                'hours_worked': hours,
+                'status': 'present' if records else 'absent'
+            })
+        
+        return summary
+    
+    def get_monthly_attendance_stats(self, year, month):
+        """Statistiques de présence pour un mois"""
+        from datetime import date, timedelta
+        import calendar
+        
+        start_date = date(year, month, 1)
+        end_date = date(year, month, calendar.monthrange(year, month)[1])
+        
+        total_days = (end_date - start_date).days + 1
+        present_days = 0
+        total_hours = 0
+        
+        current_date = start_date
+        while current_date <= end_date:
+            records = self.get_attendance_for_date(current_date)
+            if records:
+                present_days += 1
+                total_hours += self.get_work_hours_for_date(current_date)
+            current_date += timedelta(days=1)
+        
+        return {
+            'total_days': total_days,
+            'present_days': present_days,
+            'absent_days': total_days - present_days,
+            'attendance_rate': round((present_days / total_days) * 100, 1) if total_days > 0 else 0,
+            'total_hours': round(total_hours, 2)
+        }
+    
     def __repr__(self):
         return f'<Employee {self.name} ({self.role})>'
 
 
 class AttendanceRecord(db.Model):
-    """Enregistrements bruts de pointage depuis la pointeuse ZKTeco"""
+    """Modèle pour les enregistrements de pointage de la pointeuse ZKTeco"""
     __tablename__ = 'attendance_records'
     
     id = db.Column(db.Integer, primary_key=True)
     employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=False)
-    zk_user_id = db.Column(db.Integer, nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False)
-    punch_type = db.Column(db.String(20), nullable=False)  # 'check_in', 'check_out', 'break_in', 'break_out'
-    status = db.Column(db.String(20), default='normal')  # 'normal', 'late', 'early'
-    source = db.Column(db.String(50), default='zkteco')  # 'zkteco', 'manual'
-    raw_data = db.Column(db.Text)  # Données brutes JSON de la pointeuse
+    punch_type = db.Column(db.String(10), nullable=False)  # 'in' ou 'out'
+    device_id = db.Column(db.String(50))  # ID de la pointeuse
+    verification_type = db.Column(db.String(20))  # 'fingerprint', 'card', 'password'
+    
+    # Données brutes de la pointeuse
+    raw_data = db.Column(db.Text)  # JSON des données originales
+    
+    # Métadonnées
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    processed = db.Column(db.Boolean, default=False)
     
     # Index pour optimiser les requêtes
     __table_args__ = (
-        Index('idx_attendance_employee_date', 'employee_id', 'timestamp'),
-        Index('idx_attendance_zk_user', 'zk_user_id', 'timestamp'),
+        db.Index('idx_employee_date', 'employee_id', 'timestamp'),
+        db.Index('idx_date_punch', 'timestamp', 'punch_type'),
     )
     
     def __repr__(self):
-        return f'<AttendanceRecord {self.employee_id} - {self.timestamp} ({self.punch_type})>'
+        return f'<AttendanceRecord {self.employee.name} - {self.timestamp} - {self.punch_type}>'
+    
+    @property
+    def formatted_time(self):
+        """Retourne l'heure formatée"""
+        return self.timestamp.strftime('%H:%M')
+    
+    @property
+    def formatted_date(self):
+        """Retourne la date formatée"""
+        return self.timestamp.strftime('%d/%m/%Y')
+    
+    @property
+    def formatted_datetime(self):
+        """Retourne la date et l'heure formatées"""
+        return self.timestamp.strftime('%d/%m/%Y %H:%M')
+    
+    def get_punch_type_display(self):
+        """Retourne le type de pointage en français"""
+        return 'Entrée' if self.punch_type == 'in' else 'Sortie'
+    
+    @staticmethod
+    def create_from_zkteco_data(employee_id, timestamp, punch_type, raw_data=None):
+        """Crée un enregistrement de pointage à partir des données ZKTeco"""
+        record = AttendanceRecord(
+            employee_id=employee_id,
+            timestamp=timestamp,
+            punch_type=punch_type,
+            raw_data=raw_data
+        )
+        return record
+    
+    @staticmethod
+    def get_daily_summary(target_date):
+        """Récupère un résumé des pointages pour une date"""
+        records = AttendanceRecord.query.filter(
+            db.func.date(AttendanceRecord.timestamp) == target_date
+        ).order_by(AttendanceRecord.timestamp).all()
+        
+        summary = {}
+        for record in records:
+            emp_id = record.employee_id
+            if emp_id not in summary:
+                summary[emp_id] = {
+                    'employee': record.employee,
+                    'records': [],
+                    'total_hours': 0,
+                    'status': 'absent'
+                }
+            
+            summary[emp_id]['records'].append(record)
+            
+            # Calculer le statut actuel
+            if record.punch_type == 'in':
+                summary[emp_id]['status'] = 'present'
+            else:
+                summary[emp_id]['status'] = 'absent'
+        
+        # Calculer les heures travaillées
+        for emp_id, data in summary.items():
+            records = data['records']
+            total_hours = 0
+            in_time = None
+            
+            for record in records:
+                if record.punch_type == 'in':
+                    in_time = record.timestamp
+                elif record.punch_type == 'out' and in_time:
+                    duration = record.timestamp - in_time
+                    total_hours += duration.total_seconds() / 3600
+                    in_time = None
+            
+            data['total_hours'] = round(total_hours, 2)
+        
+        return summary
 
 
 class AttendanceException(db.Model):
