@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Historique des sessions de caisse – Fée Maison{% endblock %}
+
+{% block head %}
+<style>
+    :root {
+        --primary-color: #2C3E50;
+        --secondary-color: #3498DB;
+        --accent-color: #E74C3C;
+        --success-color: #27AE60;
+        --warning-color: #F39C12;
+        --light-bg: #ECF0F1;
+        --dark-text: #2C3E50;
+        --light-text: #7F8C8D;
+        --white: #FFFFFF;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--light-bg);
+        min-height: 100vh;
+        margin: 0;
+    }
+
+    .pos-container {
+        max-width: 1000px;
+        margin: 40px auto;
+        background: var(--white);
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        padding: 30px;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .page-header h1 {
+        color: var(--primary-color);
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .page-header p {
+        color: var(--light-text);
+        font-size: 1rem;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 30px;
+    }
+
+    .data-table th, .data-table td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .data-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .data-table tr:hover {
+        background: #f8f9fa;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .status-open {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .status-closed {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .amount-cell {
+        font-weight: 600;
+        color: var(--success-color);
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .actions-cell {
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .btn-outline {
+        background: transparent;
+        border: 2px solid var(--light-text);
+        color: var(--light-text);
+    }
+
+    .btn-outline:hover {
+        border-color: var(--secondary-color);
+        color: var(--secondary-color);
+    }
+
+    .btn-primary {
+        background: var(--secondary-color);
+        color: var(--white);
+    }
+
+    .btn-primary:hover {
+        background: #2980B9;
+    }
+
+    .btn-danger {
+        background: var(--accent-color);
+        color: var(--white);
+    }
+
+    .btn-danger:hover {
+        background: #c0392b;
+    }
+
+    .no-sessions {
+        text-align: center;
+        padding: 40px 0;
+        color: var(--light-text);
+    }
+
+    .no-sessions i {
+        font-size: 2rem;
+        opacity: 0.6;
+        margin-bottom: 10px;
+    }
+
+    @media (max-width: 768px) {
+        .pos-container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .data-table th, .data-table td {
+            padding: 8px 12px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pos-container">
+    <div class="page-header">
+        <h1><i class="bi bi-safe"></i> Historique des sessions de caisse</h1>
+        <p>Toutes les sessions de caisse ouvertes et fermées</p>
+    </div>
+
+    <div class="table-container">
+        {% if sessions %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Ouvert le</th>
+                    <th>Fermé le</th>
+                    <th>Employé</th>
+                    <th>Montant initial</th>
+                    <th>Montant final</th>
+                    <th>Statut</th>
+                    <th class="actions-cell">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for session in sessions %}
+                <tr>
+                    <td>{{ session.id }}</td>
+                    <td>{{ session.opened_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        {% if session.closed_at %}
+                            {{ session.closed_at.strftime('%d/%m/%Y %H:%M') }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>{{ session.opened_by.name if session.opened_by else 'N/A' }}</td>
+                    <td class="amount-cell">{{ session.initial_amount|round(2) }} DA</td>
+                    <td class="amount-cell">
+                        {% if session.closing_amount %}
+                            {{ session.closing_amount|round(2) }} DA
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if session.closed_at %}
+                            <span class="status-badge status-closed"><i class="bi bi-lock-fill"></i> Fermée</span>
+                        {% else %}
+                            <span class="status-badge status-open"><i class="bi bi-unlock-fill"></i> Ouverte</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions-cell">
+                        <a href="{{ url_for('sales.list_cash_movements', session_id=session.id) }}" class="btn btn-outline btn-sm">
+                            <i class="bi bi-eye"></i> Mouvements
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-sessions">
+            <i class="bi bi-safe"></i>
+            <div><strong>Aucune session de caisse trouvée</strong></div>
+            <small>Créez une nouvelle session pour commencer</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Rapports Comptables</h1>
+        <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-secondary">Retour au Dashboard</a>
+    </div>
+
+    <div class="row">
+        <!-- Balance Générale -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-balance-scale fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">Balance Générale</h5>
+                    <p class="card-text">Visualisez tous les soldes de comptes et vérifiez l'équilibre comptable.</p>
+                    <a href="{{ url_for('accounting.trial_balance') }}" class="btn btn-primary">Voir la Balance</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compte de Résultat -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-chart-line fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">Compte de Résultat</h5>
+                    <p class="card-text">Calculez le profit net avec le détail des produits et charges.</p>
+                    <a href="{{ url_for('accounting.profit_loss') }}" class="btn btn-success">Voir le Résultat</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Grand Livre -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-book fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title">Grand Livre</h5>
+                    <p class="card-text">Consultez le détail des mouvements par compte comptable.</p>
+                    <a href="#" class="btn btn-info disabled">Bientôt disponible</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Journal Général -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-file-alt fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">Journal Général</h5>
+                    <p class="card-text">Toutes les écritures comptables dans l'ordre chronologique.</p>
+                    <a href="{{ url_for('accounting.list_entries') }}" class="btn btn-warning">Voir les Écritures</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analyse Rapide -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Analyse Rapide</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h6>Formule du Profit Net</h6>
+                                <p class="text-muted">Produits - Charges</p>
+                                <p class="fw-bold text-success">Classe 7 - Classe 6</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h6>Équilibre Comptable</h6>
+                                <p class="text-muted">Principe fondamental</p>
+                                <p class="fw-bold text-primary">Débit = Crédit</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h6>Marge Bénéficiaire</h6>
+                                <p class="text-muted">Rentabilité</p>
+                                <p class="fw-bold text-info">(Résultat / CA) × 100</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div>
+                                <h6>Période Comptable</h6>
+                                <p class="text-muted">Exercice en cours</p>
+                                <p class="fw-bold text-warning">{{ current_year or "2025" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

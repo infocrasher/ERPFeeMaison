@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-clock"></i> {{ title }}</h1>
+                <div>
+                    <a href="{{ url_for('employees.manual_attendance') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Pointage Manuel
+                    </a>
+                    <a href="{{ url_for('employees.view_employee', employee_id=employee.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres de période -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row align-items-end">
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">Date de début</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   value="{{ start_date.strftime('%Y-%m-%d') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">Date de fin</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" 
+                                   value="{{ end_date.strftime('%Y-%m-%d') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> Filtrer
+                            </button>
+                            <a href="{{ url_for('employees.employee_attendance', employee_id=employee.id) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-undo"></i> Réinitialiser
+                            </a>
+                        </div>
+                        <div class="col-md-3 text-right">
+                            <div class="btn-group">
+                                <a href="?start_date={{ date_shortcuts.week_start }}&end_date={{ date_shortcuts.week_end }}" 
+                                   class="btn btn-outline-info btn-sm">7 jours</a>
+                                <a href="?start_date={{ date_shortcuts.month_start }}&end_date={{ date_shortcuts.month_end }}" 
+                                   class="btn btn-outline-info btn-sm">30 jours</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ stats.total_days }}</h3>
+                    <small class="text-muted">Jours Total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ stats.days_worked }}</h3>
+                    <small class="text-muted">Jours Travaillés</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger">{{ stats.days_absent }}</h3>
+                    <small class="text-muted">Jours Absents</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-info">{{ stats.total_hours }}h</h3>
+                    <small class="text-muted">Total Heures</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ stats.average_hours }}h</h3>
+                    <small class="text-muted">Moyenne/Jour</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ stats.attendance_rate }}%</h3>
+                    <small class="text-muted">Taux Présence</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pointages détaillés -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-calendar-alt"></i> Pointages Détaillés</h5>
+                </div>
+                <div class="card-body">
+                    {% if daily_attendance %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Jour</th>
+                                        <th>Pointages</th>
+                                        <th>Heures Travaillées</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for day in days_in_period %}
+                                        {% set day_records = daily_attendance.get(day, []) %}
+                                        {% set day_hours = employee.get_work_hours_for_date(day) %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ day.strftime('%d/%m/%Y') }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-light">
+                                                    {{ day.strftime('%A') | capitalize }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if day_records %}
+                                                    <div class="d-flex flex-wrap">
+                                                        {% for record in day_records %}
+                                                            <span class="badge {% if record.punch_type == 'in' %}badge-success{% else %}badge-warning{% endif %} mr-1 mb-1">
+                                                                {{ record.formatted_time }} {{ record.get_punch_type_display() }}
+                                                            </span>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-muted">Aucun pointage</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if day_hours > 0 %}
+                                                    <strong class="text-success">{{ "%.1f"|format(day_hours) }}h</strong>
+                                                {% else %}
+                                                    <span class="text-muted">0h</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if day_records %}
+                                                    {% set last_record = day_records[-1] %}
+                                                    {% if last_record.punch_type == 'in' %}
+                                                        <span class="badge badge-success">Présent</span>
+                                                    {% else %}
+                                                        <span class="badge badge-info">Parti</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge badge-secondary">Absent</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Aucun pointage trouvé</h5>
+                            <p class="text-muted">Aucun pointage n'a été enregistré pour cette période.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh toutes les 30 secondes si on regarde aujourd'hui
+    const endDate = new Date('{{ end_date.strftime('%Y-%m-%d') }}');
+    const today = new Date();
+    
+    if (endDate.toDateString() === today.toDateString()) {
+        setInterval(function() {
+            location.reload();
+        }, 30000); // 30 secondes
+    }
+});
+</script>
+{% endblock %} 

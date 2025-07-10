@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-broadcast-tower"></i> {{ title }}</h1>
+                <div>
+                    <a href="{{ url_for('employees.manual_attendance') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Pointage Manuel
+                    </a>
+                    <a href="{{ url_for('employees.attendance_dashboard') }}" class="btn btn-info">
+                        <i class="fas fa-chart-pie"></i> Dashboard
+                    </a>
+                    <button id="refreshBtn" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Actualiser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statut en temps réel -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-users"></i> Statut Actuel des Employés</h5>
+                    <div class="badge badge-info">
+                        <i class="fas fa-clock"></i> Dernière mise à jour : <span id="lastUpdate">{{ current_time }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for emp_id, data in employee_status.items() %}
+                            {% set employee = data.employee %}
+                            {% set status = data.status %}
+                            {% set last_punch_time = data.last_punch_time %}
+                            {% set today_hours = data.today_hours %}
+                            
+                            <div class="col-md-3 mb-3">
+                                <div class="card employee-card {% if status == 'present' %}border-success{% else %}border-secondary{% endif %}">
+                                    <div class="card-body text-center p-2">
+                                        <div class="employee-avatar mb-2">
+                                            {{ employee.name[:2].upper() }}
+                                        </div>
+                                        <h6 class="card-title mb-1">{{ employee.name }}</h6>
+                                        <p class="card-text small text-muted mb-2">{{ employee.get_role_display() }}</p>
+                                        
+                                        <!-- Statut -->
+                                        <div class="mb-2">
+                                            {% if status == 'present' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check-circle"></i> PRÉSENT
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">
+                                                    <i class="fas fa-times-circle"></i> ABSENT
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Dernière action -->
+                                        {% if last_punch_time %}
+                                            <div class="small text-muted mb-1">
+                                                Dernière action : {{ last_punch_time.strftime('%H:%M') }}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- Heures aujourd'hui -->
+                                        <div class="small">
+                                            <strong>{{ "%.1f"|format(today_hours) }}h</strong> aujourd'hui
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pointages récents -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Pointages Récents (Aujourd'hui)</h5>
+                </div>
+                <div class="card-body">
+                    {% if today_records %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Heure</th>
+                                        <th>Employé</th>
+                                        <th>Type</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceTable">
+                                    {% for record in today_records %}
+                                        <tr class="attendance-row" data-time="{{ record.timestamp.timestamp() }}">
+                                            <td>
+                                                <strong>{{ record.formatted_time }}</strong>
+                                                <br><small class="text-muted">{{ record.formatted_date }}</small>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="employee-avatar-small mr-2">
+                                                        {{ record.employee.name[:2].upper() }}
+                                                    </div>
+                                                    <div>
+                                                        <strong>{{ record.employee.name }}</strong>
+                                                        <br><small class="text-muted">{{ record.employee.get_role_display() }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if record.punch_type == 'in' %}badge-success{% else %}badge-warning{% endif %}">
+                                                    <i class="fas {% if record.punch_type == 'in' %}fa-sign-in-alt{% else %}fa-sign-out-alt{% endif %}"></i>
+                                                    {{ record.get_punch_type_display() }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if record.punch_type == 'in' %}
+                                                    <span class="badge badge-success">Arrivé</span>
+                                                {% else %}
+                                                    <span class="badge badge-info">Parti</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Aucun pointage aujourd'hui</h5>
+                            <p class="text-muted">Les pointages apparaîtront ici en temps réel.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.employee-card {
+    transition: all 0.3s ease;
+    min-height: 180px;
+}
+
+.employee-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.employee-avatar {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin: 0 auto;
+}
+
+.employee-avatar-small {
+    width: 35px;
+    height: 35px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.attendance-row.new-record {
+    background-color: #d4edda !important;
+    animation: highlight 2s ease-out;
+}
+
+@keyframes highlight {
+    0% { background-color: #28a745; }
+    100% { background-color: #d4edda; }
+}
+
+.border-success {
+    border-left: 4px solid #28a745 !important;
+}
+
+.border-secondary {
+    border-left: 4px solid #6c757d !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let lastUpdate = Date.now();
+    
+    // Fonction de mise à jour automatique
+    function updateAttendance() {
+        fetch('/employees/api/attendance/today')
+            .then(response => response.json())
+            .then(data => {
+                updateEmployeeStatus(data);
+                updateLastUpdateTime();
+            })
+            .catch(error => {
+                console.error('Erreur lors de la mise à jour:', error);
+            });
+    }
+    
+    // Mettre à jour le statut des employés
+    function updateEmployeeStatus(data) {
+        // Logique de mise à jour du statut en temps réel
+        // À implémenter selon les besoins
+    }
+    
+    // Mettre à jour l'heure de dernière mise à jour
+    function updateLastUpdateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('fr-FR');
+        document.getElementById('lastUpdate').textContent = timeString;
+    }
+    
+    // Bouton d'actualisation manuelle
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+        location.reload();
+    });
+    
+    // Auto-refresh toutes les 15 secondes
+    setInterval(updateAttendance, 15000);
+    
+    // Mettre à jour l'heure toutes les secondes
+    setInterval(updateLastUpdateTime, 1000);
+});
+</script>
+{% endblock %} 

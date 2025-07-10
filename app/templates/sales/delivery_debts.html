@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Dettes Livreurs – Fée Maison{% endblock %}
+
+{% block head %}
+<style>
+    .debt-container {
+        max-width: 1000px;
+        margin: 40px auto;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        padding: 30px;
+    }
+    .debt-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .debt-header h1 {
+        color: #2C3E50;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+    .debt-header p {
+        color: #7F8C8D;
+        font-size: 1rem;
+    }
+    .debt-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 30px;
+    }
+    .debt-table th, .debt-table td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .debt-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #2C3E50;
+    }
+    .debt-table tr:hover {
+        background: #f8f9fa;
+    }
+    .debt-total {
+        font-weight: 700;
+        color: #E74C3C;
+        font-size: 1.1rem;
+    }
+    .debt-details {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 10px 20px;
+        margin-bottom: 20px;
+    }
+    .debt-details-title {
+        font-weight: 600;
+        color: #3498DB;
+        margin-bottom: 8px;
+    }
+    .btn-encaisser {
+        background: #27AE60;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 18px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-left: 10px;
+    }
+    .btn-encaisser:hover {
+        background: #229954;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="debt-container">
+    <div class="debt-header">
+        <h1><i class="bi bi-truck"></i> Dettes Livreurs</h1>
+        <p>Liste des montants dus par chaque livreur (commandes livrées non encore encaissées)</p>
+    </div>
+
+    {% if dettes_liste %}
+    <table class="debt-table">
+        <thead>
+            <tr>
+                <th>Livreur</th>
+                <th>Total dû</th>
+                <th>Détail des commandes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in dettes_liste %}
+            <tr>
+                <td><i class="bi bi-person-badge"></i> {{ entry.livreur.name }}</td>
+                <td class="debt-total">{{ entry.total|round(2) }} DA</td>
+                <td>
+                    <div class="debt-details">
+                        <div class="debt-details-title">Commandes non payées :</div>
+                        <ul>
+                            {% for dette in entry.dettes %}
+                            <li>
+                                <strong>Commande #{{ dette.order_id }}</strong> – {{ dette.amount|round(2) }} DA
+                                (créée le {{ dette.created_at.strftime('%d/%m/%Y') }})
+                                <form method="POST" action="{{ url_for('sales.pay_delivery_debt', debt_id=dette.id) }}" style="display:inline;">
+                                    <button type="submit" class="btn-encaisser" title="Encaisser cette dette" onclick="return confirm('Confirmer l\'encaissement de cette dette ?');">
+                                        <i class="bi bi-cash-coin"></i> Encaisser
+                                    </button>
+                                </form>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-debts">
+        <i class="bi bi-emoji-smile"></i>
+        <div><strong>Aucune dette livreur en cours !</strong></div>
+        <small>Tous les livreurs sont à jour.</small>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

@@ -1,0 +1,64 @@
+/* Styles Fée Maison */
+
+/* ===== STYLES POUR SIGNALEMENT D'ERREURS ===== */
+
+/* Bouton de signalement d'erreur dans les dashboards */
+.action-btn.btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+    transition: all 0.2s ease;
+}
+
+.action-btn.btn-warning:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+    color: #000;
+    transform: translateY(-1px);
+}
+
+/* Actions dans les cartes de commande du dashboard production */
+.order-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.order-actions .btn {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+}
+
+/* Styles pour la section des problèmes de qualité */
+.alert-warning {
+    border-left: 4px solid #ffc107;
+}
+
+.alert-success {
+    border-left: 4px solid #198754;
+}
+
+/* Badge pour les erreurs non résolues */
+.badge.bg-warning {
+    color: #000 !important;
+}
+
+/* Icônes dans les alertes d'erreurs */
+.alert .bi {
+    font-size: 1.1em;
+}
+
+/* Responsive pour les actions de commande */
+@media (max-width: 768px) {
+    .order-actions {
+        flex-direction: column;
+    }
+    
+    .order-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* ===== STYLES EXISTANTS (à préserver) ===== */

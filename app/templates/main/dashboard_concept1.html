@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Concept 1 - Fée Maison{% endblock %}
+
+{% block head %}
+{{ super() }}
+<!-- Chart.js pour les graphiques -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- CSS spécifique au concept 1 -->
+<style>
+    :root {
+        --primary-color: #1A252F;
+        --secondary-color: #2ECC71;
+        --accent-color: #3498DB;
+        --warning-color: #F39C12;
+        --danger-color: #E74C3C;
+        --success-color: #27AE60;
+        --gray-light: #F1F2F6;
+        --gray-dark: #57606F;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .dashboard-container {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        margin: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+
+    .header-section {
+        border-bottom: 2px solid var(--gray-light);
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+
+    .operational-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        border-left: 4px solid var(--accent-color);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .operational-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+    }
+
+    .operational-card.urgent {
+        border-left-color: var(--danger-color);
+        animation: urgentPulse 3s infinite;
+    }
+
+    .operational-card.warning {
+        border-left-color: var(--warning-color);
+    }
+
+    .operational-card.success {
+        border-left-color: var(--success-color);
+    }
+
+    @keyframes urgentPulse {
+        0%, 100% { box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+        50% { box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3); }
+    }
+
+    .metric-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .metric-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-dark);
+    }
+
+    .metric-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .metric-subtitle {
+        font-size: 0.9rem;
+        color: var(--gray-dark);
+        margin-top: 5px;
+    }
+
+    .progress-ring {
+        width: 80px;
+        height: 80px;
+        transform: rotate(-90deg);
+    }
+
+    .progress-ring circle {
+        fill: none;
+        stroke-width: 8;
+        stroke-linecap: round;
+    }
+
+    .progress-ring .background {
+        stroke: var(--gray-light);
+    }
+
+    .progress-ring .progress {
+        stroke: var(--success-color);
+        stroke-dasharray: 220;
+        stroke-dashoffset: 220;
+        transition: stroke-dashoffset 1s ease;
+    }
+
+    .real-time-indicator {
+        display: inline-flex;
+        align-items: center;
+        background: var(--success-color);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .real-time-indicator::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+        margin-right: 5px;
+        animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0.3; }
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+        flex-wrap: wrap;
+    }
+
+    .btn-action {
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary-action {
+        background: var(--accent-color);
+        color: white;
+    }
+
+    .btn-primary-action:hover {
+        background: #2980b9;
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-secondary-action {
+        background: var(--gray-light);
+        color: var(--gray-dark);
+    }
+
+    .btn-secondary-action:hover {
+        background: #ddd;
+        color: var(--gray-dark);
+        text-decoration: none;
+    }
+
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .status-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        background: var(--gray-light);
+        border-radius: 10px;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            margin: 10px;
+            padding: 20px;
+        }
+        
+        .metric-value {
+            font-size: 1.8rem;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="header-section">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-1">
+                    <i class="fas fa-cogs me-2"></i>
+                    Dashboard Opérationnel
+                </h1>
+                <p class="text-muted mb-0">Suivi temps réel des opérations</p>
+            </div>
+            <div class="text-end">
+                <div class="real-time-indicator mb-2">
+                    EN DIRECT
+                </div>
+                <div class="text-muted small">
+                    Mise à jour : <span id="currentTime"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Critical Alerts Row -->
+    <div class="row">
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="operational-card urgent">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-title">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Commandes Urgentes
+                        </div>
+                        <div class="metric-value text-danger">{{ orders_today }}</div>
+                        <div class="metric-subtitle">
+                            Livraison dans moins de 30 min
+                        </div>
+                    </div>
+                    <div class="progress-ring">
+                        <svg>
+                            <circle class="background" cx="40" cy="40" r="35"></circle>
+                            <circle class="progress" cx="40" cy="40" r="35" style="stroke: #E74C3C; stroke-dashoffset: 110;"></circle>
+                        </svg>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('dashboard.production_dashboard') }}" class="btn-action btn-primary-action">
+                        Voir Détails
+                    </a>
+                    <button class="btn-action btn-secondary-action" onclick="alert('Équipe alertée!')">
+                        Alerter Équipe
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="operational-card warning">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-title">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Employés Actifs
+                        </div>
+                        <div class="metric-value text-warning">{{ employees_count }}</div>
+                        <div class="metric-subtitle">
+                            Équipe en service aujourd'hui
+                        </div>
+                    </div>
+                    <div class="progress-ring">
+                        <svg>
+                            <circle class="background" cx="40" cy="40" r="35"></circle>
+                            <circle class="progress" cx="40" cy="40" r="35" style="stroke: #F39C12; stroke-dashoffset: 67;"></circle>
+                        </svg>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('employees.list_employees') }}" class="btn-action btn-primary-action">
+                        Voir Équipe
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="operational-card success">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-title">
+                            <i class="fas fa-boxes me-2"></i>
+                            Produits Disponibles
+                        </div>
+                        <div class="metric-value text-success">{{ products_count }}</div>
+                        <div class="metric-subtitle">
+                            Catalogue complet
+                        </div>
+                    </div>
+                    <div class="progress-ring">
+                        <svg>
+                            <circle class="background" cx="40" cy="40" r="35"></circle>
+                            <circle class="progress" cx="40" cy="40" r="35" style="stroke: #27AE60; stroke-dashoffset: 44;"></circle>
+                        </svg>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                                         <a href="{{ url_for('stock.dashboard_magasin') }}" class="btn-action btn-primary-action">
+                         Gérer Stock
+                     </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operational Status Row -->
+    <div class="row">
+        <div class="col-lg-6 mb-3">
+            <div class="operational-card success">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-title">
+                            <i class="fas fa-euro-sign me-2"></i>
+                            CA Estimé Aujourd'hui
+                        </div>
+                        <div class="metric-value text-success">2 847€</div>
+                        <div class="metric-subtitle">
+                            Basé sur {{ orders_today }} commandes
+                        </div>
+                    </div>
+                    <div>
+                        <canvas id="miniChart" width="100" height="60"></canvas>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('sales.pos_interface') }}" class="btn-action btn-primary-action">
+                        Point de Vente
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-3">
+            <div class="operational-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-title">
+                            <i class="fas fa-cookie-bite me-2"></i>
+                            Recettes Disponibles
+                        </div>
+                        <div class="metric-value text-info">{{ recipes_count }}</div>
+                        <div class="metric-subtitle">
+                            Prêtes pour production
+                        </div>
+                    </div>
+                    <div class="progress-ring">
+                        <svg>
+                            <circle class="background" cx="40" cy="40" r="35"></circle>
+                            <circle class="progress" cx="40" cy="40" r="35" style="stroke: #3498DB; stroke-dashoffset: 88;"></circle>
+                        </svg>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                                         <a href="{{ url_for('main.dashboard') }}" class="btn-action btn-primary-action">
+                         Voir Recettes
+                     </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Status -->
+    <div class="row">
+        <div class="col-12">
+            <div class="operational-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-users me-2"></i>
+                    Statut Équipe - {{ employees_count }} Employés Actifs
+                </h5>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div>
+                            <strong>Production</strong>
+                            <div class="text-muted">Équipe boulangerie</div>
+                        </div>
+                        <div class="text-success">
+                            <i class="fas fa-check-circle"></i> Actif
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div>
+                            <strong>Vente</strong>
+                            <div class="text-muted">Équipe magasin</div>
+                        </div>
+                        <div class="text-success">
+                            <i class="fas fa-check-circle"></i> Actif
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div>
+                            <strong>Livraisons</strong>
+                            <div class="text-muted">Équipe livreurs</div>
+                        </div>
+                        <div class="text-warning">
+                            <i class="fas fa-clock"></i> En tournée
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="operational-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-bolt me-2"></i>
+                    Actions Rapides
+                </h5>
+                <div class="action-buttons">
+                                         <a href="{{ url_for('orders.new_customer_order') }}" class="btn-action btn-primary-action">
+                         <i class="fas fa-plus me-1"></i> Nouvelle Commande
+                     </a>
+                     <a href="{{ url_for('orders.new_production_order') }}" class="btn-action btn-primary-action">
+                         <i class="fas fa-industry me-1"></i> Ordre Production
+                     </a>
+                     <a href="{{ url_for('stock.quick_entry') }}" class="btn-action btn-secondary-action">
+                         <i class="fas fa-box me-1"></i> Ajustement Stock
+                     </a>
+                     <a href="{{ url_for('sales.cash_status') }}" class="btn-action btn-secondary-action">
+                         <i class="fas fa-cash-register me-1"></i> État Caisse
+                     </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard Concept 1 chargé');
+    
+    // Mise à jour de l'heure en temps réel
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('fr-FR');
+        document.getElementById('currentTime').textContent = timeString;
+    }
+    
+    updateTime();
+    setInterval(updateTime, 1000);
+    
+    // Mini graphique CA
+    const ctx = document.getElementById('miniChart');
+    if (ctx) {
+        new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: ['6h', '9h', '12h', '15h', '18h'],
+                datasets: [{
+                    data: [120, 450, 1200, 2100, 2847],
+                    borderColor: '#27AE60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                }
+            }
+        });
+    }
+    
+    // Animation des anneaux de progression
+    const progressRings = document.querySelectorAll('.progress-ring .progress');
+    progressRings.forEach((ring, index) => {
+        setTimeout(() => {
+            const dashOffset = ring.style.strokeDashoffset;
+            ring.style.strokeDashoffset = dashOffset;
+        }, index * 200);
+    });
+});
+</script>
+{% endblock %} 

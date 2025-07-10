@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title">Détails de la Dépense : {{ expense.label }}</h3>
+            <div>
+                <a href="{{ url_for('accounting.edit_expense', expense_id=expense.id) }}" class="btn btn-warning me-2">Éditer</a>
+                <a href="{{ url_for('accounting.list_expenses') }}" class="btn btn-secondary">Retour à la liste</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Date:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ expense.date.strftime('%d/%m/%Y') }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Libellé:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ expense.label }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Montant:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ expense.amount }} DZD
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Catégorie:</strong>
+                </div>
+                <div class="col-md-6">
+                    <span class="badge bg-secondary">{{ expense.category }}</span>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Statut de paiement:</strong>
+                </div>
+                <div class="col-md-6">
+                    {% if expense.is_paid %}
+                        <span class="badge bg-success">Payé</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">En attente</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Date de création:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ expense.created_at.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Dernière modification:</strong>
+                </div>
+                <div class="col-md-6">
+                    {{ expense.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
