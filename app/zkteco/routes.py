@@ -6,6 +6,11 @@ from extensions import db
 from app.employees.models import Employee, AttendanceRecord
 import json
 
+@zkteco.route('/')
+def root():
+    """Endpoint racine pour la pointeuse - redirige vers attendance"""
+    return attendance()
+
 @zkteco.route('/api/ping')
 def ping():
     """Test de connectivité pour la pointeuse"""
