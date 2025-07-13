@@ -299,332 +299,116 @@
 
 {% block content %}
 <div class="dashboard-analytics">
-    <!-- Header -->
     <div class="header-analytics">
         <h1>Dashboard Analytique</h1>
-        <p>Analyse avancée des performances - Fée Maison</p>
+        <p>Analyse approfondie des performances mensuelles</p>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="kpi-grid">
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-title">CA Mensuel vs Objectif</div>
-                    <div class="kpi-value">89 400€</div>
-                    <div class="kpi-change positive">
-                        <i class="fas fa-arrow-up"></i>
-                        +12.5% vs objectif
-                    </div>
-                </div>
-                <div class="kpi-icon blue">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill excellent" style="width: 89%;"></div>
-            </div>
-        </div>
-
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-title">Marge Brute</div>
-                    <div class="kpi-value">64.2%</div>
-                    <div class="kpi-change positive">
-                        <i class="fas fa-arrow-up"></i>
-                        +2.1% vs mois dernier
-                    </div>
-                </div>
-                <div class="kpi-icon green">
-                    <i class="fas fa-percentage"></i>
-                </div>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill good" style="width: 64%;"></div>
-            </div>
-        </div>
-
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-title">Flux de Trésorerie</div>
-                    <div class="kpi-value">+5 847€</div>
-                    <div class="kpi-change negative">
-                        <i class="fas fa-arrow-down"></i>
-                        -8.3% vs prévision
-                    </div>
-                </div>
-                <div class="kpi-icon purple">
-                    <i class="fas fa-coins"></i>
-                </div>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill warning" style="width: 75%;"></div>
-            </div>
-        </div>
-
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-title">Coût Matières Premières</div>
-                    <div class="kpi-value">28 340€</div>
-                    <div class="kpi-change positive">
-                        <i class="fas fa-arrow-up"></i>
-                        +15.7% vs budget
-                    </div>
-                </div>
-                <div class="kpi-icon orange">
-                    <i class="fas fa-box"></i>
-                </div>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill danger" style="width: 85%;"></div>
-            </div>
-        </div>
+    <div class="kpi-grid" id="kpiGrid">
+        <!-- KPIs will be loaded here -->
     </div>
 
-    <!-- ROI et Indicateurs Avancés -->
-    <div class="glass-card">
-        <div class="section-title">
-            <i class="fas fa-chart-pie"></i>
-            ROI Employés & Indicateurs Avancés
-        </div>
-        <div class="row">
-            <div class="col-md-3">
-                <div class="kpi-title">ROI Employés</div>
-                <div class="kpi-value">89.4%</div>
-                <div class="kpi-change positive">+23% vs trimestre</div>
-                <div class="kpi-subtitle">Excellent</div>
-            </div>
-            <div class="col-md-3">
-                <div class="kpi-title">Taux Rotation Stock</div>
-                <div class="kpi-value">12.4x</div>
-                <div class="kpi-change positive">Stable vs objectif</div>
-                <div class="kpi-subtitle">Optimal</div>
-            </div>
-            <div class="col-md-3">
-                <div class="kpi-title">Prévision Ventes</div>
-                <div class="kpi-value">94 200€</div>
-                <div class="kpi-change positive">+7% vs tendance</div>
-                <div class="kpi-subtitle">Prévision fiable à 89%</div>
-            </div>
-            <div class="col-md-3">
-                <div class="kpi-title">Indicateur Risques</div>
-                <div class="kpi-value">Medium</div>
-                <div class="kpi-change neutral">3 risques identifiés</div>
-                <div class="kpi-subtitle">Surveillance requise</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Graphiques et Analyses -->
     <div class="metrics-row">
         <div class="financial-evolution">
-            <div class="section-title">
-                <i class="fas fa-chart-area"></i>
-                Évolution Financière - 6 Mois
-            </div>
+            <div class="section-title"><i class="fas fa-chart-line"></i> Évolution Financière</div>
             <div class="chart-container">
-                <canvas id="financialChart"></canvas>
+                <canvas id="financialEvolutionChart"></canvas>
             </div>
         </div>
-
         <div class="cost-breakdown">
-            <div class="section-title">
-                <i class="fas fa-chart-pie"></i>
-                Répartition des Coûts
-            </div>
+            <div class="section-title"><i class="fas fa-chart-pie"></i> Répartition du CA</div>
             <div class="chart-container">
-                <canvas id="costChart"></canvas>
+                <canvas id="salesBreakdownChart"></canvas>
             </div>
         </div>
     </div>
-
-    <!-- Alertes Financières -->
-    <div class="alert-section">
-        <div class="section-title">
-            <i class="fas fa-exclamation-triangle"></i>
-            Alertes Financières
-        </div>
-        <div class="alert-item">
-            <div class="alert-icon">
-                <i class="fas fa-arrow-up"></i>
-            </div>
-            <div>
-                <strong>Coût matières premières en hausse</strong>
-                <div class="text-muted">Dépassement budget de 15.7% ce mois</div>
-            </div>
-        </div>
-        <div class="alert-item">
-            <div class="alert-icon">
-                <i class="fas fa-clock"></i>
-            </div>
-            <div>
-                <strong>Factures fournisseurs en retard</strong>
-                <div class="text-muted">3 factures à régler sous 48h</div>
-            </div>
-        </div>
-        <div class="alert-item">
-            <div class="alert-icon">
-                <i class="fas fa-target"></i>
-            </div>
-            <div>
-                <strong>Objectif mensuel à risque</strong>
-                <div class="text-muted">Nécessite +8% de ventes sur 10 jours restants</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Actions Rapides -->
-    <div class="glass-card">
-        <div class="section-title">
-            <i class="fas fa-bolt"></i>
-            Actions Analytiques
-        </div>
-        <div class="row">
-            <div class="col-md-3">
-                <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-outline-light w-100 mb-2">
-                    <i class="fas fa-calculator me-2"></i>
-                    Tableau de Bord Comptable
-                </a>
-            </div>
-                         <div class="col-md-3">
-                 <a href="{{ url_for('employees.payroll_dashboard') }}" class="btn btn-outline-light w-100 mb-2">
-                     <i class="fas fa-users me-2"></i>
-                     Analytics RH
-                 </a>
-             </div>
-                         <div class="col-md-3">
-                 <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-outline-light w-100 mb-2">
-                     <i class="fas fa-file-alt me-2"></i>
-                     Rapports Avancés
-                 </a>
-             </div>
-             <div class="col-md-3">
-                 <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-outline-light w-100 mb-2">
-                     <i class="fas fa-chart-bar me-2"></i>
-                     Compte de Résultat
-                 </a>
-             </div>
-        </div>
-    </div>
+    
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Dashboard Concept 2 (Analytique) chargé');
-    
-    // Graphique d'évolution financière
-    const financialCtx = document.getElementById('financialChart');
-    if (financialCtx) {
-        new Chart(financialCtx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin'],
-                datasets: [
-                    {
-                        label: 'Chiffre d\'Affaires',
-                        data: [78000, 82000, 85000, 87000, 89000, 89400],
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Charges',
-                        data: [45000, 47000, 48000, 49000, 50000, 52000],
-                        borderColor: '#ef4444',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Bénéfice',
-                        data: [33000, 35000, 37000, 38000, 39000, 37400],
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: '#f1f5f9'
-                        }
-                    }
+    document.addEventListener('DOMContentLoaded', function() {
+        const formatCurrency = (value) => (value || 0).toLocaleString('fr-DZ', { style: 'currency', currency: 'DZD' });
+
+        // KPIs
+        fetch('/dashboards/api/monthly/overview').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const kpis = data.data.kpis;
+            document.getElementById('kpiGrid').innerHTML = `
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-title">CA Mensuel</div>
+                        <div class="kpi-icon blue"><i class="fas fa-dollar-sign"></i></div>
+                    </div>
+                    <div class="kpi-value">${formatCurrency(kpis.monthly_revenue)}</div>
+                    <div class="kpi-change positive"><i class="fas fa-arrow-up"></i> +5.2%</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-title">Marge Brute</div>
+                        <div class="kpi-icon green"><i class="fas fa-percentage"></i></div>
+                    </div>
+                    <div class="kpi-value">${kpis.profit_margin.toFixed(1)}%</div>
+                    <div class="kpi-change positive"><i class="fas fa-arrow-up"></i> +1.1%</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-title">Commandes</div>
+                         <div class="kpi-icon purple"><i class="fas fa-box-open"></i></div>
+                    </div>
+                    <div class="kpi-value">${kpis.monthly_orders}</div>
+                    <div class="kpi-change neutral"><i class="fas fa-arrows-alt-h"></i> stable</div>
+                </div>
+                 <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-title">Panier Moyen</div>
+                         <div class="kpi-icon orange"><i class="fas fa-shopping-cart"></i></div>
+                    </div>
+                    <div class="kpi-value">${formatCurrency(kpis.monthly_revenue / (kpis.monthly_orders || 1))}</div>
+                    <div class="kpi-change positive"><i class="fas fa-arrow-up"></i> +3.4%</div>
+                </div>
+            `;
+        });
+        
+        // Financial Evolution Chart
+        fetch('/dashboards/api/monthly/revenue-trend').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const trendData = data.data;
+            const labels = trendData.map(d => d.period);
+            const revenues = trendData.map(d => d.revenue);
+            const profits = trendData.map(d => d.revenue * 0.3); // Simulation
+
+            new Chart(document.getElementById('financialEvolutionChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Revenu', data: revenues, borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+                        { label: 'Profit', data: profits, borderColor: '#10b981', tension: 0.4, fill: true, backgroundColor: 'rgba(16, 185, 129, 0.1)' }
+                    ]
                 },
-                scales: {
-                    x: {
-                        ticks: { color: '#94a3b8' },
-                        grid: { color: 'rgba(148, 163, 184, 0.1)' }
-                    },
-                    y: {
-                        ticks: { color: '#94a3b8' },
-                        grid: { color: 'rgba(148, 163, 184, 0.1)' }
-                    }
-                }
-            }
+                options: { responsive: true, maintainAspectRatio: false }
+            });
         });
-    }
-    
-    // Graphique de répartition des coûts
-    const costCtx = document.getElementById('costChart');
-    if (costCtx) {
-        new Chart(costCtx.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Matières Premières', 'Salaires', 'Charges', 'Marketing', 'Autres'],
-                datasets: [{
-                    data: [45, 30, 15, 7, 3],
-                    backgroundColor: [
-                        '#ef4444',
-                        '#3b82f6',
-                        '#f59e0b',
-                        '#8b5cf6',
-                        '#10b981'
-                    ],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: '#f1f5f9',
-                            padding: 20
-                        }
-                    }
-                }
-            }
+
+        // Sales Breakdown Chart
+        fetch('/dashboards/api/monthly/product-performance?limit=5').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const productData = data.data.top_by_revenue;
+            const labels = productData.map(p => p.category);
+            const revenues = productData.map(p => p.total_revenue);
+
+            new Chart(document.getElementById('salesBreakdownChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{ data: revenues, backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
         });
-    }
-    
-    // Animation des barres de progression
-    setTimeout(() => {
-        const progressBars = document.querySelectorAll('.progress-fill');
-        progressBars.forEach(bar => {
-            const width = bar.style.width;
-            bar.style.width = '0%';
-            setTimeout(() => {
-                bar.style.width = width;
-            }, 100);
-        });
-    }, 500);
-});
+    });
 </script>
 {% endblock %} 

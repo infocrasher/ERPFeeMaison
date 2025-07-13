@@ -1,0 +1,565 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Mensuel - Fée Maison{% endblock %}
+
+{% block head %}
+{{ super() }}
+<!-- Chart.js pour les graphiques -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- CSS moderne pour le dashboard mensuel -->
+<style>
+    :root {
+        --primary-color: #2563eb;
+        --secondary-color: #64748b;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --info-color: #06b6d4;
+        --dark-color: #1e293b;
+        --light-color: #f8fafc;
+        --border-color: #e2e8f0;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .dashboard-container {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        margin: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+
+    .header-section {
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+
+    .main-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: var(--secondary-color);
+        font-size: 1.1rem;
+    }
+
+    .period-selector {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .kpi-card {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--info-color));
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+    }
+
+    .kpi-title {
+        font-size: 0.9rem;
+        color: var(--secondary-color);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin: 10px 0;
+    }
+
+    .kpi-change {
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .kpi-change.positive {
+        color: var(--success-color);
+    }
+
+    .kpi-change.negative {
+        color: var(--danger-color);
+    }
+
+    .kpi-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+    }
+
+    .kpi-icon.blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .kpi-icon.green { background: linear-gradient(135deg, #10b981, #059669); }
+    .kpi-icon.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    .kpi-icon.orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 15px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 1s ease;
+    }
+
+    .progress-fill.excellent { background: linear-gradient(90deg, #10b981, #059669); }
+    .progress-fill.good { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+    .progress-fill.warning { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .progress-fill.danger { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+    .charts-section {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .chart-card {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
+    }
+
+    .chart-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .analysis-section {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
+        margin-bottom: 30px;
+    }
+
+    .analysis-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .analysis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .analysis-item {
+        padding: 15px;
+        border-radius: 8px;
+        background: var(--light-color);
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .analysis-item.success {
+        border-left-color: var(--success-color);
+        background: #f0fdf4;
+    }
+
+    .analysis-item.warning {
+        border-left-color: var(--warning-color);
+        background: #fefbeb;
+    }
+
+    .analysis-item.danger {
+        border-left-color: var(--danger-color);
+        background: #fef2f2;
+    }
+
+    .analysis-label {
+        font-size: 0.9rem;
+        color: var(--secondary-color);
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .analysis-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--dark-color);
+    }
+
+    .analysis-trend {
+        font-size: 0.8rem;
+        margin-top: 5px;
+    }
+
+    .trend-up { color: var(--success-color); }
+    .trend-down { color: var(--danger-color); }
+
+    .alert-section {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 16px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+
+    .alert-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--danger-color);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .alert-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px 0;
+        border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .alert-item:last-child {
+        border-bottom: none;
+    }
+
+    .alert-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: var(--danger-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem;
+    }
+
+    .alert-content h4 {
+        margin: 0;
+        font-size: 1rem;
+        color: var(--dark-color);
+    }
+
+    .alert-content p {
+        margin: 5px 0 0 0;
+        color: var(--secondary-color);
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            margin: 10px;
+            padding: 20px;
+        }
+        
+        .charts-section {
+            grid-template-columns: 1fr;
+        }
+        
+        .main-title {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="header-section">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="main-title">📈 DASHBOARD MENSUEL</h1>
+                <p class="subtitle">Analyse stratégique et tendances</p>
+            </div>
+            <div class="text-end">
+                <div class="period-selector">
+                    <label for="periodSelect" class="me-2">📅 Période:</label>
+                    <select id="periodSelect" onchange="changePeriod()">
+                        <option value="current">Juillet 2024</option>
+                        <option value="previous">Juin 2024</option>
+                        <option value="custom">Personnalisé</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-title">CA Mensuel vs Objectif</div>
+                    <div class="kpi-value" id="kpiCaMensuel">...</div>
+                    <div class="kpi-change positive" id="kpiCaChange">...</div>
+                </div>
+                <div class="kpi-icon blue">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill excellent" id="kpiCaProgress" style="width:0%"></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-title">Marge Brute</div>
+                    <div class="kpi-value" id="kpiMarge">...</div>
+                    <div class="kpi-change positive" id="kpiMargeChange">...</div>
+                </div>
+                <div class="kpi-icon green">
+                    <i class="fas fa-percentage"></i>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill good" id="kpiMargeProgress" style="width:0%"></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-title">Flux de Trésorerie</div>
+                    <div class="kpi-value" id="kpiFlux">...</div>
+                    <div class="kpi-change negative" id="kpiFluxChange">...</div>
+                </div>
+                <div class="kpi-icon purple">
+                    <i class="fas fa-coins"></i>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill warning" id="kpiFluxProgress" style="width:0%"></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-title">Coût Matières Premières</div>
+                    <div class="kpi-value" id="kpiMP">...</div>
+                    <div class="kpi-change positive" id="kpiMPChange">...</div>
+                </div>
+                <div class="kpi-icon orange">
+                    <i class="fas fa-box"></i>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill danger" id="kpiMPProgress" style="width:0%"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Graphiques -->
+    <div class="charts-section">
+        <div class="chart-card">
+            <div class="chart-title">
+                <i class="fas fa-chart-area text-primary"></i>
+                Évolution Financière - 6 Mois
+            </div>
+            <canvas id="financialChart" height="300"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">
+                <i class="fas fa-chart-pie text-success"></i>
+                Répartition des Coûts
+            </div>
+            <canvas id="costChart" height="300"></canvas>
+        </div>
+    </div>
+    <!-- Analyses Détaillées -->
+    <div class="analysis-section">
+        <div class="analysis-title">
+            <i class="fas fa-chart-bar text-info"></i>
+            Analyses Détaillées
+        </div>
+        <div class="analysis-grid" id="analysisGrid"></div>
+    </div>
+    <!-- Alertes Financières -->
+    <div class="alert-section" id="alertSection">
+        <div class="alert-title">
+            <i class="fas fa-exclamation-triangle"></i>
+            Alertes Financières
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Charger les KPI et analyses
+    fetch('/dashboards/api/monthly/overview').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const kpis = data.data.kpis;
+            document.getElementById('kpiCaMensuel').textContent = kpis.monthly_revenue.toLocaleString('fr-DZ') + ' DA';
+            document.getElementById('kpiCaChange').innerHTML = (kpis.profit_margin >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>') + Math.abs(kpis.profit_margin).toFixed(1) + '% marge';
+            document.getElementById('kpiCaProgress').style.width = Math.min(100, (kpis.monthly_revenue / 100000) * 100) + '%';
+            document.getElementById('kpiMarge').textContent = kpis.profit_margin.toFixed(1) + '%';
+            document.getElementById('kpiMargeChange').innerHTML = (kpis.profit_margin >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>') + Math.abs(kpis.profit_margin).toFixed(1) + '% vs mois dernier';
+            document.getElementById('kpiMargeProgress').style.width = Math.min(100, kpis.profit_margin) + '%';
+            document.getElementById('kpiFlux').textContent = (kpis.net_profit >= 0 ? '+' : '') + kpis.net_profit.toLocaleString('fr-DZ') + ' DA';
+            document.getElementById('kpiFluxChange').innerHTML = (kpis.net_profit >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>') + Math.abs(kpis.net_profit).toLocaleString('fr-DZ') + ' DA';
+            document.getElementById('kpiFluxProgress').style.width = Math.min(100, (kpis.net_profit / kpis.monthly_revenue) * 100) + '%';
+            document.getElementById('kpiMP').textContent = kpis.monthly_expenses.toLocaleString('fr-DZ') + ' DA';
+            document.getElementById('kpiMPChange').innerHTML = (kpis.monthly_expenses >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>') + Math.abs(kpis.monthly_expenses).toLocaleString('fr-DZ') + ' DA';
+            document.getElementById('kpiMPProgress').style.width = Math.min(100, (kpis.monthly_expenses / kpis.monthly_revenue) * 100) + '%';
+            // Analyses détaillées
+            document.getElementById('analysisGrid').innerHTML =
+                `<div class='analysis-item success'><div class='analysis-label'>ROI Employés</div><div class='analysis-value'>${kpis.revenue_per_employee.toFixed(1)} DA</div><div class='analysis-trend trend-up'><i class='fas fa-arrow-up'></i>vs mois dernier</div></div>`+
+                `<div class='analysis-item success'><div class='analysis-label'>Taux Rotation Stock</div><div class='analysis-value'>${(kpis.stock_value/10000).toFixed(2)}x</div><div class='analysis-trend trend-up'><i class='fas fa-arrow-up'></i>Stable</div></div>`;
+            // Alertes financières (exemple)
+            let alerts = '';
+            if(kpis.monthly_expenses > kpis.monthly_revenue*0.5) alerts += `<div class='alert-item'><div class='alert-icon'><i class='fas fa-arrow-up'></i></div><div class='alert-content'><h4>Coût matières premières élevé</h4><p>Dépassement de 50% du CA</p></div></div>`;
+            if(kpis.net_profit < 0) alerts += `<div class='alert-item'><div class='alert-icon'><i class='fas fa-exclamation-triangle'></i></div><div class='alert-content'><h4>Bénéfice négatif</h4><p>Attention à la rentabilité ce mois</p></div></div>`;
+            document.getElementById('alertSection').innerHTML += alerts;
+        }
+    });
+    // Graphique évolution financière
+    fetch('/dashboards/api/monthly/revenue-trend').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const trend = data.data;
+            const labels = trend.map(t => t.period);
+            const ca = trend.map(t => t.revenue);
+            const charges = trend.map(t => t.revenue-t.avg_order_value*t.orders);
+            const benef = trend.map(t => t.avg_order_value*t.orders);
+            const ctx = document.getElementById('financialChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {label: "Chiffre d'Affaires", data: ca, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 3, fill: true, tension: 0.4},
+                        {label: 'Charges', data: charges, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 3, fill: true, tension: 0.4},
+                        {label: 'Bénéfice', data: benef, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 3, fill: true, tension: 0.4}
+                    ]
+                },
+                options: {responsive: true, maintainAspectRatio: false, interaction: {intersect: false, mode: 'index'}, plugins: {legend: {labels: {usePointStyle: true}}}, scales: {y: {beginAtZero: true, ticks: {callback: v => (v/1000000).toFixed(1)+'M DA'}}}}
+            });
+        }
+    });
+    // Graphique répartition des coûts
+    fetch('/dashboards/api/monthly/overview').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const kpis = data.data.kpis;
+            const ctx = document.getElementById('costChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Matières Premières', 'Salaires', 'Charges', 'Autres'],
+                    datasets: [{
+                        data: [kpis.monthly_expenses, kpis.total_salary_cost, kpis.monthly_expenses*0.2, kpis.monthly_expenses*0.1],
+                        backgroundColor: ['#ef4444','#3b82f6','#f59e0b','#10b981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom', labels: {padding: 20, usePointStyle: true}}}}
+            });
+        }
+    });
+    
+    // Animation des barres de progression
+    setTimeout(() => {
+        const progressBars = document.querySelectorAll('.progress-fill');
+        progressBars.forEach(bar => {
+            const width = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => {
+                bar.style.width = width;
+            }, 100);
+        });
+    }, 500);
+    
+    // Fonction de changement de période
+    window.changePeriod = function() {
+        const period = document.getElementById('periodSelect').value;
+        console.log('Changement de période:', period);
+        // Ici vous pouvez ajouter la logique pour charger les données de la période sélectionnée
+    };
+    
+    // Animation des cartes au chargement
+    const cards = document.querySelectorAll('.kpi-card, .analysis-item');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}

@@ -166,6 +166,10 @@ def create_app(config_name=None):
     from app.accounting import bp as accounting_blueprint
     # Import des routes après la création du blueprint
     from app.accounting import routes as accounting_routes
+    
+    # ✅ AJOUT : Module dashboards unifié
+    from app.dashboards import dashboards_bp
+    app.register_blueprint(dashboards_bp)
     app.register_blueprint(accounting_blueprint)
     
     # ✅ AJOUT : Import des modèles accounting pour Flask-Migrate
@@ -174,6 +178,8 @@ def create_app(config_name=None):
     # ✅ AJOUT : Blueprint ZKTeco pour la pointeuse
     from app.zkteco import zkteco as zkteco_blueprint
     app.register_blueprint(zkteco_blueprint, url_prefix='/zkteco')
+    
+
 
     # Gestionnaire d'erreurs personnalisés
     @app.errorhandler(404)

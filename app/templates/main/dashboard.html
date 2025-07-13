@@ -1,449 +1,612 @@
 {% extends "base.html" %}
 
-{% block title %}{{ title }} - Fée Maison{% endblock %}
+{% block title %}Dashboard Principal - Fée Maison{% endblock %}
 
 {% block head %}
 {{ super() }}
+<!-- Chart.js pour les graphiques -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- CSS moderne pour le dashboard -->
 <style>
-    .welcome-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-        border-radius: 20px;
-        box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+    :root {
+        --primary-color: #2563eb;
+        --secondary-color: #64748b;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --info-color: #06b6d4;
+        --dark-color: #1e293b;
+        --light-color: #f8fafc;
+        --border-color: #e2e8f0;
     }
-    
-    .dashboard-card {
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .dashboard-container {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        margin: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+
+    .header-section {
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+
+    .main-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: var(--secondary-color);
+        font-size: 1.1rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
         background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
         transition: all 0.3s ease;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
         position: relative;
         overflow: hidden;
     }
-    
-    .dashboard-card::before {
+
+    .stat-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, var(--card-color), var(--card-color-alt));
+        background: linear-gradient(90deg, var(--primary-color), var(--info-color));
     }
-    
-    .dashboard-card:hover {
+
+    .stat-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     }
-    
-    .dashboard-card.production { --card-color: #ffc107; --card-color-alt: #ff8f00; }
-    .dashboard-card.shop { --card-color: #28a745; --card-color-alt: #20c997; }
-    .dashboard-card.employees { --card-color: #007bff; --card-color-alt: #6610f2; }
-    .dashboard-card.orders { --card-color: #fd7e14; --card-color-alt: #e83e8c; }
-    .dashboard-card.stock { --card-color: #6f42c1; --card-color-alt: #e83e8c; }
-    .dashboard-card.analytics { --card-color: #17a2b8; --card-color-alt: #20c997; }
-    
-    .dashboard-icon {
+
+    .stat-card.success::before { background: linear-gradient(90deg, var(--success-color), #059669); }
+    .stat-card.warning::before { background: linear-gradient(90deg, var(--warning-color), #d97706); }
+    .stat-card.danger::before { background: linear-gradient(90deg, var(--danger-color), #dc2626); }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 15px;
+    }
+
+    .stat-icon.success { background: linear-gradient(135deg, var(--success-color), #059669); }
+    .stat-icon.warning { background: linear-gradient(135deg, var(--warning-color), #d97706); }
+    .stat-icon.danger { background: linear-gradient(135deg, var(--danger-color), #dc2626); }
+    .stat-icon.info { background: linear-gradient(135deg, var(--info-color), #0891b2); }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: var(--secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+
+    .stat-trend {
+        font-size: 0.8rem;
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .trend-up { color: var(--success-color); }
+    .trend-down { color: var(--danger-color); }
+
+    /* 🔧 CORRECTION: Amélioration de la section graphiques */
+    .charts-section {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr; /* Ajusté pour plus d'équilibre */
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+
+    .chart-card {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
+        /* 🔧 CORRECTION: Hauteur minimale pour les graphiques */
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chart-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        /* 🔧 CORRECTION: Titre fixe en haut */
+        flex-shrink: 0;
+    }
+
+    /* 🔧 CORRECTION: Conteneur de graphique avec dimensions contrôlées */
+    .chart-container {
+        position: relative;
+        flex: 1;
+        min-height: 320px;
+        width: 100%;
+    }
+
+    .chart-container canvas {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Section Navigation Modules */
+    .modules-section {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
+        margin-bottom: 30px;
+    }
+
+    .modules-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 25px;
+        text-align: center;
+    }
+
+    .modules-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+    }
+
+    .module-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 16px;
+        padding: 25px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .module-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--primary-color);
+        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.2);
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .module-icon {
         width: 70px;
         height: 70px;
-        border-radius: 15px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        color: white;
+        margin: 0 auto 15px;
+    }
+
+    .module-production { background: linear-gradient(135deg, #f093fb, #f5576c); }
+    .module-shop { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+    .module-stock { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+    .module-accounting { background: linear-gradient(135deg, #fa709a, #fee140); }
+    .module-hr { background: linear-gradient(135deg, #a8edea, #fed6e3); }
+    .module-orders { background: linear-gradient(135deg, #ffecd2, #fcb69f); }
+    .module-products { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
+    .module-recipes { background: linear-gradient(135deg, #a8caba, #5d4e75); }
+
+    .module-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 8px;
+    }
+
+    .module-desc {
+        color: var(--secondary-color);
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    .concepts-section {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
+    }
+
+    .concepts-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 25px;
+        text-align: center;
+    }
+
+    .concepts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .concept-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 16px;
+        padding: 25px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        cursor: pointer;
+    }
+
+    .concept-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--primary-color);
+        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.2);
+    }
+
+    .concept-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 2rem;
         color: white;
-        flex-shrink: 0;
-        background: linear-gradient(135deg, var(--card-color), var(--card-color-alt));
-        box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        margin: 0 auto 20px;
     }
-    
-    .dashboard-content {
-        flex: 1;
-    }
-    
-    .dashboard-title {
+
+    .concept-1 { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .concept-2 { background: linear-gradient(135deg, #f093fb, #f5576c); }
+    .concept-3 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+
+    .concept-title {
         font-size: 1.3rem;
-        font-weight: 700;
-        color: #2c3e50;
-        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 10px;
     }
-    
-    .dashboard-desc {
-        font-size: 0.95rem;
-        color: #6c757d;
-        margin-bottom: 1rem;
+
+    .concept-desc {
+        color: var(--secondary-color);
+        margin-bottom: 20px;
         line-height: 1.5;
     }
-    
-    .dashboard-link {
-        background: linear-gradient(135deg, var(--card-color), var(--card-color-alt));
+
+    .btn-concept {
+        background: var(--primary-color);
         color: white;
-        text-decoration: none;
-        padding: 0.6rem 1.5rem;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        transition: all 0.3s ease;
-        display: inline-block;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    
-    .dashboard-link:hover {
-        color: white;
-        text-decoration: none;
-        transform: scale(1.05);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-    }
-    
-    .stats-overview {
-        background: white;
-        border-radius: 20px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-    }
-    
-    .stat-item {
-        text-align: center;
-        padding: 1.5rem;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.05));
-        border-radius: 15px;
-        transition: all 0.3s ease;
-    }
-    
-    .stat-item:hover {
-        transform: translateY(-3px);
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.1));
-    }
-    
-    .stat-number {
-        font-size: 2.5rem;
-        font-weight: bold;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        display: block;
-        margin-bottom: 0.5rem;
-    }
-    
-    .stat-label {
-        color: #6c757d;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-    }
-    
-    .section-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #2c3e50;
-        margin-bottom: 2rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-    
-    .section-title::before {
-        content: '';
-        width: 4px;
-        height: 2rem;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border-radius: 2px;
-    }
-    
-    .quick-access {
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        border-radius: 20px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        border: 1px solid rgba(0,0,0,0.05);
-    }
-    
-    .alert-custom {
-        border-radius: 15px;
         border: none;
-        padding: 1.5rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        margin-bottom: 1rem;
-    }
-    
-    .user-welcome {
-        background: rgba(255,255,255,0.2);
-        border-radius: 15px;
-        padding: 1.5rem;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.3);
-    }
-    
-    .admin-badge {
-        background: rgba(255,255,255,0.2);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
+        padding: 12px 24px;
+        border-radius: 25px;
         font-weight: 600;
+        text-decoration: none;
         display: inline-block;
-        margin-top: 0.5rem;
-        border: 1px solid rgba(255,255,255,0.3);
+        transition: all 0.3s ease;
+    }
+
+    .btn-concept:hover {
+        background: #1d4ed8;
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+        box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
+    }
+
+    /* 🔧 CORRECTION: Responsive amélioré */
+    @media (max-width: 768px) {
+        .dashboard-container {
+            margin: 10px;
+            padding: 20px;
+        }
+        
+        .charts-section {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .chart-card {
+            min-height: 350px;
+        }
+        
+        .chart-container {
+            min-height: 280px;
+        }
+        
+        .modules-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .concepts-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .main-title {
+            font-size: 2rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .chart-card {
+            min-height: 300px;
+            padding: 15px;
+        }
+        
+        .chart-container {
+            min-height: 220px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- En-tête de bienvenue -->
-<div class="welcome-header">
-    <div class="container">
-        <div class="user-welcome">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h1 class="mb-2">
-                        <i class="bi bi-house-heart me-3"></i>
-                        Bienvenue, {{ current_user.username }} !
-                    </h1>
-                    <p class="mb-0 opacity-90">Tableau de bord ERP Fée Maison - Gestion complète de votre pâtisserie</p>
-                    {% if current_user.is_admin %}
-                        <span class="admin-badge">
-                            <i class="bi bi-shield-check me-1"></i>
-                            Administrateur
-                        </span>
-                    {% endif %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="header-section">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="main-title">🏠 FÉE MAISON - COCKPIT PRINCIPAL</h1>
+                <p class="subtitle">Vue d'ensemble temps réel de votre entreprise</p>
+                <div class="dashboard-shortcuts" style="margin-top:18px; display:flex; gap:16px;">
+                    <a href="{{ url_for('dashboards.dashboard_routes.daily_dashboard') }}" class="btn btn-primary" style="font-weight:600; border-radius:25px; padding:10px 28px; font-size:1.1rem;">
+                        <i class="fas fa-sun me-1"></i> Dashboard Journalier
+                    </a>
+                    <a href="{{ url_for('dashboards.dashboard_routes.monthly_dashboard') }}" class="btn btn-success" style="font-weight:600; border-radius:25px; padding:10px 28px; font-size:1.1rem;">
+                        <i class="fas fa-calendar-alt me-1"></i> Dashboard Mensuel
+                    </a>
                 </div>
-                <div class="col-md-4 text-end">
-                    <div class="text-white">
-                        <div class="h4 mb-0" id="current-time"></div>
-                        <small id="current-date"></small>
-                    </div>
+            </div>
+            <div class="text-end">
+                <div class="badge bg-success fs-6 mb-2">
+                    <i class="fas fa-circle me-1"></i>
+                    Système opérationnel
+                </div>
+                <div class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    <span id="currentTime"></span>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<div class="container-fluid">
-    <!-- Statistiques rapides -->
-    <div class="stats-overview">
-        <h3 class="section-title">Vue d'ensemble</h3>
-        <div class="row g-3">
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <span class="stat-number">{{ orders_today or 0 }}</span>
-                    <div class="stat-label">Commandes Aujourd'hui</div>
-                </div>
+    <!-- Statistiques principales -->
+    <div class="stats-grid">
+        <div class="stat-card success">
+            <div class="stat-icon success">
+                <i class="fas fa-euro-sign"></i>
             </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <span class="stat-number">{{ employees_count or 17 }}</span>
-                    <div class="stat-label">Employés Actifs</div>
-                </div>
+            <div class="stat-value" id="caJour">284 700 DA</div>
+            <div class="stat-label">Chiffre d'Affaires</div>
+            <div class="stat-trend trend-up" id="caTrend">+12.5% vs hier</div>
+        </div>
+
+        <div class="stat-card warning">
+            <div class="stat-icon warning">
+                <i class="fas fa-shopping-cart"></i>
             </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <span class="stat-number">{{ products_count or 25 }}</span>
-                    <div class="stat-label">Produits Catalogues</div>
-                </div>
+            <div class="stat-value" id="commandesJour">15</div>
+            <div class="stat-label">Commandes du jour</div>
+            <div class="stat-trend" id="commandesTrend">12 à temps • 3 urgentes</div>
+        </div>
+
+        <div class="stat-card danger">
+            <div class="stat-icon danger">
+                <i class="fas fa-exclamation-triangle"></i>
             </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <span class="stat-number">{{ recipes_count or 8 }}</span>
-                    <div class="stat-label">Recettes Validées</div>
-                </div>
+            <div class="stat-value" id="alertesStock">7</div>
+            <div class="stat-label">Alertes stock</div>
+            <div class="stat-trend" id="alertesTrend">Farine, Beurre, Œufs...</div>
+        </div>
+
+        <div class="stat-card info">
+            <div class="stat-icon info">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-value" id="employesActifs">8</div>
+            <div class="stat-label">Employés actifs</div>
+            <div class="stat-trend" id="employesTrend">5 production • 3 magasin</div>
+        </div>
+    </div>
+
+    <!-- 🔧 CORRECTION: Graphiques avec structure améliorée -->
+    <div class="charts-section">
+        <div class="chart-card">
+            <div class="chart-title">
+                <i class="fas fa-chart-bar text-primary"></i>
+                Top 5 produits vendus
+            </div>
+            <div class="chart-container">
+                <canvas id="topProductsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-title">
+                <i class="fas fa-chart-pie text-success"></i>
+                Répartition des ventes
+            </div>
+            <div class="chart-container">
+                <canvas id="salesChart"></canvas>
             </div>
         </div>
     </div>
-    
-    <!-- Dashboards Temps Réel -->
-    <div class="quick-access">
-        <h3 class="section-title">Dashboards Production</h3>
-        <div class="row g-4">
-            <!-- Dashboard Production (Rayan) -->
-            <div class="col-lg-6">
-                <div class="dashboard-card production">
-                    <div class="dashboard-icon">
-                        <i class="bi bi-gear-wide-connected"></i>
-                    </div>
-                    <div class="dashboard-content">
-                        <div class="dashboard-title">Production</div>
-                        <div class="dashboard-desc">Interface tactile pour Rayan - Suivi temps réel des commandes en cours</div>
-                        <a href="{{ url_for('dashboard.production_dashboard') }}" class="dashboard-link">
-                            <i class="bi bi-eye me-2"></i>Ouvrir Dashboard
-                        </a>
-                    </div>
+
+    <!-- Section Navigation Modules -->
+    <div class="modules-section">
+        <h2 class="modules-title">
+            <i class="fas fa-th-large me-2"></i>
+            Modules de l'ERP
+        </h2>
+        <div class="modules-grid">
+            <a href="{{ url_for('dashboard.production_dashboard') }}" class="module-card">
+                <div class="module-icon module-production">
+                    <i class="fas fa-cogs"></i>
                 </div>
-            </div>
-            
-            <!-- Dashboard Magasin (Yasmine) -->
-            <div class="col-lg-6">
-                <div class="dashboard-card shop">
-                    <div class="dashboard-icon">
-                        <i class="bi bi-shop"></i>
-                    </div>
-                    <div class="dashboard-content">
-                        <div class="dashboard-title">Magasin</div>
-                        <div class="dashboard-desc">Gestion des réceptions et livraisons - Interface Yasmine</div>
-                        <a href="{{ url_for('dashboard.shop_dashboard') }}" class="dashboard-link">
-                            <i class="bi bi-shop me-2"></i>Ouvrir Dashboard
-                        </a>
-                    </div>
+                <h3 class="module-title">Production</h3>
+                <p class="module-desc">Gestion de la production et des recettes</p>
+            </a>
+
+            <a href="{{ url_for('dashboard.shop_dashboard') }}" class="module-card">
+                <div class="module-icon module-shop">
+                    <i class="fas fa-store"></i>
                 </div>
-            </div>
+                <h3 class="module-title">Magasin</h3>
+                <p class="module-desc">Point de vente et caisse</p>
+            </a>
+
+            <a href="{{ url_for('stock.overview') }}" class="module-card">
+                <div class="module-icon module-stock">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <h3 class="module-title">Stock</h3>
+                <p class="module-desc">Gestion des stocks et inventaires</p>
+            </a>
+
+            <a href="{{ url_for('accounting.dashboard') }}" class="module-card">
+                <div class="module-icon module-accounting">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <h3 class="module-title">Comptabilité</h3>
+                <p class="module-desc">Comptabilité et rapports financiers</p>
+            </a>
+
+            <a href="{{ url_for('employees.list_employees') }}" class="module-card">
+                <div class="module-icon module-hr">
+                    <i class="fas fa-users-cog"></i>
+                </div>
+                <h3 class="module-title">Ressources Humaines</h3>
+                <p class="module-desc">Gestion des employés et paie</p>
+            </a>
+
+            <a href="{{ url_for('orders.list_orders') }}" class="module-card">
+                <div class="module-icon module-orders">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <h3 class="module-title">Commandes</h3>
+                <p class="module-desc">Gestion des commandes clients</p>
+            </a>
+
+            <a href="{{ url_for('products.list_products') }}" class="module-card">
+                <div class="module-icon module-products">
+                    <i class="fas fa-bread-slice"></i>
+                </div>
+                <h3 class="module-title">Produits</h3>
+                <p class="module-desc">Catalogue des produits</p>
+            </a>
+
+            <a href="{{ url_for('recipes.list_recipes') }}" class="module-card">
+                <div class="module-icon module-recipes">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <h3 class="module-title">Recettes</h3>
+                <p class="module-desc">Gestion des recettes</p>
+            </a>
         </div>
     </div>
-    
-    <!-- Gestion Générale -->
-    <div class="quick-access">
-        <h3 class="section-title">Gestion Générale</h3>
-        <div class="row g-4">
-            <!-- Employés -->
-            <div class="col-lg-4">
-                <div class="dashboard-card employees">
-                    <div class="dashboard-icon">
-                        <i class="bi bi-people-fill"></i>
-                    </div>
-                    <div class="dashboard-content">
-                        <div class="dashboard-title">Employés</div>
-                        <div class="dashboard-desc">Gestion de l'équipe et suivi des performances</div>
-                        <a href="{{ url_for('employees.list_employees') }}" class="dashboard-link">
-                            <i class="bi bi-people me-2"></i>Gérer Équipe
-                        </a>
-                    </div>
+
+    <!-- Section Concepts de Dashboards -->
+    <div class="concepts-section">
+        <h2 class="concepts-title">
+            <i class="fas fa-lightbulb me-2"></i>
+            Concepts de Dashboards Avancés
+        </h2>
+        <div class="concepts-grid">
+            <div class="concept-card" onclick="window.location.href='{{ url_for('main.dashboard_concept1') }}'">
+                <div class="concept-icon concept-1">
+                    <i class="fas fa-cogs"></i>
                 </div>
-            </div>
-            
-            <!-- Commandes -->
-            <div class="col-lg-4">
-                <div class="dashboard-card orders">
-                    <div class="dashboard-icon">
-                        <i class="bi bi-clipboard-check"></i>
-                    </div>
-                    <div class="dashboard-content">
-                        <div class="dashboard-title">Commandes</div>
-                        <div class="dashboard-desc">Gestion des commandes clients et ordres de production</div>
-                        <a href="{{ url_for('orders.list_orders') }}" class="dashboard-link">
-                            <i class="bi bi-list-check me-2"></i>Voir Commandes
-                        </a>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Stock -->
-            <div class="col-lg-4">
-                <div class="dashboard-card stock">
-                    <div class="dashboard-icon">
-                        <i class="bi bi-boxes"></i>
-                    </div>
-                    <div class="dashboard-content">
-                        <div class="dashboard-title">Stock</div>
-                        <div class="dashboard-desc">Suivi des stocks et gestion des ingrédients</div>
-                        <a href="{{ url_for('stock.overview') }}" class="dashboard-link">
-                            <i class="bi bi-box me-2"></i>Voir Stock
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Alertes et Outils -->
-    <div class="row g-3">
-        <div class="col-md-6">
-            <div class="alert alert-warning alert-custom d-flex align-items-center">
-                <i class="bi bi-exclamation-triangle-fill me-3 fs-3"></i>
-                <div class="flex-grow-1">
-                    <h6 class="mb-1">Alertes Ingrédients</h6>
-                    <small>Surveillez les stocks pour optimiser vos achats</small>
-                </div>
-                <a href="{{ url_for('dashboard.ingredients_alerts') }}" class="btn btn-warning">
-                    <i class="bi bi-eye me-1"></i>Voir Alertes
+                <h3 class="concept-title">Concept 1 - Opérationnel</h3>
+                <p class="concept-desc">
+                    Dashboard temps réel pour le pilotage opérationnel quotidien. 
+                    Suivi des commandes, production, stock et équipe en direct.
+                </p>
+                <a href="{{ url_for('main.dashboard_concept1') }}" class="btn-concept">
+                    <i class="fas fa-arrow-right me-1"></i>
+                    Explorer
                 </a>
             </div>
-        </div>
-        
-        <div class="col-md-6">
-            <div class="alert alert-info alert-custom d-flex align-items-center">
-                <i class="bi bi-calendar-check me-3 fs-3"></i>
-                <div class="flex-grow-1">
-                    <h6 class="mb-1">Planning Production</h6>
-                    <small>Calendrier des commandes et planification</small>
+
+            <div class="concept-card" onclick="window.location.href='{{ url_for('main.dashboard_concept2') }}'">
+                <div class="concept-icon concept-2">
+                    <i class="fas fa-chart-bar"></i>
                 </div>
-                <a href="{{ url_for('orders.orders_calendar') }}" class="btn btn-info">
-                    <i class="bi bi-calendar me-1"></i>Voir Planning
+                <h3 class="concept-title">Concept 2 - Analytique</h3>
+                <p class="concept-desc">
+                    Dashboard analytique avec métriques avancées, tendances, 
+                    prévisions et analyses de performance détaillées.
+                </p>
+                <a href="{{ url_for('main.dashboard_concept2') }}" class="btn-concept">
+                    <i class="fas fa-arrow-right me-1"></i>
+                    Explorer
                 </a>
             </div>
-        </div>
-    </div>
-    
-    <!-- Outils Additionnels -->
-    <div class="quick-access mt-4">
-        <h3 class="section-title">Outils de Gestion</h3>
-        <div class="row g-4">
-            <div class="col-lg-3">
-                <div class="dashboard-card analytics">
-                    <div class="dashboard-icon">
-                        <i class="bi bi-graph-up"></i>
-                    </div>
-                    <div class="dashboard-content">
-                        <div class="dashboard-title">Produits</div>
-                        <div class="dashboard-desc">Catalogue et gestion des produits</div>
-                        <a href="{{ url_for('products.list_products') }}" class="dashboard-link">
-                            <i class="bi bi-box-seam me-2"></i>Gérer
-                        </a>
-                    </div>
+
+            <div class="concept-card" onclick="window.location.href='{{ url_for('main.dashboard_concept3') }}'">
+                <div class="concept-icon concept-3">
+                    <i class="fas fa-tachometer-alt"></i>
                 </div>
-            </div>
-            
-            <div class="col-lg-3">
-                <div class="dashboard-card analytics">
-                    <div class="dashboard-icon">
-                        <i class="bi bi-journal-bookmark"></i>
-                    </div>
-                    <div class="dashboard-content">
-                        <div class="dashboard-title">Recettes</div>
-                        <div class="dashboard-desc">Création et gestion des recettes</div>
-                        <a href="{{ url_for('recipes.list_recipes') }}" class="dashboard-link">
-                            <i class="bi bi-book me-2"></i>Gérer
-                        </a>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-3">
-                <div class="dashboard-card analytics">
-                    <div class="dashboard-icon">
-                        <i class="bi bi-tags"></i>
-                    </div>
-                    <div class="dashboard-content">
-                        <div class="dashboard-title">Catégories</div>
-                        <div class="dashboard-desc">Organisation et classification</div>
-                        <a href="{{ url_for('products.list_categories') }}" class="dashboard-link">
-                            <i class="bi bi-tags me-2"></i>Gérer
-                        </a>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-3">
-                <div class="dashboard-card analytics">
-                    <div class="dashboard-icon">
-                        <i class="bi bi-person-gear"></i>
-                    </div>
-                    <div class="dashboard-content">
-                        <div class="dashboard-title">Mon Compte</div>
-                        <div class="dashboard-desc">Paramètres et préférences</div>
-                        <a href="{{ url_for('auth.account') }}" class="dashboard-link">
-                            <i class="bi bi-gear me-2"></i>Paramètres
-                        </a>
-                    </div>
-                </div>
+                <h3 class="concept-title">Concept 3 - Vue d'Ensemble</h3>
+                <p class="concept-desc">
+                    Dashboard de synthèse avec KPI globaux, navigation rapide 
+                    et accès direct aux modules principaux de l'ERP.
+                </p>
+                <a href="{{ url_for('main.dashboard_concept3') }}" class="btn-concept">
+                    <i class="fas fa-arrow-right me-1"></i>
+                    Explorer
+                </a>
             </div>
         </div>
     </div>
@@ -454,39 +617,126 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Mise à jour de l'horloge
-    function updateClock() {
+    console.log('Dashboard Principal chargé');
+    
+    // Mise à jour de l'heure en temps réel
+    function updateTime() {
         const now = new Date();
-        const timeElement = document.getElementById('current-time');
-        const dateElement = document.getElementById('current-date');
-        
-        if (timeElement) {
-            timeElement.textContent = now.toLocaleTimeString('fr-FR');
-        }
-        if (dateElement) {
-            dateElement.textContent = now.toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric', 
-                month: 'long'
-            });
-        }
+        const timeString = now.toLocaleTimeString('fr-FR');
+        document.getElementById('currentTime').textContent = timeString;
     }
     
-    // Animation d'apparition des cartes
-    const cards = document.querySelectorAll('.dashboard-card');
+    updateTime();
+    setInterval(updateTime, 1000);
+    
+    // Chargement dynamique des données réelles pour les cards
+    fetch('/dashboards/api/daily/sales').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const stats = data.data.stats;
+            document.getElementById('caJour').textContent = stats.daily_revenue.toLocaleString('fr-DZ') + ' DA';
+            document.getElementById('commandesJour').textContent = stats.total_orders;
+            document.getElementById('caTrend').innerHTML = stats.delivered_orders + ' livrées';
+            document.getElementById('commandesTrend').innerHTML = stats.cash_session_open ? '<span class="text-success">Caisse ouverte</span>' : '<span class="text-danger">Caisse fermée</span>';
+        }
+    });
+    fetch('/dashboards/api/daily/stock').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const stats = data.data.stats;
+            document.getElementById('alertesStock').textContent = stats.out_of_stock_count + stats.low_stock_count;
+            document.getElementById('alertesTrend').innerHTML = stats.out_of_stock_count + ' ruptures, ' + stats.low_stock_count + ' alertes';
+        }
+    });
+    fetch('/dashboards/api/daily/employees').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const stats = data.data.stats;
+            document.getElementById('employesActifs').textContent = stats.total_employees;
+            document.getElementById('employesTrend').innerHTML = stats.present_today + ' présents, ' + stats.absent_today + ' absents';
+        }
+    });
+    // Graphique Top 5 produits vendus (données réelles)
+    fetch('/dashboards/api/monthly/product-performance?limit=5').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const top = data.data.top_by_quantity.slice(0,5);
+            const labels = top.map(p => p.name);
+            const values = top.map(p => p.total_quantity);
+            const ctx = document.getElementById('topProductsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Ventes (unités)',
+                        data: values,
+                        backgroundColor: ['#2563eb','#10b981','#f59e0b','#ef4444','#06b6d4'],
+                        borderRadius: 8,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {padding: {left: 10, right: 20, top: 10, bottom: 10}},
+                    plugins: {legend: {display: false}},
+                    scales: {x: {beginAtZero: true}, y: {grid: {display: false}}},
+                    animation: {duration: 1000, easing: 'easeInOutQuart'}
+                }
+            });
+        }
+    });
+    // Graphique Répartition des ventes (données réelles par catégorie)
+    fetch('/dashboards/api/daily/stock').then(r=>r.json()).then(data => {
+        if(data.success) {
+            // Regrouper les produits par catégorie et sommer les stocks (exemple)
+            const produits = data.data.low_stock.concat(data.data.out_of_stock);
+            const categories = {};
+            produits.forEach(p => {
+                if(!categories[p.category]) categories[p.category] = 0;
+                categories[p.category] += 1;
+            });
+            const labels = Object.keys(categories);
+            const values = Object.values(categories);
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: ['#10b981','#f59e0b','#ef4444','#06b6d4','#2563eb'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {padding: 20},
+                    plugins: {legend: {position: 'bottom', labels: {padding: 20, usePointStyle: true}}, tooltip: {backgroundColor: 'rgba(0,0,0,0.8)', titleColor: '#fff', bodyColor: '#fff'}},
+                    animation: {duration: 1000, easing: 'easeInOutQuart'}
+                }
+            });
+        }
+    });
+    
+    // Animation des cartes au chargement
+    const cards = document.querySelectorAll('.stat-card, .module-card, .concept-card');
     cards.forEach((card, index) => {
         card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
+        card.style.transform = 'translateY(20px)';
+        
         setTimeout(() => {
-            card.style.transition = 'all 0.6s ease';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
             card.style.opacity = '1';
             card.style.transform = 'translateY(0)';
         }, index * 100);
     });
     
-    // Initialisation
-    updateClock();
-    setInterval(updateClock, 1000);
+    // Auto-refresh des données toutes les 5 minutes
+    setInterval(() => {
+        console.log('Rafraîchissement des données...');
+        updateTime();
+    }, 300000);
 });
 </script>
 {% endblock %}

@@ -91,6 +91,26 @@
         padding: 20px;
         margin-bottom: 20px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chart-title {
+        flex-shrink: 0;
+        margin-bottom: 20px;
+    }
+
+    .chart-canvas-container {
+        position: relative;
+        flex: 1;
+        min-height: 320px;
+        width: 100%;
+    }
+    
+    .chart-canvas-container canvas {
+        max-width: 100% !important;
+        height: auto !important;
     }
 
     .quick-nav {
@@ -151,16 +171,6 @@
         color: white;
         text-decoration: none;
     }
-
-    @media (max-width: 768px) {
-        .kpi-value {
-            font-size: 2rem;
-        }
-        
-        .kpi-card {
-            padding: 20px;
-        }
-    }
 </style>
 {% endblock %}
 
@@ -191,184 +201,55 @@
 <div class="container mt-4">
     <!-- KPI Cards Row 1 -->
     <div class="row">
-        <div class="col-lg-4 col-md-6">
-            <div class="kpi-card position-relative" data-url="{{ url_for('sales.pos_interface') }}">
-                <div class="kpi-label">
-                    <i class="fas fa-euro-sign text-success me-2"></i>
-                    Chiffre d'Affaires Journalier
-                </div>
-                <div class="kpi-value text-success">2 847€</div>
-                <div class="kpi-trend trend-up">
-                    <i class="fas fa-arrow-up me-1"></i>
-                    +12.5% vs hier
-                </div>
-                <div class="action-buttons">
-                    <a href="{{ url_for('sales.pos_interface') }}" class="btn-action btn-primary-action">
-                        Point de Vente
-                    </a>
-                </div>
-            </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card" id="kpi-ca"></div>
         </div>
-        <div class="col-lg-4 col-md-6">
-            <div class="kpi-card position-relative" data-url="{{ url_for('dashboard.production_dashboard') }}">
-                <div class="kpi-label">
-                    <i class="fas fa-cogs text-warning me-2"></i>
-                    Commandes en Production
-                </div>
-                <div class="kpi-value text-warning">{{ orders_today }}</div>
-                <div class="kpi-trend">
-                    <span class="text-success">18 à temps</span> • 
-                    <span class="text-danger">5 urgentes</span>
-                </div>
-                <span class="badge bg-warning alert-badge">5</span>
-                <div class="action-buttons">
-                    <a href="{{ url_for('dashboard.production_dashboard') }}" class="btn-action btn-primary-action">
-                        Voir Production
-                    </a>
-                </div>
-            </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card" id="kpi-orders"></div>
         </div>
-        <div class="col-lg-4 col-md-6">
-            <div class="kpi-card position-relative" data-url="{{ url_for('accounting.dashboard') }}">
-                <div class="kpi-label">
-                    <i class="fas fa-wallet text-info me-2"></i>
-                    Trésorerie Totale
-                </div>
-                <div class="kpi-value text-info">8 642€</div>
-                <div class="kpi-trend">
-                    <span class="text-muted">Caisse : 1 247€</span><br>
-                    <span class="text-muted">Banque : 7 395€</span>
-                </div>
-                <div class="action-buttons">
-                    <a href="{{ url_for('accounting.dashboard') }}" class="btn-action btn-primary-action">
-                        Comptabilité
-                    </a>
-                </div>
-            </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card" id="kpi-stock"></div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card" id="kpi-personnel"></div>
         </div>
     </div>
 
-    <!-- KPI Cards Row 2 -->
+    <!-- Main Content Row -->
     <div class="row">
-        <div class="col-lg-4 col-md-6">
-            <div class="kpi-card position-relative" data-url="{{ url_for('stock.dashboard_magasin') }}">
-                <div class="kpi-label">
-                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>
-                    Alertes Stock
-                </div>
-                <div class="kpi-value text-danger">7</div>
-                <div class="kpi-trend">
-                    <span class="text-danger">Farine, Beurre, Œufs...</span>
-                </div>
-                <span class="badge bg-danger alert-badge">!</span>
-                <div class="action-buttons">
-                    <a href="{{ url_for('stock.dashboard_magasin') }}" class="btn-action btn-primary-action">
-                        Gérer Stock
-                    </a>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4 col-md-6">
-            <div class="kpi-card position-relative" data-url="{{ url_for('employees.list_employees') }}">
-                <div class="kpi-label">
-                    <i class="fas fa-users text-primary me-2"></i>
-                    Employés Actifs
-                </div>
-                <div class="kpi-value text-primary">{{ employees_count }}</div>
-                <div class="kpi-trend">
-                    <span class="text-success">8 production</span> • 
-                    <span class="text-info">4 magasin</span>
-                </div>
-                <div class="action-buttons">
-                    <a href="{{ url_for('employees.list_employees') }}" class="btn-action btn-primary-action">
-                        Gestion RH
-                    </a>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4 col-md-6">
-            <div class="kpi-card position-relative" data-url="{{ url_for('accounting.dashboard') }}">
-                <div class="kpi-label">
-                    <i class="fas fa-chart-line text-success me-2"></i>
-                    Marge Bénéficiaire
-                </div>
-                <div class="kpi-value text-success">34.2%</div>
-                <div class="kpi-trend trend-up">
-                    <i class="fas fa-arrow-up me-1"></i>
-                    +2.1% vs mois dernier
-                </div>
-                <div class="action-buttons">
-                    <a href="{{ url_for('accounting.dashboard') }}" class="btn-action btn-primary-action">
-                        Analytics
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts and Navigation -->
-    <div class="row">
+        <!-- Main Chart -->
         <div class="col-lg-8">
             <div class="chart-container">
-                <h5 class="mb-3">
-                    <i class="fas fa-chart-area me-2"></i>
-                    Évolution du CA - 7 derniers jours
-                </h5>
-                <canvas id="caChart" height="300"></canvas>
+                <h4 class="chart-title">Performance Mensuelle</h4>
+                <div class="chart-canvas-container">
+                    <canvas id="mainChart"></canvas>
+                </div>
             </div>
         </div>
+
+        <!-- Quick Navigation -->
         <div class="col-lg-4">
             <div class="quick-nav">
-                <h5 class="mb-3">
-                    <i class="fas fa-bolt me-2"></i>
-                    Accès Rapide
-                </h5>
-                <a href="{{ url_for('dashboard.production_dashboard') }}" class="nav-item">
-                    <i class="fas fa-cogs text-warning"></i>
-                    Production
-                </a>
-                <a href="{{ url_for('stock.dashboard_magasin') }}" class="nav-item">
-                    <i class="fas fa-boxes text-info"></i>
-                    Stock
-                </a>
-                <a href="{{ url_for('sales.pos_interface') }}" class="nav-item">
-                    <i class="fas fa-cash-register text-success"></i>
-                    Point de Vente
-                </a>
+                <h4>Navigation Rapide</h4>
                 <a href="{{ url_for('orders.list_orders') }}" class="nav-item">
-                    <i class="fas fa-shopping-cart text-primary"></i>
-                    Commandes
+                    <i class="fas fa-clipboard-list text-info"></i> Gérer les Commandes
                 </a>
-                <a href="{{ url_for('accounting.dashboard') }}" class="nav-item">
-                    <i class="fas fa-calculator text-secondary"></i>
-                    Comptabilité
+                <a href="{{ url_for('products.list_products') }}" class="nav-item">
+                    <i class="fas fa-box text-warning"></i> Gérer les Produits
                 </a>
                 <a href="{{ url_for('employees.list_employees') }}" class="nav-item">
-                    <i class="fas fa-user-tie text-info"></i>
-                    Employés
+                    <i class="fas fa-users text-success"></i> Gérer les Employés
+                </a>
+                <a href="{{ url_for('accounting.dashboard') }}" class="nav-item">
+                    <i class="fas fa-calculator text-danger"></i> Accéder à la Comptabilité
+                </a>
+                <a href="{{ url_for('sales.pos_interface') }}" class="nav-item">
+                    <i class="fas fa-cash-register text-primary"></i> Point de Vente
                 </a>
             </div>
-
-            <!-- Quick Actions -->
             <div class="quick-nav">
-                <h5 class="mb-3">
-                    <i class="fas fa-plus me-2"></i>
-                    Actions Rapides
-                </h5>
-                <div class="d-grid gap-2">
-                    <a href="{{ url_for('orders.new_customer_order') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>
-                        Nouvelle Commande
-                    </a>
-                    <a href="{{ url_for('orders.new_production_order') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-industry me-2"></i>
-                        Ordre Production
-                    </a>
-                    <a href="{{ url_for('stock.quick_entry') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-box me-2"></i>
-                        Ajustement Stock
-                    </a>
-                </div>
+                <h4>Alertes Récentes</h4>
+                <ul class="list-unstyled" id="recentAlerts"></ul>
             </div>
         </div>
     </div>
@@ -378,132 +259,54 @@
 {% block scripts %}
 {{ super() }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Dashboard Vue d\'Ensemble chargé');
-    
-    // Mise à jour de l'heure de dernière mise à jour
-    function updateLastUpdate() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('fr-FR');
-        const element = document.getElementById('lastUpdate');
-        if (element) {
-            element.textContent = timeString;
-        }
-    }
-    
-    // Affichage de la date actuelle
-    function updateCurrentDate() {
-        const now = new Date();
-        const options = { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+    document.addEventListener('DOMContentLoaded', function() {
+        const formatCurrency = (value) => (value || 0).toLocaleString('fr-DZ', { style: 'currency', currency: 'DZD' });
+        const updateTime = () => {
+            const now = new Date();
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('fr-FR');
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('fr-FR');
         };
-        const dateString = now.toLocaleDateString('fr-FR', options);
-        const element = document.getElementById('currentDate');
-        if (element) {
-            element.textContent = dateString;
-        }
-    }
-    
-    updateLastUpdate();
-    updateCurrentDate();
-    setInterval(updateLastUpdate, 60000);
+        updateTime();
+        setInterval(updateTime, 1000);
 
-    // Chart CA Evolution
-    const ctx = document.getElementById('caChart');
-    if (ctx) {
-        new Chart(ctx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-                datasets: [{
-                    label: 'CA Journalier (€)',
-                    data: [2340, 2580, 2120, 2890, 3200, 3450, 2847],
-                    borderColor: '#27AE60',
-                    backgroundColor: 'rgba(39, 174, 96, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#27AE60',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#27AE60',
-                        borderWidth: 1,
-                        callbacks: {
-                            label: function(context) {
-                                return 'CA: ' + context.parsed.y + '€';
-                            }
-                        }
-                    }
+        // Daily KPIs
+        fetch('/dashboards/api/daily/sales').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const sales = data.data.stats;
+            document.getElementById('kpi-ca').innerHTML = `<div class="kpi-label"><i class="fas fa-euro-sign text-success me-2"></i>CA Journalier</div><div class="kpi-value text-success">${formatCurrency(sales.daily_revenue)}</div>`;
+            document.getElementById('kpi-orders').innerHTML = `<div class="kpi-label"><i class="fas fa-shopping-cart text-info me-2"></i>Commandes du Jour</div><div class="kpi-value text-info">${sales.total_orders}</div>`;
+        });
+        fetch('/dashboards/api/daily/stock').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const stock = data.data.stats;
+            document.getElementById('kpi-stock').innerHTML = `<div class="kpi-label"><i class="fas fa-boxes text-warning me-2"></i>Stock</div><div class="kpi-value text-warning">${stock.low_stock_count + stock.out_of_stock_count} alertes</div>`;
+        });
+        fetch('/dashboards/api/daily/employees').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const team = data.data.stats;
+            document.getElementById('kpi-personnel').innerHTML = `<div class="kpi-label"><i class="fas fa-users text-danger me-2"></i>Personnel</div><div class="kpi-value text-danger">${team.present_today}/${team.total_employees} présents</div>`;
+        });
+
+        // Main Chart (Monthly Trend)
+        fetch('/dashboards/api/monthly/revenue-trend').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const trend = data.data;
+            new Chart(document.getElementById('mainChart'), {
+                type: 'bar',
+                data: {
+                    labels: trend.map(d => d.period),
+                    datasets: [{ label: 'CA', data: trend.map(d => d.revenue), backgroundColor: '#3498DB' }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '€';
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
-            }
+                options: { responsive: true, maintainAspectRatio: false }
+            });
         });
-    }
 
-    // Navigation pour les cartes KPI
-    const cards = document.querySelectorAll('.kpi-card[data-url]');
-    cards.forEach(function(card) {
-        card.addEventListener('click', function() {
-            const url = this.getAttribute('data-url');
-            if (url) {
-                window.location.href = url;
-            }
+        // Recent Alerts
+        fetch('/dashboards/api/daily/stock').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const alerts = data.data.low_stock.slice(0, 3).map(p => `<li><i class="fas fa-exclamation-triangle text-warning"></i> Stock bas: ${p.name}</li>`).join('');
+            document.getElementById('recentAlerts').innerHTML = alerts || '<li>Aucune alerte</li>';
         });
     });
-
-    // Animation des cartes au chargement
-    const allCards = document.querySelectorAll('.kpi-card');
-    allCards.forEach(function(card, index) {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        
-        setTimeout(function() {
-            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
-
-    // Auto-refresh des données toutes les 5 minutes
-    setInterval(function() {
-        console.log('Rafraîchissement des données...');
-        updateLastUpdate();
-    }, 300000);
-});
 </script>
 {% endblock %}

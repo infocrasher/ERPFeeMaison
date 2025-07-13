@@ -106,9 +106,11 @@ def test_database_connection():
         app = create_app('production')
         
         with app.app_context():
-            # Test de connexion
-            db.engine.execute("SELECT 1")
-            print_success("Connexion à PostgreSQL réussie")
+            # Test de connexion avec la nouvelle syntaxe SQLAlchemy
+            with db.engine.connect() as connection:
+                result = connection.execute(db.text("SELECT 1"))
+                result.fetchone()
+            print_success("Connexion à la base de données réussie")
             
             # Test des tables
             from models import User

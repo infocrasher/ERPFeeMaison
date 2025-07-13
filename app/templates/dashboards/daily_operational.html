@@ -1,0 +1,632 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Journalier - Fée Maison{% endblock %}
+
+{% block head %}
+{{ super() }}
+<!-- Chart.js pour les graphiques -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- CSS moderne pour le dashboard journalier -->
+<style>
+    :root {
+        --primary-color: #2563eb;
+        --secondary-color: #64748b;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --info-color: #06b6d4;
+        --dark-color: #1e293b;
+        --light-color: #f8fafc;
+        --border-color: #e2e8f0;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .dashboard-container {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        margin: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+
+    .header-section {
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+
+    .main-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: var(--secondary-color);
+        font-size: 1.1rem;
+    }
+
+    .urgent-alerts {
+        background: linear-gradient(135deg, #fef2f2, #fecaca);
+        border: 1px solid #fecaca;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .alert-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+    }
+
+    .alert-item.critical {
+        color: var(--danger-color);
+    }
+
+    .alert-item.warning {
+        color: var(--warning-color);
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--info-color));
+    }
+
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .metric-card.danger::before { background: linear-gradient(90deg, var(--danger-color), #dc2626); }
+    .metric-card.warning::before { background: linear-gradient(90deg, var(--warning-color), #d97706); }
+    .metric-card.success::before { background: linear-gradient(90deg, var(--success-color), #059669); }
+
+    .metric-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .metric-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: white;
+    }
+
+    .metric-icon.danger { background: linear-gradient(135deg, var(--danger-color), #dc2626); }
+    .metric-icon.warning { background: linear-gradient(135deg, var(--warning-color), #d97706); }
+    .metric-icon.success { background: linear-gradient(135deg, var(--success-color), #059669); }
+    .metric-icon.info { background: linear-gradient(135deg, var(--info-color), #0891b2); }
+
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 10px;
+    }
+
+    .metric-subtitle {
+        color: var(--secondary-color);
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+    }
+
+    .status-list {
+        margin-bottom: 20px;
+    }
+
+    .status-item {
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .status-item.urgent {
+        background: #fef2f2;
+        color: var(--danger-color);
+        border-left: 4px solid var(--danger-color);
+    }
+
+    .status-item.warning {
+        background: #fefbeb;
+        color: var(--warning-color);
+        border-left: 4px solid var(--warning-color);
+    }
+
+    .status-item.success {
+        background: #f0fdf4;
+        color: var(--success-color);
+        border-left: 4px solid var(--success-color);
+    }
+
+    .progress-section {
+        margin-top: 20px;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 1s ease;
+    }
+
+    .progress-fill.success { background: linear-gradient(90deg, var(--success-color), #059669); }
+    .progress-fill.warning { background: linear-gradient(90deg, var(--warning-color), #d97706); }
+    .progress-fill.danger { background: linear-gradient(90deg, var(--danger-color), #dc2626); }
+
+    .progress-text {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        color: var(--secondary-color);
+    }
+
+    .charts-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .chart-card {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
+    }
+
+    .chart-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .btn-action {
+        padding: 10px 20px;
+        border-radius: 25px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1d4ed8;
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+        box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-secondary {
+        background: var(--light-color);
+        color: var(--dark-color);
+    }
+
+    .btn-secondary:hover {
+        background: #e2e8f0;
+        color: var(--dark-color);
+        text-decoration: none;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            margin: 10px;
+            padding: 20px;
+        }
+        
+        .charts-section {
+            grid-template-columns: 1fr;
+        }
+        
+        .urgent-alerts {
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .main-title {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="header-section">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="main-title">🌅 DASHBOARD JOURNALIER</h1>
+                <p class="subtitle">Pilotage opérationnel temps réel</p>
+            </div>
+            <div class="text-end">
+                <div class="badge bg-success fs-6 mb-2">
+                    <i class="fas fa-circle me-1"></i>
+                    Temps réel
+                </div>
+                <div class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    <span id="currentTime"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertes urgentes -->
+    <div class="urgent-alerts">
+        <div class="alert-item critical">
+            <i class="fas fa-fire"></i>
+            <span id="commandesUrgentes">...</span> commandes à traiter MAINTENANT
+        </div>
+        <div class="alert-item warning">
+            <i class="fas fa-clock"></i>
+            <span id="commandesProches">...</span> dans &lt; 1 heure
+        </div>
+        <button class="btn btn-danger" onclick="alert('Équipe alertée!')">
+            <i class="fas fa-bell me-1"></i>
+            Alerter Équipe
+        </button>
+    </div>
+
+    <!-- Métriques principales -->
+    <div class="metrics-grid">
+        <!-- Production -->
+        <div class="metric-card danger">
+            <div class="metric-header">
+                <div class="metric-title">
+                    <i class="fas fa-industry"></i>
+                    PRODUCTION TEMPS RÉEL
+                </div>
+                <div class="metric-icon danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+            <div class="metric-value" id="nbRetard">...</div>
+            <div class="metric-subtitle" id="prodSubtitle">...</div>
+            <div class="status-list" id="prodStatusList"></div>
+            <div class="progress-section">
+                <div class="progress-text" id="prodProgressText"></div>
+                <div class="progress-bar">
+                    <div class="progress-fill warning" id="prodProgressFill" style="width:0%"></div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <a href="{{ url_for('orders.list_orders') }}" class="btn-action btn-primary">
+                    <i class="fas fa-eye me-1"></i>
+                    Voir Détails
+                </a>
+            </div>
+        </div>
+        <!-- Stock -->
+        <div class="metric-card warning">
+            <div class="metric-header">
+                <div class="metric-title">
+                    <i class="fas fa-boxes"></i>
+                    STOCK CRITIQUE
+                </div>
+                <div class="metric-icon warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+            <div class="metric-value" id="nbRuptures">...</div>
+            <div class="metric-subtitle" id="stockSubtitle">...</div>
+            <div class="status-list" id="stockStatusList"></div>
+            <div class="action-buttons">
+                <a href="{{ url_for('purchases.new_purchase') }}" class="btn-action btn-primary">
+                    <i class="fas fa-shopping-cart me-1"></i>
+                    Commander Urgent
+                </a>
+            </div>
+        </div>
+        <!-- RH -->
+        <div class="metric-card success">
+            <div class="metric-header">
+                <div class="metric-title">
+                    <i class="fas fa-users"></i>
+                    ÉQUIPE AUJOURD'HUI
+                </div>
+                <div class="metric-icon success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <div class="metric-value" id="nbPresents">...</div>
+            <div class="metric-subtitle" id="rhSubtitle">...</div>
+            <div class="status-list" id="rhStatusList"></div>
+            <div class="progress-section">
+                <div class="progress-text" id="rhProgressText"></div>
+                <div class="progress-bar">
+                    <div class="progress-fill success" id="rhProgressFill" style="width:0%"></div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <a href="{{ url_for('employees.list_employees') }}" class="btn-action btn-primary">
+                    <i class="fas fa-eye me-1"></i>
+                    Voir Équipe
+                </a>
+            </div>
+        </div>
+        <!-- Finance -->
+        <div class="metric-card info">
+            <div class="metric-header">
+                <div class="metric-title">
+                    <i class="fas fa-euro-sign"></i>
+                    FINANCE LIVE
+                </div>
+                <div class="metric-icon info">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+            <div class="metric-value" id="caTempsReel">...</div>
+            <div class="metric-subtitle" id="financeSubtitle">...</div>
+            <div class="status-list" id="financeStatusList"></div>
+            <div class="action-buttons">
+                <a href="{{ url_for('sales.pos_interface') }}" class="btn-action btn-primary">
+                    <i class="fas fa-cash-register me-1"></i>
+                    Point de Vente
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- Graphiques -->
+    <div class="charts-section">
+        <div class="chart-card">
+            <div class="chart-title">
+                <i class="fas fa-chart-area text-primary"></i>
+                Évolution des commandes - Aujourd'hui
+            </div>
+            <canvas id="ordersChart" height="250"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">
+                <i class="fas fa-chart-pie text-success"></i>
+                Répartition par statut
+            </div>
+            <canvas id="statusChart" height="250"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard Journalier chargé');
+    
+    // Mise à jour de l'heure en temps réel
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('fr-FR');
+        document.getElementById('currentTime').textContent = timeString;
+    }
+    
+    updateTime();
+    setInterval(updateTime, 1000);
+    
+    // Production
+    fetch('/dashboards/api/daily/production').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const stats = data.data.stats;
+            document.getElementById('nbRetard').textContent = stats.overdue_count;
+            document.getElementById('prodSubtitle').textContent = 'Commandes en retard';
+            // Urgentes et proches
+            document.getElementById('commandesUrgentes').textContent = stats.urgent_count;
+            document.getElementById('commandesProches').textContent = stats.normal_count;
+            // Liste des commandes en retard
+            const list = data.data.overdue_orders.map(o =>
+                `<div class="status-item urgent"><i class="fas fa-clock"></i>${o.customer_name} (${Math.abs(o.time_remaining_hours)}h retard)</div>`
+            ).join('');
+            document.getElementById('prodStatusList').innerHTML = list;
+            // Objectif et progression
+            document.getElementById('prodProgressText').innerHTML = `Objectif jour: ${stats.total_production}/${stats.total_production+3} <span>${Math.round((stats.total_production/(stats.total_production+3))*100)}%</span>`;
+            document.getElementById('prodProgressFill').style.width = `${Math.round((stats.total_production/(stats.total_production+3))*100)}%`;
+            // Graphique répartition statuts
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['En retard', 'Urgentes', 'Normales'],
+                    datasets: [{
+                        data: [stats.overdue_count, stats.urgent_count, stats.normal_count],
+                        backgroundColor: ['#ef4444','#f59e0b','#2563eb'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {position: 'bottom', labels: {padding: 20, usePointStyle: true}}}
+                }
+            });
+        }
+    });
+    // Stock
+    fetch('/dashboards/api/daily/stock').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const stats = data.data.stats;
+            document.getElementById('nbRuptures').textContent = stats.out_of_stock_count;
+            document.getElementById('stockSubtitle').textContent = 'Ruptures de stock';
+            // Liste des produits en rupture/alerte
+            const ruptures = data.data.out_of_stock.map(p =>
+                `<div class="status-item urgent"><i class="fas fa-times-circle"></i>${p.name} (0 ${p.category})</div>`
+            ).join('');
+            const alertes = data.data.low_stock.map(p =>
+                `<div class="status-item warning"><i class="fas fa-exclamation-circle"></i>${p.name} (${p.stock_comptoir || p.stock_local || p.stock_magasin} ${p.category})</div>`
+            ).join('');
+            document.getElementById('stockStatusList').innerHTML = ruptures + alertes;
+        }
+    });
+    // RH
+    fetch('/dashboards/api/daily/employees').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const stats = data.data.stats;
+            document.getElementById('nbPresents').textContent = stats.present_today;
+            document.getElementById('rhSubtitle').textContent = `Présents sur ${stats.total_employees} employés`;
+            // Liste des présences
+            const list = data.data.employees.filter(e => e.is_present).map(e =>
+                `<div class="status-item success"><i class="fas fa-check"></i>${e.name}: ${e.clocked_in ? new Date(e.clocked_in).toLocaleTimeString('fr-FR') : ''} (OK)</div>`
+            ).join('');
+            document.getElementById('rhStatusList').innerHTML = list;
+            // Performance équipe
+            document.getElementById('rhProgressText').innerHTML = `Performance équipe`;
+            document.getElementById('rhProgressFill').style.width = `${Math.round(stats.attendance_rate)}%`;
+        }
+    });
+    // Finance
+    fetch('/dashboards/api/daily/sales').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const stats = data.data.stats;
+            document.getElementById('caTempsReel').textContent = stats.daily_revenue.toLocaleString('fr-DZ') + ' DA';
+            document.getElementById('financeSubtitle').textContent = 'CA du jour';
+            // Liste finance
+            document.getElementById('financeStatusList').innerHTML =
+                `<div class="status-item success"><i class="fas fa-arrow-up"></i>Objectif: 50 000 DA</div>`+
+                `<div class="status-item success"><i class="fas fa-plus"></i>Bénéfice: +${(stats.daily_revenue - 8200).toLocaleString('fr-DZ')} DA</div>`+
+                `<div class="status-item"><i class="fas fa-minus"></i>Charges: 8 200 DA</div>`+
+                `<div class="status-item"><i class="fas fa-wallet"></i>Caisse: ${stats.cash_in_today.toLocaleString('fr-DZ')} DA</div>`;
+        }
+    });
+    // Graphique évolution commandes (par heure)
+    fetch('/dashboards/api/daily/sales').then(r=>r.json()).then(data => {
+        if(data.success) {
+            const orders = Object.values(data.data.orders_by_status).reduce((acc, v) => acc + v.count, 0);
+            // Simuler une répartition horaire (à remplacer par une vraie API si besoin)
+            const labels = ['6h','8h','10h','12h','14h','16h','18h'];
+            const values = [2, 5, 8, 12, 15, 18, orders];
+            const ctx = document.getElementById('ordersChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Commandes',
+                        data: values,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#2563eb',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: false}},
+                    scales: {y: {beginAtZero: true, grid: {color: 'rgba(0,0,0,0.1)'}}, x: {grid: {display: false}}}
+                }
+            });
+        }
+    });
+    
+    // Animation des cartes au chargement
+    const cards = document.querySelectorAll('.metric-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Auto-refresh des données toutes les 2 minutes
+    setInterval(() => {
+        console.log('Rafraîchissement des données journalières...');
+        updateTime();
+    }, 120000);
+});
+</script>
+{% endblock %}

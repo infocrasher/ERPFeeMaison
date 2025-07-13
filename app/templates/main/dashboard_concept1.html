@@ -248,273 +248,137 @@
 
     <!-- Critical Alerts Row -->
     <div class="row">
-        <div class="col-lg-4 col-md-6 mb-3">
+        <div class="col-md-6">
             <div class="operational-card urgent">
                 <div class="metric-header">
-                    <div>
-                        <div class="metric-title">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Commandes Urgentes
-                        </div>
-                        <div class="metric-value text-danger">{{ orders_today }}</div>
-                        <div class="metric-subtitle">
-                            Livraison dans moins de 30 min
-                        </div>
-                    </div>
-                    <div class="progress-ring">
-                        <svg>
-                            <circle class="background" cx="40" cy="40" r="35"></circle>
-                            <circle class="progress" cx="40" cy="40" r="35" style="stroke: #E74C3C; stroke-dashoffset: 110;"></circle>
-                        </svg>
-                    </div>
+                    <div class="metric-title">Commandes en Retard</div>
+                    <div class="metric-value" id="overdueOrdersCount">...</div>
                 </div>
-                <div class="action-buttons">
-                    <a href="{{ url_for('dashboard.production_dashboard') }}" class="btn-action btn-primary-action">
-                        Voir Détails
-                    </a>
-                    <button class="btn-action btn-secondary-action" onclick="alert('Équipe alertée!')">
-                        Alerter Équipe
-                    </button>
-                </div>
+                <ul class="list-unstyled" id="overdueOrdersList"></ul>
             </div>
         </div>
-
-        <div class="col-lg-4 col-md-6 mb-3">
+        <div class="col-md-6">
             <div class="operational-card warning">
                 <div class="metric-header">
-                    <div>
-                        <div class="metric-title">
-                            <i class="fas fa-chart-line me-2"></i>
-                            Employés Actifs
-                        </div>
-                        <div class="metric-value text-warning">{{ employees_count }}</div>
-                        <div class="metric-subtitle">
-                            Équipe en service aujourd'hui
-                        </div>
-                    </div>
-                    <div class="progress-ring">
-                        <svg>
-                            <circle class="background" cx="40" cy="40" r="35"></circle>
-                            <circle class="progress" cx="40" cy="40" r="35" style="stroke: #F39C12; stroke-dashoffset: 67;"></circle>
-                        </svg>
-                    </div>
+                    <div class="metric-title">Commandes Urgentes (&lt;2h)</div>
+                    <div class="metric-value" id="urgentOrdersCount">...</div>
                 </div>
-                <div class="action-buttons">
-                    <a href="{{ url_for('employees.list_employees') }}" class="btn-action btn-primary-action">
-                        Voir Équipe
-                    </a>
-                </div>
+                 <ul class="list-unstyled" id="urgentOrdersList"></ul>
             </div>
         </div>
+    </div>
 
-        <div class="col-lg-4 col-md-6 mb-3">
+    <!-- Main Grid -->
+    <div class="row">
+        <!-- Production -->
+        <div class="col-lg-8">
+            <div class="operational-card">
+                <div class="metric-header">
+                    <div class="metric-title">Statut de la Production</div>
+                    <a href="{{ url_for('orders.list_orders') }}" class="btn-secondary-action btn-sm">Voir tout</a>
+                </div>
+                <div class="status-grid" id="productionStatus"></div>
+            </div>
+        </div>
+        <!-- Stock -->
+        <div class="col-lg-4">
+            <div class="operational-card warning">
+                <div class="metric-header">
+                    <div class="metric-title">Statut du Stock</div>
+                </div>
+                <div class="status-grid" id="stockStatus"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team and Quality Row -->
+    <div class="row">
+        <div class="col-md-6">
             <div class="operational-card success">
                 <div class="metric-header">
-                    <div>
-                        <div class="metric-title">
-                            <i class="fas fa-boxes me-2"></i>
-                            Produits Disponibles
-                        </div>
-                        <div class="metric-value text-success">{{ products_count }}</div>
-                        <div class="metric-subtitle">
-                            Catalogue complet
-                        </div>
-                    </div>
-                    <div class="progress-ring">
-                        <svg>
-                            <circle class="background" cx="40" cy="40" r="35"></circle>
-                            <circle class="progress" cx="40" cy="40" r="35" style="stroke: #27AE60; stroke-dashoffset: 44;"></circle>
-                        </svg>
-                    </div>
+                    <div class="metric-title">Équipe Active</div>
                 </div>
-                <div class="action-buttons">
-                                         <a href="{{ url_for('stock.dashboard_magasin') }}" class="btn-action btn-primary-action">
-                         Gérer Stock
-                     </a>
-                </div>
+                <div id="teamStatus"></div>
             </div>
         </div>
-    </div>
-
-    <!-- Operational Status Row -->
-    <div class="row">
-        <div class="col-lg-6 mb-3">
-            <div class="operational-card success">
-                <div class="metric-header">
-                    <div>
-                        <div class="metric-title">
-                            <i class="fas fa-euro-sign me-2"></i>
-                            CA Estimé Aujourd'hui
-                        </div>
-                        <div class="metric-value text-success">2 847€</div>
-                        <div class="metric-subtitle">
-                            Basé sur {{ orders_today }} commandes
-                        </div>
-                    </div>
-                    <div>
-                        <canvas id="miniChart" width="100" height="60"></canvas>
-                    </div>
-                </div>
-                <div class="action-buttons">
-                    <a href="{{ url_for('sales.pos_interface') }}" class="btn-action btn-primary-action">
-                        Point de Vente
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6 mb-3">
+        <div class="col-md-6">
             <div class="operational-card">
-                <div class="metric-header">
-                    <div>
-                        <div class="metric-title">
-                            <i class="fas fa-cookie-bite me-2"></i>
-                            Recettes Disponibles
-                        </div>
-                        <div class="metric-value text-info">{{ recipes_count }}</div>
-                        <div class="metric-subtitle">
-                            Prêtes pour production
-                        </div>
-                    </div>
-                    <div class="progress-ring">
-                        <svg>
-                            <circle class="background" cx="40" cy="40" r="35"></circle>
-                            <circle class="progress" cx="40" cy="40" r="35" style="stroke: #3498DB; stroke-dashoffset: 88;"></circle>
-                        </svg>
-                    </div>
+                 <div class="metric-header">
+                    <div class="metric-title">Qualité & Incidents</div>
                 </div>
-                <div class="action-buttons">
-                                         <a href="{{ url_for('main.dashboard') }}" class="btn-action btn-primary-action">
-                         Voir Recettes
-                     </a>
-                </div>
+                <div id="qualityStatus"></div>
             </div>
         </div>
     </div>
 
-    <!-- Team Status -->
-    <div class="row">
-        <div class="col-12">
-            <div class="operational-card">
-                <h5 class="mb-3">
-                    <i class="fas fa-users me-2"></i>
-                    Statut Équipe - {{ employees_count }} Employés Actifs
-                </h5>
-                <div class="status-grid">
-                    <div class="status-item">
-                        <div>
-                            <strong>Production</strong>
-                            <div class="text-muted">Équipe boulangerie</div>
-                        </div>
-                        <div class="text-success">
-                            <i class="fas fa-check-circle"></i> Actif
-                        </div>
-                    </div>
-                    <div class="status-item">
-                        <div>
-                            <strong>Vente</strong>
-                            <div class="text-muted">Équipe magasin</div>
-                        </div>
-                        <div class="text-success">
-                            <i class="fas fa-check-circle"></i> Actif
-                        </div>
-                    </div>
-                    <div class="status-item">
-                        <div>
-                            <strong>Livraisons</strong>
-                            <div class="text-muted">Équipe livreurs</div>
-                        </div>
-                        <div class="text-warning">
-                            <i class="fas fa-clock"></i> En tournée
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="operational-card">
-                <h5 class="mb-3">
-                    <i class="fas fa-bolt me-2"></i>
-                    Actions Rapides
-                </h5>
-                <div class="action-buttons">
-                                         <a href="{{ url_for('orders.new_customer_order') }}" class="btn-action btn-primary-action">
-                         <i class="fas fa-plus me-1"></i> Nouvelle Commande
-                     </a>
-                     <a href="{{ url_for('orders.new_production_order') }}" class="btn-action btn-primary-action">
-                         <i class="fas fa-industry me-1"></i> Ordre Production
-                     </a>
-                     <a href="{{ url_for('stock.quick_entry') }}" class="btn-action btn-secondary-action">
-                         <i class="fas fa-box me-1"></i> Ajustement Stock
-                     </a>
-                     <a href="{{ url_for('sales.cash_status') }}" class="btn-action btn-secondary-action">
-                         <i class="fas fa-cash-register me-1"></i> État Caisse
-                     </a>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Dashboard Concept 1 chargé');
-    
-    // Mise à jour de l'heure en temps réel
-    function updateTime() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('fr-FR');
-        document.getElementById('currentTime').textContent = timeString;
-    }
-    
-    updateTime();
-    setInterval(updateTime, 1000);
-    
-    // Mini graphique CA
-    const ctx = document.getElementById('miniChart');
-    if (ctx) {
-        new Chart(ctx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: ['6h', '9h', '12h', '15h', '18h'],
-                datasets: [{
-                    data: [120, 450, 1200, 2100, 2847],
-                    borderColor: '#27AE60',
-                    backgroundColor: 'rgba(39, 174, 96, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    x: { display: false },
-                    y: { display: false }
-                }
-            }
+    document.addEventListener('DOMContentLoaded', function() {
+        function updateTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('fr-FR');
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        const formatCurrency = (value) => (value || 0).toLocaleString('fr-DZ', { style: 'currency', currency: 'DZD' });
+
+        // Production Data
+        fetch('/dashboards/api/daily/production').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const prodData = data.data;
+            document.getElementById('overdueOrdersCount').textContent = prodData.stats.overdue_count;
+            document.getElementById('urgentOrdersCount').textContent = prodData.stats.urgent_count;
+
+            const overdueList = prodData.overdue_orders.map(o => `<li>${o.customer_name} - Retard: ${Math.abs(o.time_remaining_hours).toFixed(1)}h</li>`).join('');
+            document.getElementById('overdueOrdersList').innerHTML = overdueList || '<li>Aucune commande en retard</li>';
+            
+            const urgentList = prodData.urgent_orders.map(o => `<li>${o.customer_name} - Restant: ${o.time_remaining_hours.toFixed(1)}h</li>`).join('');
+            document.getElementById('urgentOrdersList').innerHTML = urgentList || '<li>Aucune commande urgente</li>';
+
+            document.getElementById('productionStatus').innerHTML = `
+                <div class="status-item"><span>En attente</span> <strong>${prodData.stats.normal_count}</strong></div>
+                <div class="status-item"><span>En cours</span> <strong>${prodData.stats.urgent_count}</strong></div>
+                <div class="status-item"><span>En retard</span> <strong>${prodData.stats.overdue_count}</strong></div>
+            `;
         });
-    }
-    
-    // Animation des anneaux de progression
-    const progressRings = document.querySelectorAll('.progress-ring .progress');
-    progressRings.forEach((ring, index) => {
-        setTimeout(() => {
-            const dashOffset = ring.style.strokeDashoffset;
-            ring.style.strokeDashoffset = dashOffset;
-        }, index * 200);
+
+        // Stock Data
+        fetch('/dashboards/api/daily/stock').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const stockData = data.data;
+            document.getElementById('stockStatus').innerHTML = `
+                <div class="status-item"><span>Alertes</span> <strong>${stockData.stats.low_stock_count}</strong></div>
+                <div class="status-item"><span>Ruptures</span> <strong>${stockData.stats.out_of_stock_count}</strong></div>
+            `;
+        });
+
+        // Team Data
+        fetch('/dashboards/api/daily/employees').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const teamData = data.data;
+            document.getElementById('teamStatus').innerHTML = `
+                <div class="metric-value">${teamData.stats.present_today}/${teamData.stats.total_employees}</div>
+                <div class="metric-subtitle">Employés présents</div>
+            `;
+        });
+        
+        // Quality Data (simulated from production data for now)
+         fetch('/dashboards/api/daily/production').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const qualityData = data.data;
+            const total = qualityData.stats.total_production;
+            const issues = qualityData.stats.overdue_count; // Simulate issues = overdue
+            const qualityRate = total > 0 ? ((total - issues) / total * 100).toFixed(0) : 100;
+            document.getElementById('qualityStatus').innerHTML = `
+                <div class="metric-value">${qualityRate}%</div>
+                <div class="metric-subtitle">Taux de qualité</div>
+            `;
+        });
+
     });
-});
 </script>
 {% endblock %} 

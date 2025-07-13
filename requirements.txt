@@ -10,6 +10,9 @@ Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.2.2
 greenlet==3.2.2
 gunicorn==23.0.0
+weasyprint==65.1
+pandas==2.3.1
+openpyxl==3.1.5
 idna==3.10
 iniconfig==2.1.0
 itsdangerous==2.2.0
