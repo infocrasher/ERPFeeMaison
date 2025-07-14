@@ -1,0 +1,28 @@
+# Exclure les templates HTML
+**/templates/**
+**/*.html
+
+# Exclure les fichiers statiques
+**/static/**
+**/*.css
+**/*.js
+
+# Exclure les migrations
+**/migrations/**
+
+# Exclure les logs
+**/logs/**
+
+# Exclure l'environnement virtuel
+venv/
+
+# Exclure les tests
+tests/
+
+# Exclure les fichiers de configuration
+*.ini
+*.conf
+*.json
+*.md
+*.txt
+*.sh 

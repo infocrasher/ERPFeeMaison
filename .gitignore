@@ -172,3 +172,12 @@ postgresql_validation.sh
 postgresql_troubleshooting.sh
 deploy_setup.sh
 deploy_app.sh
+
+# Base de données locales (pointeuse ZKTeco)
+TimeNet.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Fichiers de configuration Pyright
+.pyrightcache/

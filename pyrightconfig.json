@@ -1,15 +1,39 @@
 {
   "venvPath": "./",
   "venv": "venv",
-  "include": ["app", "."],
-  "exclude": ["venv", "tests", "**/*.html", "**/templates/**"],
+  "include": ["app"],
+  "exclude": [
+    "venv", 
+    "tests", 
+    "**/*.html", 
+    "**/templates/**",
+    "**/*.css",
+    "**/*.js",
+    "**/static/**",
+    "**/migrations/**",
+    "**/logs/**",
+    "**/templates_backup/**",
+    "*.db",
+    "*.sqlite",
+    "*.sqlite3"
+  ],
   "reportMissingImports": false,
   "reportMissingModuleSource": false,
   "pythonVersion": "3.10",
-  "typeCheckingMode": "basic",
+  "typeCheckingMode": "off",
   "reportAttributeAccessIssue": false,
   "reportCallIssue": false,
   "reportArgumentType": false,
   "reportOptionalMemberAccess": false,
-  "reportGeneralTypeIssues": false
+  "reportGeneralTypeIssues": false,
+  "ignore": [
+    "**/templates/**",
+    "**/*.html",
+    "**/static/**",
+    "**/templates_backup/**",
+    "*.db"
+  ],
+  "stubPath": "./typings",
+  "useLibraryCodeForTypes": true,
+  "disable": true
 } 

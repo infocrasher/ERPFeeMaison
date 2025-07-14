@@ -1,384 +1,1039 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Concept 1 - Fée Maison{% endblock %}
+{% block title %}Dashboard Opérationnel - Fée Maison{% endblock %}
 
 {% block head %}
 {{ super() }}
-<!-- Chart.js pour les graphiques -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- CSS spécifique au concept 1 -->
 <style>
     :root {
-        --primary-color: #1A252F;
-        --secondary-color: #2ECC71;
-        --accent-color: #3498DB;
-        --warning-color: #F39C12;
-        --danger-color: #E74C3C;
-        --success-color: #27AE60;
-        --gray-light: #F1F2F6;
-        --gray-dark: #57606F;
+        --primary-color: #6366f1;
+        --secondary-color: #64748b;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --info-color: #06b6d4;
+        --dark-color: #0f172a;
+        --light-color: #f8fafc;
+        --border-color: #e2e8f0;
+        --glass-bg: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
     }
 
     body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
         min-height: 100vh;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        overflow-x: hidden;
+    }
+
+    .dashboard-wrapper {
+        min-height: 100vh;
+        padding: 20px;
+        position: relative;
     }
 
     .dashboard-container {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        margin: 20px;
-        padding: 30px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        max-width: 1600px;
+        margin: 0 auto;
+        position: relative;
     }
 
-    .header-section {
-        border-bottom: 2px solid var(--gray-light);
-        padding-bottom: 20px;
+    /* Header moderne */
+    .modern-header {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 30px;
+        margin-bottom: 30px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .modern-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+        animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .header-content {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 30px;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .title-section h1 {
+        font-size: 2.8rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff, #e2e8f0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+        text-shadow: 0 0 30px rgba(255,255,255,0.3);
+    }
+
+    .title-section p {
+        color: rgba(255,255,255,0.8);
+        font-size: 1.2rem;
+        font-weight: 500;
+    }
+
+    .status-section {
+        text-align: right;
+        color: white;
+    }
+
+    .live-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(16, 185, 129, 0.2);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 8px 16px;
+        border-radius: 50px;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .current-time {
+        font-size: 1.1rem;
+        font-weight: 600;
+        opacity: 0.9;
+    }
+
+    /* Alertes critiques */
+    .critical-alerts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
         margin-bottom: 30px;
     }
 
-    .operational-card {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-        border-left: 4px solid var(--accent-color);
-        transition: all 0.3s ease;
-        height: 100%;
+    .alert-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 25px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s ease;
     }
 
-    .operational-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+    .alert-card.urgent {
+        border-color: rgba(239, 68, 68, 0.4);
+        animation: urgentGlow 2s infinite alternate;
     }
 
-    .operational-card.urgent {
-        border-left-color: var(--danger-color);
-        animation: urgentPulse 3s infinite;
+    .alert-card.warning {
+        border-color: rgba(245, 158, 11, 0.4);
+        animation: warningGlow 2s infinite alternate;
     }
 
-    .operational-card.warning {
-        border-left-color: var(--warning-color);
+    @keyframes urgentGlow {
+        from { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+        to { box-shadow: 0 0 30px rgba(239, 68, 68, 0.5); }
     }
 
-    .operational-card.success {
-        border-left-color: var(--success-color);
+    @keyframes warningGlow {
+        from { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+        to { box-shadow: 0 0 30px rgba(245, 158, 11, 0.5); }
     }
 
-    @keyframes urgentPulse {
-        0%, 100% { box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
-        50% { box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3); }
+    .alert-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        border-radius: 20px 20px 0 0;
     }
 
-    .metric-header {
+    .alert-card.urgent::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .alert-card.warning::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+
+    .alert-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 15px;
     }
 
-    .metric-title {
+    .alert-title {
+        color: white;
         font-size: 1rem;
         font-weight: 600;
-        color: var(--gray-dark);
     }
 
-    .metric-value {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: var(--primary-color);
-    }
-
-    .metric-subtitle {
-        font-size: 0.9rem;
-        color: var(--gray-dark);
-        margin-top: 5px;
-    }
-
-    .progress-ring {
-        width: 80px;
-        height: 80px;
-        transform: rotate(-90deg);
-    }
-
-    .progress-ring circle {
-        fill: none;
-        stroke-width: 8;
-        stroke-linecap: round;
-    }
-
-    .progress-ring .background {
-        stroke: var(--gray-light);
-    }
-
-    .progress-ring .progress {
-        stroke: var(--success-color);
-        stroke-dasharray: 220;
-        stroke-dashoffset: 220;
-        transition: stroke-dashoffset 1s ease;
-    }
-
-    .real-time-indicator {
-        display: inline-flex;
-        align-items: center;
-        background: var(--success-color);
+    .alert-value {
+        font-size: 2.5rem;
+        font-weight: 800;
         color: white;
-        padding: 5px 10px;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .alert-list {
+        color: rgba(255,255,255,0.9);
+        font-size: 0.9rem;
+        max-height: 120px;
+        overflow-y: auto;
+    }
+
+    .alert-list li {
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .alert-list li:last-child {
+        border-bottom: none;
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .kpi-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
         border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
+        padding: 25px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s ease;
     }
 
-    .real-time-indicator::before {
+    .kpi-card::before {
         content: '';
-        width: 8px;
-        height: 8px;
-        background: white;
-        border-radius: 50%;
-        margin-right: 5px;
-        animation: blink 1.5s infinite;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--info-color));
+        border-radius: 20px 20px 0 0;
     }
 
-    @keyframes blink {
-        0%, 50% { opacity: 1; }
-        51%, 100% { opacity: 0.3; }
+    .kpi-card.production::before { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+    .kpi-card.stock::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .kpi-card.team::before { background: linear-gradient(90deg, #10b981, #059669); }
+    .kpi-card.finance::before { background: linear-gradient(90deg, #06b6d4, #0891b2); }
+    .kpi-card.quality::before { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        border-color: rgba(255,255,255,0.3);
+    }
+
+    .kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+    }
+
+    .kpi-title {
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .kpi-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: white;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+
+    .kpi-icon.production { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    .kpi-icon.stock { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .kpi-icon.team { background: linear-gradient(135deg, #10b981, #059669); }
+    .kpi-icon.finance { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+    .kpi-icon.quality { background: linear-gradient(135deg, #8b5cf6, #a855f7); }
+
+    .kpi-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 8px;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .kpi-subtitle {
+        color: rgba(255,255,255,0.8);
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+    }
+
+    .kpi-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .kpi-detail {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+    }
+
+    .kpi-detail-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: white;
+    }
+
+    .kpi-detail-label {
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.7);
+        margin-top: 2px;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 1.5s ease;
+        position: relative;
+    }
+
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: progress-shimmer 2s infinite;
+    }
+
+    @keyframes progress-shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .progress-fill.production { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+    .progress-fill.stock { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .progress-fill.team { background: linear-gradient(90deg, #10b981, #059669); }
+    .progress-fill.finance { background: linear-gradient(90deg, #06b6d4, #0891b2); }
+    .progress-fill.quality { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
+
+    .progress-text {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.8);
     }
 
     .action-buttons {
         display: flex;
-        gap: 10px;
-        margin-top: 15px;
+        gap: 8px;
         flex-wrap: wrap;
     }
 
     .btn-action {
+        background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
         padding: 8px 16px;
         border-radius: 20px;
-        border: none;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
+        text-decoration: none;
         transition: all 0.3s ease;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-block;
+        backdrop-filter: blur(10px);
     }
 
-    .btn-primary-action {
-        background: var(--accent-color);
-        color: white;
-    }
-
-    .btn-primary-action:hover {
-        background: #2980b9;
+    .btn-action:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.2));
         transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         color: white;
         text-decoration: none;
     }
 
-    .btn-secondary-action {
-        background: var(--gray-light);
-        color: var(--gray-dark);
-    }
-
-    .btn-secondary-action:hover {
-        background: #ddd;
-        color: var(--gray-dark);
-        text-decoration: none;
-    }
-
-    .status-grid {
+    /* Graphiques de performance */
+    .performance-charts {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-top: 20px;
+        grid-template-columns: 2fr 1fr;
+        gap: 25px;
+        margin-bottom: 30px;
     }
 
-    .status-item {
+    .chart-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 25px;
+        position: relative;
+        overflow: hidden;
+        min-height: 350px;
         display: flex;
-        justify-content: space-between;
+        flex-direction: column;
+    }
+
+    .chart-title {
+        color: white;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        display: flex;
         align-items: center;
-        padding: 15px;
-        background: var(--gray-light);
-        border-radius: 10px;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+
+    .chart-container {
+        position: relative;
+        flex: 1;
+        min-height: 280px;
+        overflow: hidden;
+    }
+
+    .chart-container canvas {
+        width: 100% !important;
+        height: 100% !important;
+        pointer-events: none;
+        touch-action: none;
+    }
+
+    /* Responsive design */
+    @media (max-width: 1200px) {
+        .performance-charts {
+            grid-template-columns: 1fr;
+        }
+        
+        .header-content {
+            grid-template-columns: 1fr;
+            text-align: center;
+        }
+        
+        .status-section {
+            text-align: center;
+        }
     }
 
     @media (max-width: 768px) {
-        .dashboard-container {
-            margin: 10px;
+        .dashboard-wrapper {
+            padding: 15px;
+        }
+        
+        .modern-header {
             padding: 20px;
         }
         
-        .metric-value {
-            font-size: 1.8rem;
+        .title-section h1 {
+            font-size: 2.2rem;
         }
         
-        .action-buttons {
-            flex-direction: column;
+        .critical-alerts {
+            grid-template-columns: 1fr;
+        }
+        
+        .kpi-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .kpi-details {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Animations d'entrée */
+    .fade-in {
+        opacity: 0;
+        transform: translateY(30px);
+        animation: fadeInUp 0.8s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .slide-in-left {
+        opacity: 0;
+        transform: translateX(-50px);
+        animation: slideInLeft 0.8s ease forwards;
+    }
+
+    @keyframes slideInLeft {
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .slide-in-right {
+        opacity: 0;
+        transform: translateX(50px);
+        animation: slideInRight 0.8s ease forwards;
+    }
+
+    @keyframes slideInRight {
+        to {
+            opacity: 1;
+            transform: translateX(0);
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <!-- Header -->
-    <div class="header-section">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1 class="h3 mb-1">
-                    <i class="fas fa-cogs me-2"></i>
-                    Dashboard Opérationnel
-                </h1>
-                <p class="text-muted mb-0">Suivi temps réel des opérations</p>
-            </div>
-            <div class="text-end">
-                <div class="real-time-indicator mb-2">
-                    EN DIRECT
+<div class="dashboard-wrapper">
+    <div class="dashboard-container">
+        <!-- Header moderne -->
+        <div class="modern-header fade-in">
+            <div class="header-content">
+                <div class="title-section">
+                    <h1>⚡ DASHBOARD OPÉRATIONNEL</h1>
+                    <p>Pilotage temps réel de la production</p>
                 </div>
-                <div class="text-muted small">
-                    Mise à jour : <span id="currentTime"></span>
+                <div class="status-section">
+                    <div class="live-indicator">
+                        <div class="live-dot"></div>
+                        <span>EN DIRECT</span>
+                    </div>
+                    <div class="current-time">
+                        <i class="fas fa-clock"></i>
+                        <span id="currentTime"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertes critiques -->
+        <div class="critical-alerts">
+            <div class="alert-card urgent slide-in-left">
+                <div class="alert-header">
+                    <div class="alert-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Commandes en Retard
+                    </div>
+                    <div class="alert-value" id="overdueOrdersCount">...</div>
+                </div>
+                <ul class="alert-list list-unstyled" id="overdueOrdersList"></ul>
+            </div>
+            
+            <div class="alert-card warning slide-in-right">
+                <div class="alert-header">
+                    <div class="alert-title">
+                        <i class="fas fa-clock"></i>
+                        Commandes Urgentes (&lt;1h)
+                    </div>
+                    <div class="alert-value" id="urgentOrdersCount">...</div>
+                </div>
+                <ul class="alert-list list-unstyled" id="urgentOrdersList"></ul>
+            </div>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+            <!-- Production & Commandes -->
+            <div class="kpi-card production slide-in-left" style="animation-delay: 0.1s;">
+                <div class="kpi-header">
+                    <div class="kpi-title">
+                        <i class="fas fa-cogs"></i>
+                        Production & Commandes
+                    </div>
+                    <div class="kpi-icon production">
+                        <i class="fas fa-industry"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="dailyOrdersCount">...</div>
+                <div class="kpi-subtitle">Commandes du jour</div>
+                <div class="kpi-details">
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="onTimeRate">...</div>
+                        <div class="kpi-detail-label">Taux à l'heure</div>
+                    </div>
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="avgProcessingTime">...</div>
+                        <div class="kpi-detail-label">Temps moyen</div>
+                    </div>
+                </div>
+                <div class="progress-text">
+                    <span>Objectif journalier</span>
+                    <span id="productionProgress">...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill production" id="productionProgressFill" style="width:0%"></div>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('orders.list_orders') }}" class="btn-action">
+                        <i class="fas fa-eye"></i> Voir détails
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stock & Approvisionnement -->
+            <div class="kpi-card stock slide-in-left" style="animation-delay: 0.2s;">
+                <div class="kpi-header">
+                    <div class="kpi-title">
+                        <i class="fas fa-boxes"></i>
+                        Stock & Approvisionnement
+                    </div>
+                    <div class="kpi-icon stock">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="stockValue">...</div>
+                <div class="kpi-subtitle">Valeur stock actuel</div>
+                <div class="kpi-details">
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="stockOutCount">...</div>
+                        <div class="kpi-detail-label">Ruptures</div>
+                    </div>
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="lowStockCount">...</div>
+                        <div class="kpi-detail-label">Alertes</div>
+                    </div>
+                </div>
+                <div class="progress-text">
+                    <span>Rotation stock</span>
+                    <span id="stockRotation">...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill stock" id="stockProgressFill" style="width:0%"></div>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('purchases.new_purchase') }}" class="btn-action">
+                        <i class="fas fa-shopping-cart"></i> Commander
+                    </a>
+                </div>
+            </div>
+
+            <!-- Ressources Humaines -->
+            <div class="kpi-card team slide-in-right" style="animation-delay: 0.3s;">
+                <div class="kpi-header">
+                    <div class="kpi-title">
+                        <i class="fas fa-users"></i>
+                        Ressources Humaines
+                    </div>
+                    <div class="kpi-icon team">
+                        <i class="fas fa-user-friends"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="presentEmployees">...</div>
+                <div class="kpi-subtitle">Employés présents</div>
+                <div class="kpi-details">
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="absenteeismRate">...</div>
+                        <div class="kpi-detail-label">Absentéisme</div>
+                    </div>
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="workedHours">...</div>
+                        <div class="kpi-detail-label">Heures travaillées</div>
+                    </div>
+                </div>
+                <div class="progress-text">
+                    <span>Performance équipe</span>
+                    <span id="teamPerformance">...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill team" id="teamProgressFill" style="width:0%"></div>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('employees.list_employees') }}" class="btn-action">
+                        <i class="fas fa-eye"></i> Voir équipe
+                    </a>
+                </div>
+            </div>
+
+            <!-- Finance & Ventes -->
+            <div class="kpi-card finance slide-in-right" style="animation-delay: 0.4s;">
+                <div class="kpi-header">
+                    <div class="kpi-title">
+                        <i class="fas fa-chart-line"></i>
+                        Finance & Ventes
+                    </div>
+                    <div class="kpi-icon finance">
+                        <i class="fas fa-euro-sign"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="dailyRevenue">...</div>
+                <div class="kpi-subtitle">CA du jour</div>
+                <div class="kpi-details">
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="ticketCount">...</div>
+                        <div class="kpi-detail-label">Tickets</div>
+                    </div>
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="avgBasket">...</div>
+                        <div class="kpi-detail-label">Panier moyen</div>
+                    </div>
+                </div>
+                <div class="progress-text">
+                    <span>Objectif CA</span>
+                    <span id="revenueObjective">...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill finance" id="financeProgressFill" style="width:0%"></div>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('sales.pos_interface') }}" class="btn-action">
+                        <i class="fas fa-cash-register"></i> Caisse
+                    </a>
+                </div>
+            </div>
+
+            <!-- Qualité & Satisfaction -->
+            <div class="kpi-card quality slide-in-left" style="animation-delay: 0.5s;">
+                <div class="kpi-header">
+                    <div class="kpi-title">
+                        <i class="fas fa-star"></i>
+                        Qualité & Satisfaction
+                    </div>
+                    <div class="kpi-icon quality">
+                        <i class="fas fa-thumbs-up"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="qualityRate">...</div>
+                <div class="kpi-subtitle">Taux de qualité</div>
+                <div class="kpi-details">
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="incidentsCount">...</div>
+                        <div class="kpi-detail-label">Incidents</div>
+                    </div>
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="returnRate">...</div>
+                        <div class="kpi-detail-label">Retours</div>
+                    </div>
+                </div>
+                <div class="progress-text">
+                    <span>Satisfaction client</span>
+                    <span id="customerSatisfaction">...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill quality" id="qualityProgressFill" style="width:0%"></div>
+                </div>
+                <div class="action-buttons">
+                    <a href="#" class="btn-action">
+                        <i class="fas fa-chart-bar"></i> Rapports
+                    </a>
+                </div>
+            </div>
+
+            <!-- Alertes & Suivi -->
+            <div class="kpi-card slide-in-right" style="animation-delay: 0.6s;">
+                <div class="kpi-header">
+                    <div class="kpi-title">
+                        <i class="fas fa-bell"></i>
+                        Alertes & Suivi
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="criticalAlerts">...</div>
+                <div class="kpi-subtitle">Alertes critiques</div>
+                <div class="kpi-details">
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="urgentTasks">...</div>
+                        <div class="kpi-detail-label">Tâches urgentes</div>
+                    </div>
+                    <div class="kpi-detail">
+                        <div class="kpi-detail-value" id="systemStatus">OK</div>
+                        <div class="kpi-detail-label">Système</div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-action" onclick="alert('Équipe alertée!')">
+                        <i class="fas fa-bell"></i> Alerter équipe
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphiques de performance -->
+        <div class="performance-charts">
+            <div class="chart-card slide-in-left" style="animation-delay: 0.7s;">
+                <div class="chart-title">
+                    <i class="fas fa-chart-line"></i>
+                    Performance Production - Aujourd'hui
+                </div>
+                <div class="chart-container">
+                    <canvas id="productionChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card slide-in-right" style="animation-delay: 0.8s;">
+                <div class="chart-title">
+                    <i class="fas fa-chart-pie"></i>
+                    Répartition des Commandes
+                </div>
+                <div class="chart-container">
+                    <canvas id="ordersChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Critical Alerts Row -->
-    <div class="row">
-        <div class="col-md-6">
-            <div class="operational-card urgent">
-                <div class="metric-header">
-                    <div class="metric-title">Commandes en Retard</div>
-                    <div class="metric-value" id="overdueOrdersCount">...</div>
-                </div>
-                <ul class="list-unstyled" id="overdueOrdersList"></ul>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="operational-card warning">
-                <div class="metric-header">
-                    <div class="metric-title">Commandes Urgentes (&lt;2h)</div>
-                    <div class="metric-value" id="urgentOrdersCount">...</div>
-                </div>
-                 <ul class="list-unstyled" id="urgentOrdersList"></ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Grid -->
-    <div class="row">
-        <!-- Production -->
-        <div class="col-lg-8">
-            <div class="operational-card">
-                <div class="metric-header">
-                    <div class="metric-title">Statut de la Production</div>
-                    <a href="{{ url_for('orders.list_orders') }}" class="btn-secondary-action btn-sm">Voir tout</a>
-                </div>
-                <div class="status-grid" id="productionStatus"></div>
-            </div>
-        </div>
-        <!-- Stock -->
-        <div class="col-lg-4">
-            <div class="operational-card warning">
-                <div class="metric-header">
-                    <div class="metric-title">Statut du Stock</div>
-                </div>
-                <div class="status-grid" id="stockStatus"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Team and Quality Row -->
-    <div class="row">
-        <div class="col-md-6">
-            <div class="operational-card success">
-                <div class="metric-header">
-                    <div class="metric-title">Équipe Active</div>
-                </div>
-                <div id="teamStatus"></div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="operational-card">
-                 <div class="metric-header">
-                    <div class="metric-title">Qualité & Incidents</div>
-                </div>
-                <div id="qualityStatus"></div>
-            </div>
-        </div>
-    </div>
-
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        function updateTime() {
-            document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('fr-FR');
-        }
-        updateTime();
-        setInterval(updateTime, 1000);
+document.addEventListener('DOMContentLoaded', function() {
+    // Mise à jour de l'heure en temps réel
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('fr-FR');
+        document.getElementById('currentTime').textContent = timeString;
+    }
+    
+    updateTime();
+    setInterval(updateTime, 1000);
 
-        const formatCurrency = (value) => (value || 0).toLocaleString('fr-DZ', { style: 'currency', currency: 'DZD' });
+    const formatCurrency = (value) => (value || 0).toLocaleString('fr-DZ') + ' DA';
+    const formatPercentage = (value) => (value || 0).toFixed(1) + '%';
 
-        // Production Data
-        fetch('/dashboards/api/daily/production').then(r => r.json()).then(data => {
-            if (!data.success) return;
-            const prodData = data.data;
-            document.getElementById('overdueOrdersCount').textContent = prodData.stats.overdue_count;
-            document.getElementById('urgentOrdersCount').textContent = prodData.stats.urgent_count;
-
-            const overdueList = prodData.overdue_orders.map(o => `<li>${o.customer_name} - Retard: ${Math.abs(o.time_remaining_hours).toFixed(1)}h</li>`).join('');
-            document.getElementById('overdueOrdersList').innerHTML = overdueList || '<li>Aucune commande en retard</li>';
-            
-            const urgentList = prodData.urgent_orders.map(o => `<li>${o.customer_name} - Restant: ${o.time_remaining_hours.toFixed(1)}h</li>`).join('');
-            document.getElementById('urgentOrdersList').innerHTML = urgentList || '<li>Aucune commande urgente</li>';
-
-            document.getElementById('productionStatus').innerHTML = `
-                <div class="status-item"><span>En attente</span> <strong>${prodData.stats.normal_count}</strong></div>
-                <div class="status-item"><span>En cours</span> <strong>${prodData.stats.urgent_count}</strong></div>
-                <div class="status-item"><span>En retard</span> <strong>${prodData.stats.overdue_count}</strong></div>
-            `;
-        });
-
-        // Stock Data
-        fetch('/dashboards/api/daily/stock').then(r => r.json()).then(data => {
-            if (!data.success) return;
-            const stockData = data.data;
-            document.getElementById('stockStatus').innerHTML = `
-                <div class="status-item"><span>Alertes</span> <strong>${stockData.stats.low_stock_count}</strong></div>
-                <div class="status-item"><span>Ruptures</span> <strong>${stockData.stats.out_of_stock_count}</strong></div>
-            `;
-        });
-
-        // Team Data
-        fetch('/dashboards/api/daily/employees').then(r => r.json()).then(data => {
-            if (!data.success) return;
-            const teamData = data.data;
-            document.getElementById('teamStatus').innerHTML = `
-                <div class="metric-value">${teamData.stats.present_today}/${teamData.stats.total_employees}</div>
-                <div class="metric-subtitle">Employés présents</div>
-            `;
-        });
+    // Production & Commandes
+    fetch('/dashboards/api/daily/production').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const prodData = data.data;
         
-        // Quality Data (simulated from production data for now)
-         fetch('/dashboards/api/daily/production').then(r => r.json()).then(data => {
-            if (!data.success) return;
-            const qualityData = data.data;
-            const total = qualityData.stats.total_production;
-            const issues = qualityData.stats.overdue_count; // Simulate issues = overdue
-            const qualityRate = total > 0 ? ((total - issues) / total * 100).toFixed(0) : 100;
-            document.getElementById('qualityStatus').innerHTML = `
-                <div class="metric-value">${qualityRate}%</div>
-                <div class="metric-subtitle">Taux de qualité</div>
-            `;
-        });
+        // Alertes critiques
+        document.getElementById('overdueOrdersCount').textContent = prodData.stats.overdue_count;
+        document.getElementById('urgentOrdersCount').textContent = prodData.stats.urgent_count;
+        
+        const overdueList = prodData.overdue_orders.map(o => 
+            `<li><i class="fas fa-clock"></i> ${o.customer_name} - Retard: ${Math.abs(o.time_remaining_hours).toFixed(1)}h</li>`
+        ).join('');
+        document.getElementById('overdueOrdersList').innerHTML = overdueList || '<li>Aucune commande en retard</li>';
+        
+        const urgentList = prodData.urgent_orders.map(o => 
+            `<li><i class="fas fa-exclamation-triangle"></i> ${o.customer_name} - Restant: ${o.time_remaining_hours.toFixed(1)}h</li>`
+        ).join('');
+        document.getElementById('urgentOrdersList').innerHTML = urgentList || '<li>Aucune commande urgente</li>';
 
+        // KPI Production
+        const totalOrders = prodData.stats.total_production;
+        const onTimeOrders = totalOrders - prodData.stats.overdue_count;
+        const onTimeRate = totalOrders > 0 ? (onTimeOrders / totalOrders * 100) : 100;
+        
+        document.getElementById('dailyOrdersCount').textContent = totalOrders;
+        document.getElementById('onTimeRate').textContent = formatPercentage(onTimeRate);
+        document.getElementById('avgProcessingTime').textContent = '2.5h'; // Simulé
+        document.getElementById('productionProgress').textContent = formatPercentage(onTimeRate);
+        document.getElementById('productionProgressFill').style.width = onTimeRate + '%';
     });
+
+    // Stock & Approvisionnement
+    fetch('/dashboards/api/daily/stock').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const stockData = data.data;
+        
+        document.getElementById('stockValue').textContent = '125 000 DA'; // Simulé
+        document.getElementById('stockOutCount').textContent = stockData.stats.out_of_stock_count;
+        document.getElementById('lowStockCount').textContent = stockData.stats.low_stock_count;
+        document.getElementById('stockRotation').textContent = '85%'; // Simulé
+        document.getElementById('stockProgressFill').style.width = '85%';
+    });
+
+    // Ressources Humaines
+    fetch('/dashboards/api/daily/employees').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const teamData = data.data;
+        
+        document.getElementById('presentEmployees').textContent = `${teamData.stats.present_today}/${teamData.stats.total_employees}`;
+        document.getElementById('absenteeismRate').textContent = formatPercentage(100 - teamData.stats.attendance_rate);
+        document.getElementById('workedHours').textContent = (teamData.stats.present_today * 8) + 'h'; // Simulé
+        document.getElementById('teamPerformance').textContent = formatPercentage(teamData.stats.attendance_rate);
+        document.getElementById('teamProgressFill').style.width = teamData.stats.attendance_rate + '%';
+    });
+
+    // Finance & Ventes
+    fetch('/dashboards/api/daily/sales').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const salesData = data.data;
+        
+        document.getElementById('dailyRevenue').textContent = formatCurrency(salesData.stats.daily_revenue);
+        document.getElementById('ticketCount').textContent = salesData.stats.total_orders;
+        const avgBasket = salesData.stats.total_orders > 0 ? salesData.stats.daily_revenue / salesData.stats.total_orders : 0;
+        document.getElementById('avgBasket').textContent = formatCurrency(avgBasket);
+        
+        const objective = 50000; // Objectif journalier
+        const objectiveProgress = (salesData.stats.daily_revenue / objective * 100);
+        document.getElementById('revenueObjective').textContent = formatPercentage(objectiveProgress);
+        document.getElementById('financeProgressFill').style.width = Math.min(objectiveProgress, 100) + '%';
+    });
+
+    // Qualité & Satisfaction
+    fetch('/dashboards/api/daily/production').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const qualityData = data.data;
+        
+        const total = qualityData.stats.total_production;
+        const issues = qualityData.stats.overdue_count;
+        const qualityRate = total > 0 ? ((total - issues) / total * 100) : 100;
+        
+        document.getElementById('qualityRate').textContent = formatPercentage(qualityRate);
+        document.getElementById('incidentsCount').textContent = issues;
+        document.getElementById('returnRate').textContent = '2.1%'; // Simulé
+        document.getElementById('customerSatisfaction').textContent = '4.8/5'; // Simulé
+        document.getElementById('qualityProgressFill').style.width = qualityRate + '%';
+    });
+
+    // Alertes & Suivi
+    fetch('/dashboards/api/daily/production').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const alertData = data.data;
+        
+        const criticalAlerts = alertData.stats.overdue_count + alertData.stats.urgent_count;
+        document.getElementById('criticalAlerts').textContent = criticalAlerts;
+        document.getElementById('urgentTasks').textContent = alertData.stats.urgent_count;
+    });
+
+    // Graphique Performance Production
+    fetch('/dashboards/api/daily/sales').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        
+        const labels = ['6h', '8h', '10h', '12h', '14h', '16h', '18h', '20h'];
+        const values = [2, 5, 8, 12, 15, 18, 22, 25]; // Simulé
+        const ctx = document.getElementById('productionChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Commandes traitées',
+                    data: values,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 1500 },
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'white' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: 'white' }
+                    }
+                }
+            }
+        });
+    });
+
+    // Graphique Répartition des Commandes
+    fetch('/dashboards/api/daily/production').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const prodData = data.data;
+        
+        const ctx = document.getElementById('ordersChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['En retard', 'Urgentes', 'Normales'],
+                datasets: [{
+                    data: [prodData.stats.overdue_count, prodData.stats.urgent_count, prodData.stats.normal_count],
+                    backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                    borderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 1500 },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            color: 'white',
+                            font: { size: 12 }
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+    // Auto-refresh toutes les 2 minutes
+    setInterval(() => {
+        console.log('Rafraîchissement des données opérationnelles...');
+        updateTime();
+    }, 120000);
+});
 </script>
-{% endblock %} 
+{% endblock %}

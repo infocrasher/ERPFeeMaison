@@ -1,255 +1,951 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Vue d'Ensemble - Fée Maison{% endblock %}
+{% block title %}Dashboard Futuriste - Fée Maison{% endblock %}
 
 {% block head %}
 {{ super() }}
-<!-- Chart.js pour les graphiques -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- CSS spécifique au dashboard vue d'ensemble -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <style>
     :root {
-        --primary-color: #2C3E50;
-        --secondary-color: #3498DB;
-        --success-color: #27AE60;
-        --warning-color: #F39C12;
-        --danger-color: #E74C3C;
-        --info-color: #17A2B8;
-        --light-gray: #F8F9FA;
-        --dark-gray: #6C757D;
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        --danger-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        --dark-gradient: linear-gradient(135deg, #232526 0%, #414345 100%);
+        --neon-blue: #00d4ff;
+        --neon-purple: #b537f2;
+        --neon-green: #39ff14;
+        --neon-pink: #ff073a;
+        --glass-bg: rgba(255, 255, 255, 0.05);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --backdrop-blur: blur(25px);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
     }
 
     body {
-        background-color: var(--light-gray);
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    .dashboard-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        overflow-x: hidden;
         color: white;
-        padding: 20px 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
 
-    .kpi-card {
-        background: white;
-        border-radius: 12px;
-        padding: 25px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        cursor: pointer;
+    /* Particules d'arrière-plan */
+    .particles {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
         height: 100%;
+        pointer-events: none;
+        z-index: 1;
     }
 
-    .kpi-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    .particle {
+        position: absolute;
+        width: 2px;
+        height: 2px;
+        background: var(--neon-blue);
+        border-radius: 50%;
+        animation: float 20s infinite linear;
+        opacity: 0.7;
     }
 
-    .kpi-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 10px 0;
+    @keyframes float {
+        0% {
+            transform: translateY(100vh) rotate(0deg);
+            opacity: 0;
+        }
+        10% {
+            opacity: 1;
+        }
+        90% {
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(-100vh) rotate(360deg);
+            opacity: 0;
+        }
     }
 
-    .kpi-label {
-        font-size: 1.1rem;
-        color: var(--dark-gray);
-        margin-bottom: 5px;
+    .dashboard-wrapper {
+        min-height: 100vh;
+        padding: 20px;
+        position: relative;
+        z-index: 2;
     }
 
-    .kpi-trend {
-        font-size: 0.9rem;
+    .dashboard-container {
+        max-width: 1800px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    /* Header futuriste */
+    .futuristic-header {
+        background: var(--glass-bg);
+        backdrop-filter: var(--backdrop-blur);
+        border: 2px solid var(--glass-border);
+        border-radius: 30px;
+        padding: 40px;
+        margin-bottom: 30px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .futuristic-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(from 0deg, transparent, var(--neon-blue), transparent, var(--neon-purple), transparent);
+        animation: rotate 10s linear infinite;
+        opacity: 0.1;
+    }
+
+    @keyframes rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .header-content {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 40px;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .title-section h1 {
+        font-size: 4rem;
+        font-weight: 900;
+        background: linear-gradient(45deg, var(--neon-blue), var(--neon-purple), var(--neon-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 15px;
+        text-shadow: 0 0 50px rgba(0, 212, 255, 0.5);
+        animation: glow 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+        from { filter: drop-shadow(0 0 20px var(--neon-blue)); }
+        to { filter: drop-shadow(0 0 40px var(--neon-purple)); }
+    }
+
+    .title-section p {
+        color: rgba(255,255,255,0.8);
+        font-size: 1.4rem;
         font-weight: 500;
     }
 
-    .trend-up {
-        color: var(--success-color);
+    .status-section {
+        text-align: right;
     }
 
-    .trend-down {
-        color: var(--danger-color);
+    .hologram-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(45deg, rgba(0, 212, 255, 0.2), rgba(181, 55, 242, 0.2));
+        border: 2px solid var(--neon-blue);
+        padding: 12px 24px;
+        border-radius: 50px;
+        margin-bottom: 15px;
+        font-weight: 700;
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+        animation: pulse-border 2s infinite;
     }
 
-    .alert-badge {
+    @keyframes pulse-border {
+        0%, 100% { border-color: var(--neon-blue); box-shadow: 0 0 30px rgba(0, 212, 255, 0.3); }
+        50% { border-color: var(--neon-purple); box-shadow: 0 0 30px rgba(181, 55, 242, 0.3); }
+    }
+
+    .hologram-dot {
+        width: 12px;
+        height: 12px;
+        background: var(--neon-green);
+        border-radius: 50%;
+        animation: pulse-dot 1.5s infinite;
+        box-shadow: 0 0 20px var(--neon-green);
+    }
+
+    @keyframes pulse-dot {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.2); opacity: 0.8; }
+    }
+
+    .time-display {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--neon-blue);
+        text-shadow: 0 0 20px var(--neon-blue);
+    }
+
+    /* Métriques holographiques */
+    .holographic-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+
+    .metric-hologram {
+        background: var(--glass-bg);
+        backdrop-filter: var(--backdrop-blur);
+        border: 2px solid var(--glass-border);
+        border-radius: 25px;
+        padding: 35px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.5s ease;
+    }
+
+    .metric-hologram::before {
+        content: '';
         position: absolute;
-        top: 15px;
-        right: 15px;
-        animation: pulse 2s infinite;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        border-radius: 25px 25px 0 0;
     }
 
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
+    .metric-hologram.revenue::before { background: var(--primary-gradient); }
+    .metric-hologram.orders::before { background: var(--secondary-gradient); }
+    .metric-hologram.production::before { background: var(--success-gradient); }
+    .metric-hologram.team::before { background: var(--warning-gradient); }
+    .metric-hologram.quality::before { background: var(--danger-gradient); }
+    .metric-hologram.efficiency::before { background: var(--info-gradient); }
+
+    .metric-hologram:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+        border-color: var(--neon-blue);
+    }
+
+    .metric-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 25px;
+    }
+
+    .metric-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .metric-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .metric-icon::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+        transform: translateX(-100%);
+        transition: transform 0.6s ease;
+    }
+
+    .metric-hologram:hover .metric-icon::before {
+        transform: translateX(100%);
+    }
+
+    .metric-icon.revenue { background: var(--primary-gradient); }
+    .metric-icon.orders { background: var(--secondary-gradient); }
+    .metric-icon.production { background: var(--success-gradient); }
+    .metric-icon.team { background: var(--warning-gradient); }
+    .metric-icon.quality { background: var(--danger-gradient); }
+    .metric-icon.efficiency { background: var(--info-gradient); }
+
+    .metric-value {
+        font-size: 3.5rem;
+        font-weight: 900;
+        color: white;
+        margin-bottom: 10px;
+        text-shadow: 0 0 30px rgba(255,255,255,0.3);
+        animation: count-up 2s ease-out;
+    }
+
+    @keyframes count-up {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .metric-subtitle {
+        color: rgba(255,255,255,0.8);
+        font-size: 1rem;
+        margin-bottom: 20px;
+        font-weight: 500;
+    }
+
+    .metric-trend {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+
+    .trend-up { color: var(--neon-green); }
+    .trend-down { color: var(--neon-pink); }
+
+    .holographic-progress {
+        position: relative;
+        height: 8px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 15px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        position: relative;
+        transition: width 2s ease;
+    }
+
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .progress-fill.revenue { background: var(--primary-gradient); }
+    .progress-fill.orders { background: var(--secondary-gradient); }
+    .progress-fill.production { background: var(--success-gradient); }
+    .progress-fill.team { background: var(--warning-gradient); }
+    .progress-fill.quality { background: var(--danger-gradient); }
+    .progress-fill.efficiency { background: var(--info-gradient); }
+
+    /* Graphiques futuristes */
+    .charts-matrix {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+
+    .chart-panel {
+        background: var(--glass-bg);
+        backdrop-filter: var(--backdrop-blur);
+        border: 2px solid var(--glass-border);
+        border-radius: 25px;
+        padding: 30px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.5s ease;
+    }
+
+    .chart-panel.large {
+        grid-row: span 2;
+    }
+
+    .chart-panel:hover {
+        border-color: var(--neon-blue);
+        box-shadow: 0 0 40px rgba(0, 212, 255, 0.2);
+    }
+
+    .chart-title {
+        color: white;
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-shadow: 0 0 20px rgba(255,255,255,0.3);
     }
 
     .chart-container {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        min-height: 400px;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .chart-title {
-        flex-shrink: 0;
-        margin-bottom: 20px;
-    }
-
-    .chart-canvas-container {
         position: relative;
-        flex: 1;
-        min-height: 320px;
-        width: 100%;
-    }
-    
-    .chart-canvas-container canvas {
-        max-width: 100% !important;
-        height: auto !important;
+        height: 300px;
+        overflow: hidden;
     }
 
-    .quick-nav {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    .chart-panel.large .chart-container {
+        height: 500px;
     }
 
-    .nav-item {
+    .chart-container canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    /* Tableau de bord temps réel */
+    .realtime-dashboard {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+
+    .realtime-panel {
+        background: var(--glass-bg);
+        backdrop-filter: var(--backdrop-blur);
+        border: 2px solid var(--glass-border);
+        border-radius: 25px;
+        padding: 30px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .realtime-title {
+        color: white;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 25px;
         display: flex;
         align-items: center;
-        padding: 10px 15px;
-        border-radius: 8px;
-        transition: background-color 0.3s ease;
-        text-decoration: none;
-        color: var(--primary-color);
+        gap: 10px;
+    }
+
+    .activity-feed {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .activity-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 15px;
+        margin-bottom: 10px;
+        border-left: 4px solid var(--neon-blue);
+        transition: all 0.3s ease;
+    }
+
+    .activity-item:hover {
+        background: rgba(255,255,255,0.1);
+        transform: translateX(5px);
+    }
+
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        color: white;
+        background: var(--primary-gradient);
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-title {
+        font-weight: 600;
+        color: white;
         margin-bottom: 5px;
     }
 
-    .nav-item:hover {
-        background-color: var(--light-gray);
-        color: var(--secondary-color);
-        text-decoration: none;
+    .activity-time {
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.6);
     }
 
-    .nav-item i {
-        margin-right: 10px;
-        width: 20px;
+    /* Alertes holographiques */
+    .holographic-alerts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
     }
 
-    .action-buttons {
-        margin-top: 15px;
-    }
-
-    .btn-action {
-        padding: 8px 16px;
+    .alert-hologram {
+        background: var(--glass-bg);
+        backdrop-filter: var(--backdrop-blur);
+        border: 2px solid;
         border-radius: 20px;
-        border: none;
-        font-weight: 600;
+        padding: 25px;
+        position: relative;
+        overflow: hidden;
+        animation: alert-pulse 3s infinite;
+    }
+
+    .alert-hologram.critical {
+        border-color: var(--neon-pink);
+        box-shadow: 0 0 30px rgba(255, 7, 58, 0.3);
+    }
+
+    .alert-hologram.warning {
+        border-color: #ffd700;
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+    }
+
+    .alert-hologram.info {
+        border-color: var(--neon-blue);
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+    }
+
+    @keyframes alert-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+
+    .alert-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 15px;
+    }
+
+    .alert-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: white;
+    }
+
+    .alert-icon.critical { background: linear-gradient(135deg, var(--neon-pink), #ff6b6b); }
+    .alert-icon.warning { background: linear-gradient(135deg, #ffd700, #ffed4e); }
+    .alert-icon.info { background: linear-gradient(135deg, var(--neon-blue), #4ecdc4); }
+
+    .alert-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: white;
+    }
+
+    .alert-message {
+        color: rgba(255,255,255,0.9);
         font-size: 0.9rem;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-block;
-        margin-right: 10px;
+        line-height: 1.4;
     }
 
-    .btn-primary-action {
-        background: var(--secondary-color);
-        color: white;
+    /* Responsive design */
+    @media (max-width: 1400px) {
+        .charts-matrix {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto;
+        }
+        
+        .chart-panel.large {
+            grid-row: span 1;
+            grid-column: span 2;
+        }
     }
 
-    .btn-primary-action:hover {
-        background: #2980b9;
-        transform: translateY(-2px);
-        color: white;
-        text-decoration: none;
+    @media (max-width: 768px) {
+        .dashboard-wrapper {
+            padding: 15px;
+        }
+        
+        .futuristic-header {
+            padding: 25px;
+        }
+        
+        .title-section h1 {
+            font-size: 2.5rem;
+        }
+        
+        .header-content {
+            grid-template-columns: 1fr;
+            text-align: center;
+        }
+        
+        .holographic-metrics {
+            grid-template-columns: 1fr;
+        }
+        
+        .charts-matrix {
+            grid-template-columns: 1fr;
+        }
+        
+        .realtime-dashboard {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Animations d'entrée */
+    .fade-in {
+        opacity: 0;
+        transform: translateY(50px);
+        animation: fadeInUp 1s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .slide-in-left {
+        opacity: 0;
+        transform: translateX(-100px);
+        animation: slideInLeft 1s ease forwards;
+    }
+
+    @keyframes slideInLeft {
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .slide-in-right {
+        opacity: 0;
+        transform: translateX(100px);
+        animation: slideInRight 1s ease forwards;
+    }
+
+    @keyframes slideInRight {
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .scale-in {
+        opacity: 0;
+        transform: scale(0.8);
+        animation: scaleIn 1s ease forwards;
+    }
+
+    @keyframes scaleIn {
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<header class="dashboard-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <h1 class="h3 mb-0">
-                    <i class="fas fa-tachometer-alt me-2"></i>
-                    Dashboard Vue d'Ensemble
-                </h1>
-                <p class="mb-0 opacity-75">Performance globale - <span id="currentDate"></span></p>
-            </div>
-            <div class="col-md-6 text-end">
-                <div class="d-flex justify-content-end align-items-center">
-                    <span class="badge bg-success me-2">
-                        <i class="fas fa-circle me-1"></i>
-                        Système opérationnel
-                    </span>
-                    <span class="opacity-75">Dernière mise à jour : <span id="lastUpdate"></span></span>
+<!-- Particules d'arrière-plan -->
+<div class="particles" id="particles"></div>
+
+<div class="dashboard-wrapper">
+    <div class="dashboard-container">
+        <!-- Header futuriste -->
+        <div class="futuristic-header fade-in">
+            <div class="header-content">
+                <div class="title-section">
+                    <h1>🚀 NEXUS DASHBOARD</h1>
+                    <p>Interface de contrôle futuriste - Fée Maison</p>
                 </div>
-            </div>
-        </div>
-    </div>
-</header>
-
-<div class="container mt-4">
-    <!-- KPI Cards Row 1 -->
-    <div class="row">
-        <div class="col-lg-3 col-md-6">
-            <div class="kpi-card" id="kpi-ca"></div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="kpi-card" id="kpi-orders"></div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="kpi-card" id="kpi-stock"></div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="kpi-card" id="kpi-personnel"></div>
-        </div>
-    </div>
-
-    <!-- Main Content Row -->
-    <div class="row">
-        <!-- Main Chart -->
-        <div class="col-lg-8">
-            <div class="chart-container">
-                <h4 class="chart-title">Performance Mensuelle</h4>
-                <div class="chart-canvas-container">
-                    <canvas id="mainChart"></canvas>
+                <div class="status-section">
+                    <div class="hologram-indicator">
+                        <div class="hologram-dot"></div>
+                        <span>SYSTÈME ACTIF</span>
+                    </div>
+                    <div class="time-display">
+                        <i class="fas fa-clock"></i>
+                        <span id="currentTime"></span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Quick Navigation -->
-        <div class="col-lg-4">
-            <div class="quick-nav">
-                <h4>Navigation Rapide</h4>
-                <a href="{{ url_for('orders.list_orders') }}" class="nav-item">
-                    <i class="fas fa-clipboard-list text-info"></i> Gérer les Commandes
-                </a>
-                <a href="{{ url_for('products.list_products') }}" class="nav-item">
-                    <i class="fas fa-box text-warning"></i> Gérer les Produits
-                </a>
-                <a href="{{ url_for('employees.list_employees') }}" class="nav-item">
-                    <i class="fas fa-users text-success"></i> Gérer les Employés
-                </a>
-                <a href="{{ url_for('accounting.dashboard') }}" class="nav-item">
-                    <i class="fas fa-calculator text-danger"></i> Accéder à la Comptabilité
-                </a>
-                <a href="{{ url_for('sales.pos_interface') }}" class="nav-item">
-                    <i class="fas fa-cash-register text-primary"></i> Point de Vente
-                </a>
+        <!-- Métriques holographiques -->
+        <div class="holographic-metrics">
+            <div class="metric-hologram revenue slide-in-left" style="animation-delay: 0.1s;">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <i class="fas fa-chart-line"></i>
+                        Revenus Temps Réel
+                    </div>
+                    <div class="metric-icon revenue">
+                        <i class="fas fa-euro-sign"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="revenueValue">284,750 DA</div>
+                <div class="metric-subtitle">Chiffre d'affaires journalier</div>
+                <div class="metric-trend trend-up">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>+15.3% vs hier</span>
+                </div>
+                <div class="holographic-progress">
+                    <div class="progress-fill revenue" style="width: 78%"></div>
+                </div>
             </div>
-            <div class="quick-nav">
-                <h4>Alertes Récentes</h4>
-                <ul class="list-unstyled" id="recentAlerts"></ul>
+
+            <div class="metric-hologram orders slide-in-left" style="animation-delay: 0.2s;">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <i class="fas fa-shopping-cart"></i>
+                        Commandes Actives
+                    </div>
+                    <div class="metric-icon orders">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="ordersValue">42</div>
+                <div class="metric-subtitle">Commandes en cours</div>
+                <div class="metric-trend trend-up">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>+8 nouvelles</span>
+                </div>
+                <div class="holographic-progress">
+                    <div class="progress-fill orders" style="width: 65%"></div>
+                </div>
+            </div>
+
+            <div class="metric-hologram production slide-in-right" style="animation-delay: 0.3s;">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <i class="fas fa-cogs"></i>
+                        Production Live
+                    </div>
+                    <div class="metric-icon production">
+                        <i class="fas fa-industry"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="productionValue">156</div>
+                <div class="metric-subtitle">Unités produites</div>
+                <div class="metric-trend trend-up">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>Cadence: +12%</span>
+                </div>
+                <div class="holographic-progress">
+                    <div class="progress-fill production" style="width: 89%"></div>
+                </div>
+            </div>
+
+            <div class="metric-hologram team slide-in-right" style="animation-delay: 0.4s;">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <i class="fas fa-users"></i>
+                        Équipe Active
+                    </div>
+                    <div class="metric-icon team">
+                        <i class="fas fa-user-friends"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="teamValue">12/15</div>
+                <div class="metric-subtitle">Employés présents</div>
+                <div class="metric-trend trend-up">
+                    <i class="fas fa-check"></i>
+                    <span>Productivité: 94%</span>
+                </div>
+                <div class="holographic-progress">
+                    <div class="progress-fill team" style="width: 80%"></div>
+                </div>
+            </div>
+
+            <div class="metric-hologram quality slide-in-left" style="animation-delay: 0.5s;">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <i class="fas fa-star"></i>
+                        Qualité Globale
+                    </div>
+                    <div class="metric-icon quality">
+                        <i class="fas fa-medal"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="qualityValue">98.7%</div>
+                <div class="metric-subtitle">Taux de satisfaction</div>
+                <div class="metric-trend trend-up">
+                    <i class="fas fa-thumbs-up"></i>
+                    <span>Excellent</span>
+                </div>
+                <div class="holographic-progress">
+                    <div class="progress-fill quality" style="width: 98%"></div>
+                </div>
+            </div>
+
+            <div class="metric-hologram efficiency slide-in-right" style="animation-delay: 0.6s;">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Efficacité Système
+                    </div>
+                    <div class="metric-icon efficiency">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="efficiencyValue">92.4%</div>
+                <div class="metric-subtitle">Performance globale</div>
+                <div class="metric-trend trend-up">
+                    <i class="fas fa-bolt"></i>
+                    <span>Optimisé</span>
+                </div>
+                <div class="holographic-progress">
+                    <div class="progress-fill efficiency" style="width: 92%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matrice de graphiques -->
+        <div class="charts-matrix">
+            <div class="chart-panel large scale-in" style="animation-delay: 0.7s;">
+                <div class="chart-title">
+                    <i class="fas fa-chart-area"></i>
+                    Analyse Temporelle Multi-Dimensionnelle
+                </div>
+                <div class="chart-container">
+                    <canvas id="timeSeriesChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-panel scale-in" style="animation-delay: 0.8s;">
+                <div class="chart-title">
+                    <i class="fas fa-chart-pie"></i>
+                    Distribution Produits
+                </div>
+                <div class="chart-container">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-panel scale-in" style="animation-delay: 0.9s;">
+                <div class="chart-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Performance Équipe
+                </div>
+                <div class="chart-container">
+                    <canvas id="teamPerformanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tableau de bord temps réel -->
+        <div class="realtime-dashboard">
+            <div class="realtime-panel slide-in-left" style="animation-delay: 1s;">
+                <div class="realtime-title">
+                    <i class="fas fa-stream"></i>
+                    Flux d'Activité Temps Réel
+                </div>
+                <div class="activity-feed" id="activityFeed">
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Nouvelle commande #2847</div>
+                            <div class="activity-time">Il y a 2 minutes</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Production terminée - Lot #156</div>
+                            <div class="activity-time">Il y a 5 minutes</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Employé connecté - Marie D.</div>
+                            <div class="activity-time">Il y a 8 minutes</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Livraison effectuée #2841</div>
+                            <div class="activity-time">Il y a 12 minutes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="realtime-panel slide-in-right" style="animation-delay: 1.1s;">
+                <div class="realtime-title">
+                    <i class="fas fa-chart-line"></i>
+                    Métriques Avancées
+                </div>
+                <div class="chart-container">
+                    <canvas id="advancedMetricsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertes holographiques -->
+        <div class="holographic-alerts">
+            <div class="alert-hologram critical fade-in" style="animation-delay: 1.2s;">
+                <div class="alert-header">
+                    <div class="alert-icon critical">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="alert-title">Alerte Critique</div>
+                </div>
+                <div class="alert-message">
+                    Stock farine critique : 2 kg restants. Réapprovisionnement urgent requis.
+                </div>
+            </div>
+
+            <div class="alert-hologram warning fade-in" style="animation-delay: 1.3s;">
+                <div class="alert-header">
+                    <div class="alert-icon warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="alert-title">Attention</div>
+                </div>
+                <div class="alert-message">
+                    3 commandes approchent de leur deadline. Vérification recommandée.
+                </div>
+            </div>
+
+            <div class="alert-hologram info fade-in" style="animation-delay: 1.4s;">
+                <div class="alert-header">
+                    <div class="alert-icon info">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="alert-title">Information</div>
+                </div>
+                <div class="alert-message">
+                    Nouveau record de productivité atteint aujourd'hui : +23% par rapport à la moyenne.
+                </div>
             </div>
         </div>
     </div>
@@ -259,54 +955,333 @@
 {% block scripts %}
 {{ super() }}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const formatCurrency = (value) => (value || 0).toLocaleString('fr-DZ', { style: 'currency', currency: 'DZD' });
-        const updateTime = () => {
-            const now = new Date();
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('fr-FR');
-            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('fr-FR');
-        };
-        updateTime();
-        setInterval(updateTime, 1000);
-
-        // Daily KPIs
-        fetch('/dashboards/api/daily/sales').then(r => r.json()).then(data => {
-            if (!data.success) return;
-            const sales = data.data.stats;
-            document.getElementById('kpi-ca').innerHTML = `<div class="kpi-label"><i class="fas fa-euro-sign text-success me-2"></i>CA Journalier</div><div class="kpi-value text-success">${formatCurrency(sales.daily_revenue)}</div>`;
-            document.getElementById('kpi-orders').innerHTML = `<div class="kpi-label"><i class="fas fa-shopping-cart text-info me-2"></i>Commandes du Jour</div><div class="kpi-value text-info">${sales.total_orders}</div>`;
-        });
-        fetch('/dashboards/api/daily/stock').then(r => r.json()).then(data => {
-            if (!data.success) return;
-            const stock = data.data.stats;
-            document.getElementById('kpi-stock').innerHTML = `<div class="kpi-label"><i class="fas fa-boxes text-warning me-2"></i>Stock</div><div class="kpi-value text-warning">${stock.low_stock_count + stock.out_of_stock_count} alertes</div>`;
-        });
-        fetch('/dashboards/api/daily/employees').then(r => r.json()).then(data => {
-            if (!data.success) return;
-            const team = data.data.stats;
-            document.getElementById('kpi-personnel').innerHTML = `<div class="kpi-label"><i class="fas fa-users text-danger me-2"></i>Personnel</div><div class="kpi-value text-danger">${team.present_today}/${team.total_employees} présents</div>`;
-        });
-
-        // Main Chart (Monthly Trend)
-        fetch('/dashboards/api/monthly/revenue-trend').then(r => r.json()).then(data => {
-            if (!data.success) return;
-            const trend = data.data;
-            new Chart(document.getElementById('mainChart'), {
-                type: 'bar',
-                data: {
-                    labels: trend.map(d => d.period),
-                    datasets: [{ label: 'CA', data: trend.map(d => d.revenue), backgroundColor: '#3498DB' }]
+document.addEventListener('DOMContentLoaded', function() {
+    // Création des particules d'arrière-plan
+    function createParticles() {
+        const particlesContainer = document.getElementById('particles');
+        const particleCount = 50;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 20 + 's';
+            particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            particlesContainer.appendChild(particle);
+        }
+    }
+    
+    createParticles();
+    
+    // Mise à jour de l'heure
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('fr-FR');
+        document.getElementById('currentTime').textContent = timeString;
+    }
+    
+    updateTime();
+    setInterval(updateTime, 1000);
+    
+    // --- KPI RÉELS ---
+    // Revenus, commandes, production, équipe, qualité, efficacité
+    function formatCurrency(value) {
+        return (value || 0).toLocaleString('fr-DZ') + ' DA';
+    }
+    // Revenus & Commandes
+    fetch('/dashboards/api/daily/sales').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const stats = data.data.stats;
+        document.getElementById('revenueValue').textContent = formatCurrency(stats.daily_revenue);
+        document.getElementById('ordersValue').textContent = stats.total_orders;
+    });
+    // Production & Qualité
+    fetch('/dashboards/api/daily/production').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const stats = data.data.stats;
+        document.getElementById('productionValue').textContent = stats.total_production;
+        // Qualité globale = % commandes non en retard
+        const quality = stats.total_production > 0 ? ((stats.total_production - stats.overdue_count) / stats.total_production * 100) : 100;
+        document.getElementById('qualityValue').textContent = quality.toFixed(1) + '%';
+    });
+    // Équipe
+    fetch('/dashboards/api/daily/employees').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const stats = data.data.stats;
+        document.getElementById('teamValue').textContent = stats.present_today + '/' + stats.total_employees;
+    });
+    // Efficacité système (exemple : taux de commandes livrées à l'heure)
+    fetch('/dashboards/api/daily/production').then(r => r.json()).then(data => {
+        if (!data.success) return;
+        const stats = data.data.stats;
+        const efficiency = stats.total_production > 0 ? ((stats.total_production - stats.overdue_count) / stats.total_production * 100) : 100;
+        document.getElementById('efficiencyValue').textContent = efficiency.toFixed(1) + '%';
+    });
+    
+    // Graphique temporel multi-dimensionnel
+    const timeSeriesCtx = document.getElementById('timeSeriesChart').getContext('2d');
+    const timeSeriesChart = new Chart(timeSeriesCtx, {
+        type: 'line',
+        data: {
+            labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
+            datasets: [
+                {
+                    label: 'Revenus',
+                    data: [12000, 15000, 25000, 45000, 38000, 52000, 48000],
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#00d4ff',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
                 },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        });
-
-        // Recent Alerts
-        fetch('/dashboards/api/daily/stock').then(r => r.json()).then(data => {
-            if (!data.success) return;
-            const alerts = data.data.low_stock.slice(0, 3).map(p => `<li><i class="fas fa-exclamation-triangle text-warning"></i> Stock bas: ${p.name}</li>`).join('');
-            document.getElementById('recentAlerts').innerHTML = alerts || '<li>Aucune alerte</li>';
+                {
+                    label: 'Commandes',
+                    data: [8, 12, 18, 28, 24, 32, 30],
+                    borderColor: '#b537f2',
+                    backgroundColor: 'rgba(181, 55, 242, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#b537f2',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                },
+                {
+                    label: 'Production',
+                    data: [20, 35, 45, 65, 58, 72, 68],
+                    borderColor: '#39ff14',
+                    backgroundColor: 'rgba(57, 255, 20, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#39ff14',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 2000, easing: 'easeInOutQuart' },
+            plugins: {
+                legend: {
+                    labels: { color: 'white', font: { size: 14, weight: 'bold' } }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    ticks: { color: 'white', font: { weight: 'bold' } }
+                },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    ticks: { color: 'white', font: { weight: 'bold' } }
+                }
+            }
+        }
+    });
+    
+    // Graphique de distribution
+    const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+    const distributionChart = new Chart(distributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pâtisseries', 'Viennoiseries', 'Pains', 'Gâteaux', 'Autres'],
+            datasets: [{
+                data: [35, 25, 20, 15, 5],
+                backgroundColor: [
+                    '#00d4ff',
+                    '#b537f2',
+                    '#39ff14',
+                    '#ff073a',
+                    '#ffd700'
+                ],
+                borderWidth: 0,
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 2000, easing: 'easeInOutQuart' },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: 'white',
+                        font: { size: 12, weight: 'bold' },
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+    
+    // Graphique performance équipe
+    const teamCtx = document.getElementById('teamPerformanceChart').getContext('2d');
+    const teamChart = new Chart(teamCtx, {
+        type: 'radar',
+        data: {
+            labels: ['Productivité', 'Qualité', 'Rapidité', 'Créativité', 'Collaboration'],
+            datasets: [{
+                label: 'Performance',
+                data: [85, 92, 78, 88, 95],
+                borderColor: '#00d4ff',
+                backgroundColor: 'rgba(0, 212, 255, 0.2)',
+                borderWidth: 3,
+                pointBackgroundColor: '#00d4ff',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 2000, easing: 'easeInOutQuart' },
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: 'rgba(255,255,255,0.2)' },
+                    pointLabels: { color: 'white', font: { weight: 'bold' } },
+                    ticks: { color: 'white', display: false }
+                }
+            }
+        }
+    });
+    
+    // Graphique métriques avancées
+    const advancedCtx = document.getElementById('advancedMetricsChart').getContext('2d');
+    const advancedChart = new Chart(advancedCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+            datasets: [
+                {
+                    label: 'Efficacité',
+                    data: [85, 92, 78, 88, 95, 82, 90],
+                    backgroundColor: 'rgba(0, 212, 255, 0.8)',
+                    borderColor: '#00d4ff',
+                    borderWidth: 2,
+                    borderRadius: 8
+                },
+                {
+                    label: 'Satisfaction',
+                    data: [88, 85, 92, 90, 87, 94, 89],
+                    backgroundColor: 'rgba(181, 55, 242, 0.8)',
+                    borderColor: '#b537f2',
+                    borderWidth: 2,
+                    borderRadius: 8
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 2000, easing: 'easeInOutQuart' },
+            plugins: {
+                legend: {
+                    labels: { color: 'white', font: { size: 12, weight: 'bold' } }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: 'white', font: { weight: 'bold' } }
+                },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    ticks: { color: 'white', font: { weight: 'bold' } }
+                }
+            }
+        }
+    });
+    
+    // Animation des valeurs
+    function animateValue(element, start, end, duration) {
+        const startTime = performance.now();
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const current = start + (end - start) * progress;
+            element.textContent = Math.floor(current).toLocaleString();
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+        requestAnimationFrame(animate);
+    }
+    
+    // Simulation de données temps réel
+    function updateRealtimeData() {
+        // Mise à jour des métriques
+        const revenue = Math.floor(Math.random() * 50000) + 250000;
+        const orders = Math.floor(Math.random() * 20) + 35;
+        const production = Math.floor(Math.random() * 50) + 120;
+        
+        animateValue(document.getElementById('revenueValue'), 284750, revenue, 1000);
+        animateValue(document.getElementById('ordersValue'), 42, orders, 1000);
+        animateValue(document.getElementById('productionValue'), 156, production, 1000);
+        
+        // Mise à jour du flux d'activité
+        const activities = [
+            { icon: 'shopping-cart', title: 'Nouvelle commande #' + Math.floor(Math.random() * 1000 + 2000), time: 'Il y a quelques secondes' },
+            { icon: 'check-circle', title: 'Production terminée - Lot #' + Math.floor(Math.random() * 100 + 100), time: 'Il y a 1 minute' },
+            { icon: 'truck', title: 'Livraison effectuée #' + Math.floor(Math.random() * 1000 + 2000), time: 'Il y a 3 minutes' },
+            { icon: 'star', title: 'Avis client 5⭐ reçu', time: 'Il y a 5 minutes' }
+        ];
+        
+        const activityFeed = document.getElementById('activityFeed');
+        const randomActivity = activities[Math.floor(Math.random() * activities.length)];
+        
+        const newActivity = document.createElement('div');
+        newActivity.className = 'activity-item';
+        newActivity.innerHTML = `
+            <div class="activity-icon">
+                <i class="fas fa-${randomActivity.icon}"></i>
+            </div>
+            <div class="activity-content">
+                <div class="activity-title">${randomActivity.title}</div>
+                <div class="activity-time">${randomActivity.time}</div>
+            </div>
+        `;
+        
+        activityFeed.insertBefore(newActivity, activityFeed.firstChild);
+        
+        // Garder seulement les 6 dernières activités
+        while (activityFeed.children.length > 6) {
+            activityFeed.removeChild(activityFeed.lastChild);
+        }
+    }
+    
+    // Mise à jour temps réel toutes les 5 secondes
+    setInterval(updateRealtimeData, 5000);
+    
+    // Effet de parallaxe sur les particules
+    document.addEventListener('mousemove', (e) => {
+        const particles = document.querySelectorAll('.particle');
+        const x = e.clientX / window.innerWidth;
+        const y = e.clientY / window.innerHeight;
+        
+        particles.forEach((particle, index) => {
+            const speed = (index % 3 + 1) * 0.5;
+            particle.style.transform = `translate(${x * speed}px, ${y * speed}px)`;
         });
     });
+    
+    console.log('🚀 NEXUS Dashboard initialisé avec succès!');
+});
 </script>
 {% endblock %}

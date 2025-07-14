@@ -4,82 +4,152 @@
 
 {% block head %}
 {{ super() }}
-<!-- Chart.js pour les graphiques -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- CSS moderne pour le dashboard mensuel -->
 <style>
     :root {
-        --primary-color: #2563eb;
+        --primary-color: #6366f1;
         --secondary-color: #64748b;
         --success-color: #10b981;
         --warning-color: #f59e0b;
         --danger-color: #ef4444;
         --info-color: #06b6d4;
-        --dark-color: #1e293b;
+        --dark-color: #0f172a;
         --light-color: #f8fafc;
         --border-color: #e2e8f0;
+        --glass-bg: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
     }
 
     body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
         min-height: 100vh;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        overflow-x: hidden;
+    }
+
+    .dashboard-wrapper {
+        min-height: 100vh;
+        padding: 20px;
+        position: relative;
     }
 
     .dashboard-container {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        margin: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    /* Header moderne */
+    .modern-header {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
         padding: 30px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-    }
-
-    .header-section {
-        border-bottom: 2px solid var(--border-color);
-        padding-bottom: 20px;
         margin-bottom: 30px;
+        position: relative;
+        overflow: hidden;
     }
 
-    .main-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+    .modern-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+        animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .header-content {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 30px;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .title-section h1 {
+        font-size: 3rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff, #e2e8f0);
         -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
         background-clip: text;
-        margin-bottom: 10px;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+        text-shadow: 0 0 30px rgba(255,255,255,0.3);
     }
 
-    .subtitle {
-        color: var(--secondary-color);
-        font-size: 1.1rem;
+    .title-section p {
+        color: rgba(255,255,255,0.8);
+        font-size: 1.2rem;
+        font-weight: 500;
+    }
+
+    .status-section {
+        text-align: right;
+        color: white;
     }
 
     .period-selector {
-        background: white;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 8px 12px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 50px;
+        padding: 12px 20px;
         font-size: 0.9rem;
+        color: white;
+        backdrop-filter: blur(10px);
+        margin-bottom: 10px;
     }
 
-    .kpi-grid {
+    .period-selector select {
+        background: transparent;
+        border: none;
+        color: white;
+        font-weight: 600;
+    }
+
+    .period-selector select option {
+        background: var(--dark-color);
+        color: white;
+    }
+
+    .current-time {
+        font-size: 1.1rem;
+        font-weight: 600;
+        opacity: 0.9;
+    }
+
+    /* KPI Cards modernes */
+    .kpi-container {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 25px;
-        margin-bottom: 30px;
+        margin-bottom: 40px;
     }
 
     .kpi-card {
-        background: white;
-        border-radius: 16px;
-        padding: 25px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--border-color);
-        transition: all 0.3s ease;
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 30px;
         position: relative;
         overflow: hidden;
+        transition: all 0.4s ease;
     }
 
     .kpi-card::before {
@@ -89,367 +159,570 @@
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, var(--primary-color), var(--info-color));
+        border-radius: 24px 24px 0 0;
     }
 
+    .kpi-card.revenue::before { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+    .kpi-card.margin::before { background: linear-gradient(90deg, #10b981, #059669); }
+    .kpi-card.cashflow::before { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
+    .kpi-card.costs::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+
     .kpi-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        border-color: rgba(255,255,255,0.3);
     }
 
     .kpi-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
     }
 
     .kpi-title {
-        font-size: 0.9rem;
-        color: var(--secondary-color);
+        color: rgba(255,255,255,0.8);
+        font-size: 1rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        margin-bottom: 10px;
     }
 
     .kpi-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: var(--dark-color);
-        margin: 10px 0;
+        font-size: 2.8rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 8px;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }
 
     .kpi-change {
+        color: rgba(255,255,255,0.9);
         font-size: 0.9rem;
         font-weight: 600;
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 6px;
+        margin-bottom: 20px;
     }
 
-    .kpi-change.positive {
-        color: var(--success-color);
-    }
-
-    .kpi-change.negative {
-        color: var(--danger-color);
-    }
+    .kpi-change.positive { color: #10b981; }
+    .kpi-change.negative { color: #ef4444; }
 
     .kpi-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
+        width: 70px;
+        height: 70px;
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
+        font-size: 1.8rem;
         color: white;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
     }
 
-    .kpi-icon.blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
-    .kpi-icon.green { background: linear-gradient(135deg, #10b981, #059669); }
-    .kpi-icon.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-    .kpi-icon.orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .kpi-icon.revenue { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    .kpi-icon.margin { background: linear-gradient(135deg, #10b981, #059669); }
+    .kpi-icon.cashflow { background: linear-gradient(135deg, #8b5cf6, #a855f7); }
+    .kpi-icon.costs { background: linear-gradient(135deg, #f59e0b, #d97706); }
 
     .progress-bar {
         width: 100%;
         height: 8px;
-        background: #e2e8f0;
+        background: rgba(255,255,255,0.2);
         border-radius: 4px;
         overflow: hidden;
-        margin-top: 15px;
+        margin-bottom: 10px;
     }
 
     .progress-fill {
         height: 100%;
         border-radius: 4px;
-        transition: width 1s ease;
+        transition: width 1.5s ease;
+        position: relative;
+    }
+
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: progress-shimmer 2s infinite;
+    }
+
+    @keyframes progress-shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
     }
 
     .progress-fill.excellent { background: linear-gradient(90deg, #10b981, #059669); }
-    .progress-fill.good { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+    .progress-fill.good { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
     .progress-fill.warning { background: linear-gradient(90deg, #f59e0b, #d97706); }
     .progress-fill.danger { background: linear-gradient(90deg, #ef4444, #dc2626); }
 
-    .charts-section {
+    .progress-text {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.8);
+    }
+
+    /* Graphiques modernes */
+    .charts-container {
         display: grid;
         grid-template-columns: 2fr 1fr;
-        gap: 25px;
-        margin-bottom: 30px;
+        gap: 30px;
+        margin-bottom: 40px;
     }
 
     .chart-card {
-        background: white;
-        border-radius: 16px;
-        padding: 25px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--border-color);
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 30px;
+        position: relative;
+        overflow: hidden;
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
     }
 
     .chart-title {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--dark-color);
-        margin-bottom: 20px;
+        color: white;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 25px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
+        flex-shrink: 0;
     }
 
-    .analysis-section {
-        background: white;
-        border-radius: 16px;
-        padding: 25px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--border-color);
-        margin-bottom: 30px;
+    .chart-container {
+        position: relative;
+        flex: 1;
+        min-height: 320px;
+        overflow: hidden;
+    }
+
+    .chart-container canvas {
+        width: 100% !important;
+        height: 100% !important;
+        pointer-events: none;
+        touch-action: none;
+    }
+
+    /* Analyses modernes */
+    .analysis-container {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 30px;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
     }
 
     .analysis-title {
-        font-size: 1.3rem;
-        font-weight: 600;
-        color: var(--dark-color);
-        margin-bottom: 20px;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 25px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
     }
 
     .analysis-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 20px;
     }
 
     .analysis-item {
-        padding: 15px;
-        border-radius: 8px;
-        background: var(--light-color);
-        border-left: 4px solid var(--primary-color);
+        background: rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 16px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .analysis-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+        transform: translateX(-100%);
+        transition: transform 0.6s ease;
+    }
+
+    .analysis-item:hover::before {
+        transform: translateX(100%);
+    }
+
+    .analysis-item:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255,255,255,0.4);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
 
     .analysis-item.success {
-        border-left-color: var(--success-color);
-        background: #f0fdf4;
+        border-left: 4px solid #10b981;
     }
 
     .analysis-item.warning {
-        border-left-color: var(--warning-color);
-        background: #fefbeb;
+        border-left: 4px solid #f59e0b;
     }
 
     .analysis-item.danger {
-        border-left-color: var(--danger-color);
-        background: #fef2f2;
+        border-left: 4px solid #ef4444;
     }
 
     .analysis-label {
+        color: rgba(255,255,255,0.8);
         font-size: 0.9rem;
-        color: var(--secondary-color);
         font-weight: 600;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
     }
 
     .analysis-value {
-        font-size: 1.2rem;
+        color: white;
+        font-size: 1.4rem;
         font-weight: 700;
-        color: var(--dark-color);
+        margin-bottom: 5px;
     }
 
     .analysis-trend {
         font-size: 0.8rem;
-        margin-top: 5px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
     }
 
-    .trend-up { color: var(--success-color); }
-    .trend-down { color: var(--danger-color); }
+    .trend-up { color: #10b981; }
+    .trend-down { color: #ef4444; }
 
-    .alert-section {
+    /* Alertes modernes */
+    .alert-container {
         background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        border-radius: 16px;
-        padding: 25px;
-        margin-bottom: 30px;
+        backdrop-filter: blur(20px);
+        border: 2px solid rgba(239, 68, 68, 0.3);
+        border-radius: 24px;
+        padding: 30px;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+        animation: alert-pulse 3s infinite;
+    }
+
+    @keyframes alert-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.9; }
     }
 
     .alert-title {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--danger-color);
-        margin-bottom: 20px;
+        color: white;
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-bottom: 25px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
     }
 
     .alert-item {
         display: flex;
         align-items: center;
         gap: 15px;
-        padding: 15px 0;
-        border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+        padding: 20px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 16px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .alert-item:hover {
+        background: rgba(255,255,255,0.15);
+        transform: translateX(5px);
     }
 
     .alert-item:last-child {
-        border-bottom: none;
+        margin-bottom: 0;
     }
 
     .alert-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        background: var(--danger-color);
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-size: 1rem;
+        font-size: 1.2rem;
+        box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+    }
+
+    .alert-content {
+        flex: 1;
     }
 
     .alert-content h4 {
         margin: 0;
-        font-size: 1rem;
-        color: var(--dark-color);
+        font-size: 1.1rem;
+        color: white;
+        font-weight: 700;
+        margin-bottom: 5px;
     }
 
     .alert-content p {
-        margin: 5px 0 0 0;
-        color: var(--secondary-color);
+        margin: 0;
+        color: rgba(255,255,255,0.8);
         font-size: 0.9rem;
+        line-height: 1.4;
     }
 
-    @media (max-width: 768px) {
-        .dashboard-container {
-            margin: 10px;
-            padding: 20px;
-        }
-        
-        .charts-section {
+    /* Responsive design */
+    @media (max-width: 1200px) {
+        .charts-container {
             grid-template-columns: 1fr;
         }
         
-        .main-title {
-            font-size: 2rem;
+        .header-content {
+            grid-template-columns: 1fr;
+            text-align: center;
+        }
+        
+        .status-section {
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-wrapper {
+            padding: 15px;
+        }
+        
+        .modern-header {
+            padding: 20px;
+        }
+        
+        .title-section h1 {
+            font-size: 2.2rem;
+        }
+        
+        .kpi-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .analysis-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Animations d'entrée */
+    .fade-in {
+        opacity: 0;
+        transform: translateY(30px);
+        animation: fadeInUp 0.8s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .slide-in-left {
+        opacity: 0;
+        transform: translateX(-50px);
+        animation: slideInLeft 0.8s ease forwards;
+    }
+
+    @keyframes slideInLeft {
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .slide-in-right {
+        opacity: 0;
+        transform: translateX(50px);
+        animation: slideInRight 0.8s ease forwards;
+    }
+
+    @keyframes slideInRight {
+        to {
+            opacity: 1;
+            transform: translateX(0);
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <!-- Header -->
-    <div class="header-section">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1 class="main-title">📈 DASHBOARD MENSUEL</h1>
-                <p class="subtitle">Analyse stratégique et tendances</p>
-            </div>
-            <div class="text-end">
-                <div class="period-selector">
-                    <label for="periodSelect" class="me-2">📅 Période:</label>
-                    <select id="periodSelect" onchange="changePeriod()">
-                        <option value="current">Juillet 2024</option>
-                        <option value="previous">Juin 2024</option>
-                        <option value="custom">Personnalisé</option>
-                    </select>
+<div class="dashboard-wrapper">
+    <div class="dashboard-container">
+        <!-- Header moderne -->
+        <div class="modern-header fade-in">
+            <div class="header-content">
+                <div class="title-section">
+                    <h1>📈 DASHBOARD MENSUEL</h1>
+                    <p>Analyse stratégique et tendances</p>
+                </div>
+                <div class="status-section">
+                    <div class="period-selector">
+                        <label for="periodSelect">📅 Période:</label>
+                        <select id="periodSelect" onchange="changePeriod()">
+                            <option value="current">Juillet 2024</option>
+                            <option value="previous">Juin 2024</option>
+                            <option value="custom">Personnalisé</option>
+                        </select>
+                    </div>
+                    <div class="current-time">
+                        <i class="fas fa-clock"></i>
+                        <span id="currentTime"></span>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- KPI Cards -->
-    <div class="kpi-grid">
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-title">CA Mensuel vs Objectif</div>
-                    <div class="kpi-value" id="kpiCaMensuel">...</div>
-                    <div class="kpi-change positive" id="kpiCaChange">...</div>
+        <!-- KPI Cards -->
+        <div class="kpi-container">
+            <div class="kpi-card revenue slide-in-left" style="animation-delay: 0.1s;">
+                <div class="kpi-header">
+                    <div>
+                        <div class="kpi-title">CA Mensuel vs Objectif</div>
+                        <div class="kpi-value" id="kpiCaMensuel">...</div>
+                        <div class="kpi-change positive" id="kpiCaChange">...</div>
+                    </div>
+                    <div class="kpi-icon revenue">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
                 </div>
-                <div class="kpi-icon blue">
-                    <i class="fas fa-chart-line"></i>
+                <div class="progress-text">
+                    <span>Objectif mensuel</span>
+                    <span id="kpiCaProgressText">...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill excellent" id="kpiCaProgress" style="width:0%"></div>
                 </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-fill excellent" id="kpiCaProgress" style="width:0%"></div>
+
+            <div class="kpi-card margin slide-in-left" style="animation-delay: 0.2s;">
+                <div class="kpi-header">
+                    <div>
+                        <div class="kpi-title">Marge Brute</div>
+                        <div class="kpi-value" id="kpiMarge">...</div>
+                        <div class="kpi-change positive" id="kpiMargeChange">...</div>
+                    </div>
+                    <div class="kpi-icon margin">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                </div>
+                <div class="progress-text">
+                    <span>Performance</span>
+                    <span id="kpiMargeProgressText">...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill good" id="kpiMargeProgress" style="width:0%"></div>
+                </div>
+            </div>
+
+            <div class="kpi-card cashflow slide-in-right" style="animation-delay: 0.3s;">
+                <div class="kpi-header">
+                    <div>
+                        <div class="kpi-title">Flux de Trésorerie</div>
+                        <div class="kpi-value" id="kpiFlux">...</div>
+                        <div class="kpi-change negative" id="kpiFluxChange">...</div>
+                    </div>
+                    <div class="kpi-icon cashflow">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                </div>
+                <div class="progress-text">
+                    <span>Liquidité</span>
+                    <span id="kpiFluxProgressText">...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill warning" id="kpiFluxProgress" style="width:0%"></div>
+                </div>
+            </div>
+
+            <div class="kpi-card costs slide-in-right" style="animation-delay: 0.4s;">
+                <div class="kpi-header">
+                    <div>
+                        <div class="kpi-title">Coût Matières Premières</div>
+                        <div class="kpi-value" id="kpiMP">...</div>
+                        <div class="kpi-change positive" id="kpiMPChange">...</div>
+                    </div>
+                    <div class="kpi-icon costs">
+                        <i class="fas fa-box"></i>
+                    </div>
+                </div>
+                <div class="progress-text">
+                    <span>% du CA</span>
+                    <span id="kpiMPProgressText">...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill danger" id="kpiMPProgress" style="width:0%"></div>
+                </div>
             </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-title">Marge Brute</div>
-                    <div class="kpi-value" id="kpiMarge">...</div>
-                    <div class="kpi-change positive" id="kpiMargeChange">...</div>
+
+        <!-- Graphiques -->
+        <div class="charts-container">
+            <div class="chart-card slide-in-left" style="animation-delay: 0.5s;">
+                <div class="chart-title">
+                    <i class="fas fa-chart-area"></i>
+                    Évolution Financière - 6 Mois
                 </div>
-                <div class="kpi-icon green">
-                    <i class="fas fa-percentage"></i>
-                </div>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill good" id="kpiMargeProgress" style="width:0%"></div>
-            </div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-title">Flux de Trésorerie</div>
-                    <div class="kpi-value" id="kpiFlux">...</div>
-                    <div class="kpi-change negative" id="kpiFluxChange">...</div>
-                </div>
-                <div class="kpi-icon purple">
-                    <i class="fas fa-coins"></i>
+                <div class="chart-container">
+                    <canvas id="financialChart"></canvas>
                 </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-fill warning" id="kpiFluxProgress" style="width:0%"></div>
-            </div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-title">Coût Matières Premières</div>
-                    <div class="kpi-value" id="kpiMP">...</div>
-                    <div class="kpi-change positive" id="kpiMPChange">...</div>
+            <div class="chart-card slide-in-right" style="animation-delay: 0.6s;">
+                <div class="chart-title">
+                    <i class="fas fa-chart-pie"></i>
+                    Répartition des Coûts
                 </div>
-                <div class="kpi-icon orange">
-                    <i class="fas fa-box"></i>
+                <div class="chart-container">
+                    <canvas id="costChart"></canvas>
                 </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-fill danger" id="kpiMPProgress" style="width:0%"></div>
+        </div>
+
+        <!-- Analyses Détaillées -->
+        <div class="analysis-container slide-in-left" style="animation-delay: 0.7s;">
+            <div class="analysis-title">
+                <i class="fas fa-chart-bar"></i>
+                Analyses Détaillées
             </div>
+            <div class="analysis-grid" id="analysisGrid"></div>
         </div>
-    </div>
-    <!-- Graphiques -->
-    <div class="charts-section">
-        <div class="chart-card">
-            <div class="chart-title">
-                <i class="fas fa-chart-area text-primary"></i>
-                Évolution Financière - 6 Mois
+
+        <!-- Alertes Financières -->
+        <div class="alert-container slide-in-right" style="animation-delay: 0.8s;">
+            <div class="alert-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                Alertes Financières
             </div>
-            <canvas id="financialChart" height="300"></canvas>
-        </div>
-        <div class="chart-card">
-            <div class="chart-title">
-                <i class="fas fa-chart-pie text-success"></i>
-                Répartition des Coûts
-            </div>
-            <canvas id="costChart" height="300"></canvas>
-        </div>
-    </div>
-    <!-- Analyses Détaillées -->
-    <div class="analysis-section">
-        <div class="analysis-title">
-            <i class="fas fa-chart-bar text-info"></i>
-            Analyses Détaillées
-        </div>
-        <div class="analysis-grid" id="analysisGrid"></div>
-    </div>
-    <!-- Alertes Financières -->
-    <div class="alert-section" id="alertSection">
-        <div class="alert-title">
-            <i class="fas fa-exclamation-triangle"></i>
-            Alertes Financières
+            <div id="alertSection"></div>
         </div>
     </div>
 </div>
@@ -459,72 +732,203 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Mise à jour de l'heure en temps réel
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('fr-FR');
+        document.getElementById('currentTime').textContent = timeString;
+    }
+    
+    updateTime();
+    setInterval(updateTime, 1000);
+    
     // Charger les KPI et analyses
-    fetch('/dashboards/api/monthly/overview').then(r=>r.json()).then(data => {
+    fetch('/dashboards/api/monthly/overview').then(r => r.json()).then(data => {
         if(data.success) {
             const kpis = data.data.kpis;
+            
+            // CA Mensuel
             document.getElementById('kpiCaMensuel').textContent = kpis.monthly_revenue.toLocaleString('fr-DZ') + ' DA';
             document.getElementById('kpiCaChange').innerHTML = (kpis.profit_margin >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>') + Math.abs(kpis.profit_margin).toFixed(1) + '% marge';
-            document.getElementById('kpiCaProgress').style.width = Math.min(100, (kpis.monthly_revenue / 100000) * 100) + '%';
+            const caProgress = Math.min(100, (kpis.monthly_revenue / 100000) * 100);
+            document.getElementById('kpiCaProgress').style.width = caProgress + '%';
+            document.getElementById('kpiCaProgressText').textContent = caProgress.toFixed(0) + '%';
+            
+            // Marge
             document.getElementById('kpiMarge').textContent = kpis.profit_margin.toFixed(1) + '%';
             document.getElementById('kpiMargeChange').innerHTML = (kpis.profit_margin >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>') + Math.abs(kpis.profit_margin).toFixed(1) + '% vs mois dernier';
             document.getElementById('kpiMargeProgress').style.width = Math.min(100, kpis.profit_margin) + '%';
+            document.getElementById('kpiMargeProgressText').textContent = kpis.profit_margin.toFixed(1) + '%';
+            
+            // Flux de trésorerie
             document.getElementById('kpiFlux').textContent = (kpis.net_profit >= 0 ? '+' : '') + kpis.net_profit.toLocaleString('fr-DZ') + ' DA';
             document.getElementById('kpiFluxChange').innerHTML = (kpis.net_profit >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>') + Math.abs(kpis.net_profit).toLocaleString('fr-DZ') + ' DA';
-            document.getElementById('kpiFluxProgress').style.width = Math.min(100, (kpis.net_profit / kpis.monthly_revenue) * 100) + '%';
+            const fluxProgress = Math.min(100, Math.abs(kpis.net_profit / kpis.monthly_revenue) * 100);
+            document.getElementById('kpiFluxProgress').style.width = fluxProgress + '%';
+            document.getElementById('kpiFluxProgressText').textContent = fluxProgress.toFixed(0) + '%';
+            
+            // Matières premières
             document.getElementById('kpiMP').textContent = kpis.monthly_expenses.toLocaleString('fr-DZ') + ' DA';
             document.getElementById('kpiMPChange').innerHTML = (kpis.monthly_expenses >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>') + Math.abs(kpis.monthly_expenses).toLocaleString('fr-DZ') + ' DA';
-            document.getElementById('kpiMPProgress').style.width = Math.min(100, (kpis.monthly_expenses / kpis.monthly_revenue) * 100) + '%';
+            const mpProgress = Math.min(100, (kpis.monthly_expenses / kpis.monthly_revenue) * 100);
+            document.getElementById('kpiMPProgress').style.width = mpProgress + '%';
+            document.getElementById('kpiMPProgressText').textContent = mpProgress.toFixed(0) + '%';
+            
             // Analyses détaillées
             document.getElementById('analysisGrid').innerHTML =
                 `<div class='analysis-item success'><div class='analysis-label'>ROI Employés</div><div class='analysis-value'>${kpis.revenue_per_employee.toFixed(1)} DA</div><div class='analysis-trend trend-up'><i class='fas fa-arrow-up'></i>vs mois dernier</div></div>`+
-                `<div class='analysis-item success'><div class='analysis-label'>Taux Rotation Stock</div><div class='analysis-value'>${(kpis.stock_value/10000).toFixed(2)}x</div><div class='analysis-trend trend-up'><i class='fas fa-arrow-up'></i>Stable</div></div>`;
-            // Alertes financières (exemple)
+                `<div class='analysis-item success'><div class='analysis-label'>Taux Rotation Stock</div><div class='analysis-value'>${(kpis.stock_value/10000).toFixed(2)}x</div><div class='analysis-trend trend-up'><i class='fas fa-arrow-up'></i>Stable</div></div>`+
+                `<div class='analysis-item warning'><div class='analysis-label'>Coût par Commande</div><div class='analysis-value'>${(kpis.monthly_expenses/30).toFixed(0)} DA</div><div class='analysis-trend trend-down'><i class='fas fa-arrow-down'></i>À optimiser</div></div>`+
+                `<div class='analysis-item success'><div class='analysis-label'>Marge Nette</div><div class='analysis-value'>${((kpis.net_profit/kpis.monthly_revenue)*100).toFixed(1)}%</div><div class='analysis-trend trend-up'><i class='fas fa-arrow-up'></i>Excellente</div></div>`;
+            
+            // Alertes financières
             let alerts = '';
-            if(kpis.monthly_expenses > kpis.monthly_revenue*0.5) alerts += `<div class='alert-item'><div class='alert-icon'><i class='fas fa-arrow-up'></i></div><div class='alert-content'><h4>Coût matières premières élevé</h4><p>Dépassement de 50% du CA</p></div></div>`;
-            if(kpis.net_profit < 0) alerts += `<div class='alert-item'><div class='alert-icon'><i class='fas fa-exclamation-triangle'></i></div><div class='alert-content'><h4>Bénéfice négatif</h4><p>Attention à la rentabilité ce mois</p></div></div>`;
-            document.getElementById('alertSection').innerHTML += alerts;
+            if(kpis.monthly_expenses > kpis.monthly_revenue*0.5) {
+                alerts += `<div class='alert-item'><div class='alert-icon'><i class='fas fa-arrow-up'></i></div><div class='alert-content'><h4>Coût matières premières élevé</h4><p>Dépassement de 50% du CA - Révision des fournisseurs recommandée</p></div></div>`;
+            }
+            if(kpis.net_profit < 0) {
+                alerts += `<div class='alert-item'><div class='alert-icon'><i class='fas fa-exclamation-triangle'></i></div><div class='alert-content'><h4>Bénéfice négatif</h4><p>Attention à la rentabilité ce mois - Analyse des coûts nécessaire</p></div></div>`;
+            }
+            if(kpis.profit_margin < 20) {
+                alerts += `<div class='alert-item'><div class='alert-icon'><i class='fas fa-chart-line'></i></div><div class='alert-content'><h4>Marge faible</h4><p>Marge inférieure à 20% - Optimisation des prix suggérée</p></div></div>`;
+            }
+            
+            if(alerts === '') {
+                alerts = `<div class='alert-item'><div class='alert-icon'><i class='fas fa-check-circle'></i></div><div class='alert-content'><h4>Aucune alerte</h4><p>Tous les indicateurs financiers sont dans les normes</p></div></div>`;
+            }
+            
+            document.getElementById('alertSection').innerHTML = alerts;
         }
     });
+    
     // Graphique évolution financière
-    fetch('/dashboards/api/monthly/revenue-trend').then(r=>r.json()).then(data => {
+    fetch('/dashboards/api/monthly/revenue-trend').then(r => r.json()).then(data => {
         if(data.success) {
             const trend = data.data;
             const labels = trend.map(t => t.period);
             const ca = trend.map(t => t.revenue);
-            const charges = trend.map(t => t.revenue-t.avg_order_value*t.orders);
-            const benef = trend.map(t => t.avg_order_value*t.orders);
+            const charges = trend.map(t => t.revenue - t.avg_order_value * t.orders);
+            const benef = trend.map(t => t.avg_order_value * t.orders);
             const ctx = document.getElementById('financialChart').getContext('2d');
+            
             new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [
-                        {label: "Chiffre d'Affaires", data: ca, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 3, fill: true, tension: 0.4},
-                        {label: 'Charges', data: charges, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 3, fill: true, tension: 0.4},
-                        {label: 'Bénéfice', data: benef, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 3, fill: true, tension: 0.4}
+                        {
+                            label: "Chiffre d'Affaires",
+                            data: ca,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16,185,129,0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
+                        },
+                        {
+                            label: 'Charges',
+                            data: charges,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239,68,68,0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#ef4444',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
+                        },
+                        {
+                            label: 'Bénéfice',
+                            data: benef,
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99,102,241,0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#6366f1',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
+                        }
                     ]
                 },
-                options: {responsive: true, maintainAspectRatio: false, interaction: {intersect: false, mode: 'index'}, plugins: {legend: {labels: {usePointStyle: true}}}, scales: {y: {beginAtZero: true, ticks: {callback: v => (v/1000000).toFixed(1)+'M DA'}}}}
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 1500 },
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                usePointStyle: true,
+                                color: 'white',
+                                font: { size: 12, weight: 'bold' }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: {
+                                color: 'white',
+                                font: { weight: 'bold' },
+                                callback: v => (v/1000).toFixed(0) + 'K DA'
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: 'white', font: { weight: 'bold' } }
+                        }
+                    }
+                }
             });
         }
     });
+    
     // Graphique répartition des coûts
-    fetch('/dashboards/api/monthly/overview').then(r=>r.json()).then(data => {
+    fetch('/dashboards/api/monthly/overview').then(r => r.json()).then(data => {
         if(data.success) {
             const kpis = data.data.kpis;
             const ctx = document.getElementById('costChart').getContext('2d');
+            
             new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Matières Premières', 'Salaires', 'Charges', 'Autres'],
                     datasets: [{
-                        data: [kpis.monthly_expenses, kpis.total_salary_cost, kpis.monthly_expenses*0.2, kpis.monthly_expenses*0.1],
-                        backgroundColor: ['#ef4444','#3b82f6','#f59e0b','#10b981'],
-                        borderWidth: 0
+                        data: [
+                            kpis.monthly_expenses,
+                            kpis.total_salary_cost,
+                            kpis.monthly_expenses * 0.2,
+                            kpis.monthly_expenses * 0.1
+                        ],
+                        backgroundColor: ['#ef4444', '#6366f1', '#f59e0b', '#10b981'],
+                        borderWidth: 0,
+                        hoverOffset: 8
                     }]
                 },
-                options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom', labels: {padding: 20, usePointStyle: true}}}}
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 1500 },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                color: 'white',
+                                font: { size: 12, weight: 'bold' }
+                            }
+                        }
+                    }
+                }
             });
         }
     });
@@ -539,7 +943,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 bar.style.width = width;
             }, 100);
         });
-    }, 500);
+    }, 1000);
     
     // Fonction de changement de période
     window.changePeriod = function() {
@@ -547,19 +951,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Changement de période:', period);
         // Ici vous pouvez ajouter la logique pour charger les données de la période sélectionnée
     };
-    
-    // Animation des cartes au chargement
-    const cards = document.querySelectorAll('.kpi-card, .analysis-item');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        
-        setTimeout(() => {
-            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
 });
 </script>
 {% endblock %}

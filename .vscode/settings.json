@@ -1,0 +1,44 @@
+{
+    "python.analysis.extraPaths": ["./app"],
+    "python.analysis.exclude": [
+        "**/venv/**",
+        "**/templates/**",
+        "**/*.html",
+        "**/static/**",
+        "**/migrations/**",
+        "**/logs/**",
+        "**/templates_backup/**",
+        "**/*.db",
+        "**/*.sqlite",
+        "**/*.sqlite3"
+    ],
+    "python.analysis.ignore": [
+        "**/templates/**",
+        "**/*.html",
+        "**/static/**",
+        "**/templates_backup/**",
+        "**/*.db"
+    ],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.stubPath": "./typings",
+    "python.analysis.useLibraryCodeForTypes": true,
+    "files.exclude": {
+        "**/venv": true,
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        "**/.pytest_cache": true,
+        "**/logs": true,
+        "**/*.db": true
+    },
+    "search.exclude": {
+        "**/venv": true,
+        "**/templates": true,
+        "**/static": true,
+        "**/migrations": true,
+        "**/logs": true,
+        "**/*.db": true
+    }
+} 

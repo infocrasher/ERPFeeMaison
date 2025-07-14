@@ -1,0 +1,36 @@
+# Configuration Cursor pour le projet ERP Fée Maison
+# Exclure les fichiers non-Python de l'analyse
+
+# Exclusions pour l'analyse Python
+exclude:
+  - "**/templates/**"
+  - "**/*.html"
+  - "**/static/**"
+  - "**/migrations/**"
+  - "**/logs/**"
+  - "**/templates_backup/**"
+  - "**/*.db"
+  - "**/*.sqlite"
+  - "**/*.sqlite3"
+  - "venv/**"
+  - "**/__pycache__/**"
+
+# Configuration Python
+python:
+  analysis:
+    exclude:
+      - "**/templates/**"
+      - "**/*.html"
+      - "**/static/**"
+      - "**/*.db"
+    typeCheckingMode: "basic"
+    autoImportCompletions: true
+    useLibraryCodeForTypes: true
+
+# Fichiers à ignorer dans la recherche
+search:
+  exclude:
+    - "**/templates/**"
+    - "**/static/**"
+    - "**/migrations/**"
+    - "**/*.db" 

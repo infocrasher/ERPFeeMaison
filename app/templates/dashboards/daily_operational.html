@@ -4,100 +4,226 @@
 
 {% block head %}
 {{ super() }}
-<!-- Chart.js pour les graphiques -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- CSS moderne pour le dashboard journalier -->
 <style>
     :root {
-        --primary-color: #2563eb;
+        --primary-color: #6366f1;
         --secondary-color: #64748b;
         --success-color: #10b981;
         --warning-color: #f59e0b;
         --danger-color: #ef4444;
         --info-color: #06b6d4;
-        --dark-color: #1e293b;
+        --dark-color: #0f172a;
         --light-color: #f8fafc;
         --border-color: #e2e8f0;
+        --glass-bg: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
     }
 
     body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
         min-height: 100vh;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        overflow-x: hidden;
+    }
+
+    .dashboard-wrapper {
+        min-height: 100vh;
+        padding: 20px;
+        position: relative;
     }
 
     .dashboard-container {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        margin: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    /* Header moderne */
+    .modern-header {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
         padding: 30px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-    }
-
-    .header-section {
-        border-bottom: 2px solid var(--border-color);
-        padding-bottom: 20px;
         margin-bottom: 30px;
+        position: relative;
+        overflow: hidden;
     }
 
-    .main-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+    .modern-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+        animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .header-content {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 30px;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .title-section h1 {
+        font-size: 3rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff, #e2e8f0);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        background-clip: text;
+        margin-bottom: 8px;
+        text-shadow: 0 0 30px rgba(255,255,255,0.3);
+    }
+
+    .title-section p {
+        color: rgba(255,255,255,0.8);
+        font-size: 1.2rem;
+        font-weight: 500;
+    }
+
+    .status-section {
+        text-align: right;
+        color: white;
+    }
+
+    .live-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(16, 185, 129, 0.2);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 8px 16px;
+        border-radius: 50px;
         margin-bottom: 10px;
-    }
-
-    .subtitle {
-        color: var(--secondary-color);
-        font-size: 1.1rem;
-    }
-
-    .urgent-alerts {
-        background: linear-gradient(135deg, #fef2f2, #fecaca);
-        border: 1px solid #fecaca;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 30px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .alert-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
         font-weight: 600;
     }
 
-    .alert-item.critical {
-        color: var(--danger-color);
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
     }
 
-    .alert-item.warning {
-        color: var(--warning-color);
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
     }
 
-    .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 25px;
+    .current-time {
+        font-size: 1.1rem;
+        font-weight: 600;
+        opacity: 0.9;
+    }
+
+    /* Alertes modernes */
+    .alert-banner {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(245, 158, 11, 0.1));
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: 20px;
+        padding: 25px;
         margin-bottom: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .alert-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 20px;
+        align-items: center;
+    }
+
+    .alert-stat {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .alert-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .alert-icon.critical {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        animation: glow-red 2s infinite alternate;
+    }
+
+    .alert-icon.warning {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        animation: glow-yellow 2s infinite alternate;
+    }
+
+    @keyframes glow-red {
+        from { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+        to { box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); }
+    }
+
+    @keyframes glow-yellow {
+        from { box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); }
+        to { box-shadow: 0 0 30px rgba(245, 158, 11, 0.8); }
+    }
+
+    .alert-button {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border: none;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .alert-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Grille de métriques moderne */
+    .metrics-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
     }
 
     .metric-card {
-        background: white;
-        border-radius: 16px;
-        padding: 25px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--border-color);
-        transition: all 0.3s ease;
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 30px;
         position: relative;
         overflow: hidden;
+        transition: all 0.4s ease;
     }
 
     .metric-card::before {
@@ -108,102 +234,116 @@
         right: 0;
         height: 4px;
         background: linear-gradient(90deg, var(--primary-color), var(--info-color));
+        border-radius: 24px 24px 0 0;
     }
+
+    .metric-card.danger::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .metric-card.warning::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .metric-card.success::before { background: linear-gradient(90deg, #10b981, #059669); }
+    .metric-card.info::before { background: linear-gradient(90deg, #06b6d4, #0891b2); }
 
     .metric-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        border-color: rgba(255,255,255,0.3);
     }
-
-    .metric-card.danger::before { background: linear-gradient(90deg, var(--danger-color), #dc2626); }
-    .metric-card.warning::before { background: linear-gradient(90deg, var(--warning-color), #d97706); }
-    .metric-card.success::before { background: linear-gradient(90deg, var(--success-color), #059669); }
 
     .metric-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
+        align-items: flex-start;
+        margin-bottom: 25px;
     }
 
     .metric-title {
-        font-size: 1.1rem;
+        color: white;
+        font-size: 1rem;
         font-weight: 600;
-        color: var(--dark-color);
         display: flex;
         align-items: center;
         gap: 10px;
+        opacity: 0.9;
     }
 
     .metric-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 12px;
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
+        font-size: 1.5rem;
         color: white;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
     }
 
-    .metric-icon.danger { background: linear-gradient(135deg, var(--danger-color), #dc2626); }
-    .metric-icon.warning { background: linear-gradient(135deg, var(--warning-color), #d97706); }
-    .metric-icon.success { background: linear-gradient(135deg, var(--success-color), #059669); }
-    .metric-icon.info { background: linear-gradient(135deg, var(--info-color), #0891b2); }
+    .metric-icon.danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .metric-icon.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .metric-icon.success { background: linear-gradient(135deg, #10b981, #059669); }
+    .metric-icon.info { background: linear-gradient(135deg, #06b6d4, #0891b2); }
 
     .metric-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: var(--dark-color);
-        margin-bottom: 10px;
+        font-size: 3rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 8px;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }
 
     .metric-subtitle {
-        color: var(--secondary-color);
-        font-size: 0.9rem;
-        margin-bottom: 15px;
-    }
-
-    .status-list {
+        color: rgba(255,255,255,0.7);
+        font-size: 1rem;
         margin-bottom: 20px;
     }
 
+    .status-list {
+        margin-bottom: 25px;
+        max-height: 120px;
+        overflow-y: auto;
+    }
+
     .status-item {
-        padding: 10px 15px;
-        border-radius: 8px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 12px;
+        padding: 12px 16px;
         margin-bottom: 8px;
         font-size: 0.9rem;
         display: flex;
         align-items: center;
         gap: 10px;
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+    .status-item:hover {
+        background: rgba(255,255,255,0.15);
+        transform: translateX(4px);
     }
 
     .status-item.urgent {
-        background: #fef2f2;
-        color: var(--danger-color);
-        border-left: 4px solid var(--danger-color);
+        border-left: 4px solid #ef4444;
+        background: rgba(239, 68, 68, 0.1);
     }
 
     .status-item.warning {
-        background: #fefbeb;
-        color: var(--warning-color);
-        border-left: 4px solid var(--warning-color);
+        border-left: 4px solid #f59e0b;
+        background: rgba(245, 158, 11, 0.1);
     }
 
     .status-item.success {
-        background: #f0fdf4;
-        color: var(--success-color);
-        border-left: 4px solid var(--success-color);
+        border-left: 4px solid #10b981;
+        background: rgba(16, 185, 129, 0.1);
     }
 
     .progress-section {
-        margin-top: 20px;
+        margin-bottom: 20px;
     }
 
     .progress-bar {
         width: 100%;
         height: 8px;
-        background: #e2e8f0;
+        background: rgba(255,255,255,0.2);
         border-radius: 4px;
         overflow: hidden;
         margin-bottom: 10px;
@@ -212,261 +352,370 @@
     .progress-fill {
         height: 100%;
         border-radius: 4px;
-        transition: width 1s ease;
+        transition: width 1.5s ease;
+        position: relative;
     }
 
-    .progress-fill.success { background: linear-gradient(90deg, var(--success-color), #059669); }
-    .progress-fill.warning { background: linear-gradient(90deg, var(--warning-color), #d97706); }
-    .progress-fill.danger { background: linear-gradient(90deg, var(--danger-color), #dc2626); }
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: progress-shimmer 2s infinite;
+    }
+
+    @keyframes progress-shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .progress-fill.success { background: linear-gradient(90deg, #10b981, #059669); }
+    .progress-fill.warning { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .progress-fill.danger { background: linear-gradient(90deg, #ef4444, #dc2626); }
 
     .progress-text {
         display: flex;
         justify-content: space-between;
         font-size: 0.9rem;
-        color: var(--secondary-color);
-    }
-
-    .charts-section {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 25px;
-        margin-bottom: 30px;
-    }
-
-    .chart-card {
-        background: white;
-        border-radius: 16px;
-        padding: 25px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--border-color);
-    }
-
-    .chart-title {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--dark-color);
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+        color: rgba(255,255,255,0.8);
     }
 
     .action-buttons {
         display: flex;
-        gap: 10px;
+        gap: 12px;
         flex-wrap: wrap;
     }
 
     .btn-action {
+        background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
         padding: 10px 20px;
-        border-radius: 25px;
-        border: none;
+        border-radius: 50px;
         font-weight: 600;
         font-size: 0.9rem;
+        text-decoration: none;
         transition: all 0.3s ease;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-block;
+        backdrop-filter: blur(10px);
     }
 
-    .btn-primary {
-        background: var(--primary-color);
-        color: white;
-    }
-
-    .btn-primary:hover {
-        background: #1d4ed8;
+    .btn-action:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.2));
         transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
         color: white;
         text-decoration: none;
-        box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
     }
 
-    .btn-secondary {
-        background: var(--light-color);
-        color: var(--dark-color);
+    /* Section graphiques moderne */
+    .charts-container {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
     }
 
-    .btn-secondary:hover {
-        background: #e2e8f0;
-        color: var(--dark-color);
-        text-decoration: none;
+    .chart-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 30px;
+        position: relative;
+        overflow: hidden;
     }
 
-    @media (max-width: 768px) {
-        .dashboard-container {
-            margin: 10px;
-            padding: 20px;
-        }
-        
-        .charts-section {
+    .chart-title {
+        color: white;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .chart-container {
+        position: relative;
+        width: 100%;
+        height: 300px;
+        overflow: hidden;
+    }
+
+    #ordersChart, #statusChart {
+        width: 100% !important;
+        height: 100% !important;
+        pointer-events: none;
+        touch-action: none;
+    }
+
+    /* Responsive design */
+    @media (max-width: 1200px) {
+        .charts-container {
             grid-template-columns: 1fr;
         }
         
-        .urgent-alerts {
-            flex-direction: column;
-            gap: 15px;
+        .header-content {
+            grid-template-columns: 1fr;
+            text-align: center;
         }
         
-        .main-title {
-            font-size: 2rem;
+        .status-section {
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-wrapper {
+            padding: 15px;
+        }
+        
+        .modern-header {
+            padding: 20px;
+        }
+        
+        .title-section h1 {
+            font-size: 2.2rem;
+        }
+        
+        .alert-content {
+            grid-template-columns: 1fr;
+            gap: 15px;
+            text-align: center;
+        }
+        
+        .metrics-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .metric-card {
+            padding: 20px;
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+        }
+    }
+
+    /* Animations d'entrée */
+    .fade-in {
+        opacity: 0;
+        transform: translateY(30px);
+        animation: fadeInUp 0.8s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .slide-in-left {
+        opacity: 0;
+        transform: translateX(-50px);
+        animation: slideInLeft 0.8s ease forwards;
+    }
+
+    @keyframes slideInLeft {
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .slide-in-right {
+        opacity: 0;
+        transform: translateX(50px);
+        animation: slideInRight 0.8s ease forwards;
+    }
+
+    @keyframes slideInRight {
+        to {
+            opacity: 1;
+            transform: translateX(0);
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <!-- Header -->
-    <div class="header-section">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1 class="main-title">🌅 DASHBOARD JOURNALIER</h1>
-                <p class="subtitle">Pilotage opérationnel temps réel</p>
-            </div>
-            <div class="text-end">
-                <div class="badge bg-success fs-6 mb-2">
-                    <i class="fas fa-circle me-1"></i>
-                    Temps réel
+<div class="dashboard-wrapper">
+    <div class="dashboard-container">
+        <!-- Header moderne -->
+        <div class="modern-header fade-in">
+            <div class="header-content">
+                <div class="title-section">
+                    <h1>⚡ DASHBOARD LIVE</h1>
+                    <p>Pilotage opérationnel en temps réel</p>
                 </div>
-                <div class="text-muted">
-                    <i class="fas fa-clock me-1"></i>
-                    <span id="currentTime"></span>
+                <div class="status-section">
+                    <div class="live-indicator">
+                        <div class="live-dot"></div>
+                        <span>TEMPS RÉEL</span>
+                    </div>
+                    <div class="current-time">
+                        <i class="fas fa-clock"></i>
+                        <span id="currentTime"></span>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Alertes urgentes -->
-    <div class="urgent-alerts">
-        <div class="alert-item critical">
-            <i class="fas fa-fire"></i>
-            <span id="commandesUrgentes">...</span> commandes à traiter MAINTENANT
+        <!-- Alertes modernes -->
+        <div class="alert-banner slide-in-left">
+            <div class="alert-content">
+                <div class="alert-stat">
+                    <div class="alert-icon critical">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div>
+                        <div><span id="commandesUrgentes">...</span> commandes</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">À traiter MAINTENANT</div>
+                    </div>
+                </div>
+                <div class="alert-stat">
+                    <div class="alert-icon warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div>
+                        <div><span id="commandesProches">...</span> commandes</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">Dans < 1 heure</div>
+                    </div>
+                </div>
+                <button class="alert-button" onclick="alert('Équipe alertée!')">
+                    <i class="fas fa-bell"></i>
+                    Alerter Équipe
+                </button>
+            </div>
         </div>
-        <div class="alert-item warning">
-            <i class="fas fa-clock"></i>
-            <span id="commandesProches">...</span> dans &lt; 1 heure
-        </div>
-        <button class="btn btn-danger" onclick="alert('Équipe alertée!')">
-            <i class="fas fa-bell me-1"></i>
-            Alerter Équipe
-        </button>
-    </div>
 
-    <!-- Métriques principales -->
-    <div class="metrics-grid">
-        <!-- Production -->
-        <div class="metric-card danger">
-            <div class="metric-header">
-                <div class="metric-title">
-                    <i class="fas fa-industry"></i>
-                    PRODUCTION TEMPS RÉEL
+        <!-- Métriques principales -->
+        <div class="metrics-container">
+            <!-- Production -->
+            <div class="metric-card danger slide-in-left" style="animation-delay: 0.1s;">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <i class="fas fa-industry"></i>
+                        PRODUCTION
+                    </div>
+                    <div class="metric-icon danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
                 </div>
-                <div class="metric-icon danger">
-                    <i class="fas fa-exclamation-triangle"></i>
+                <div class="metric-value" id="nbRetard">...</div>
+                <div class="metric-subtitle" id="prodSubtitle">...</div>
+                <div class="status-list" id="prodStatusList"></div>
+                <div class="progress-section">
+                    <div class="progress-text" id="prodProgressText"></div>
+                    <div class="progress-bar">
+                        <div class="progress-fill warning" id="prodProgressFill" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('orders.list_orders') }}" class="btn-action">
+                        <i class="fas fa-eye"></i>
+                        Voir Détails
+                    </a>
                 </div>
             </div>
-            <div class="metric-value" id="nbRetard">...</div>
-            <div class="metric-subtitle" id="prodSubtitle">...</div>
-            <div class="status-list" id="prodStatusList"></div>
-            <div class="progress-section">
-                <div class="progress-text" id="prodProgressText"></div>
-                <div class="progress-bar">
-                    <div class="progress-fill warning" id="prodProgressFill" style="width:0%"></div>
+
+            <!-- Stock -->
+            <div class="metric-card warning slide-in-left" style="animation-delay: 0.2s;">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <i class="fas fa-boxes"></i>
+                        STOCK
+                    </div>
+                    <div class="metric-icon warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="nbRuptures">...</div>
+                <div class="metric-subtitle" id="stockSubtitle">...</div>
+                <div class="status-list" id="stockStatusList"></div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('purchases.new_purchase') }}" class="btn-action">
+                        <i class="fas fa-shopping-cart"></i>
+                        Commander
+                    </a>
                 </div>
             </div>
-            <div class="action-buttons">
-                <a href="{{ url_for('orders.list_orders') }}" class="btn-action btn-primary">
-                    <i class="fas fa-eye me-1"></i>
-                    Voir Détails
-                </a>
+
+            <!-- RH -->
+            <div class="metric-card success slide-in-right" style="animation-delay: 0.3s;">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <i class="fas fa-users"></i>
+                        ÉQUIPE
+                    </div>
+                    <div class="metric-icon success">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="nbPresents">...</div>
+                <div class="metric-subtitle" id="rhSubtitle">...</div>
+                <div class="status-list" id="rhStatusList"></div>
+                <div class="progress-section">
+                    <div class="progress-text" id="rhProgressText"></div>
+                    <div class="progress-bar">
+                        <div class="progress-fill success" id="rhProgressFill" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('employees.list_employees') }}" class="btn-action">
+                        <i class="fas fa-eye"></i>
+                        Voir Équipe
+                    </a>
+                </div>
+            </div>
+
+            <!-- Finance -->
+            <div class="metric-card info slide-in-right" style="animation-delay: 0.4s;">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <i class="fas fa-chart-line"></i>
+                        FINANCE
+                    </div>
+                    <div class="metric-icon info">
+                        <i class="fas fa-euro-sign"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="caTempsReel">...</div>
+                <div class="metric-subtitle" id="financeSubtitle">...</div>
+                <div class="status-list" id="financeStatusList"></div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('sales.pos_interface') }}" class="btn-action">
+                        <i class="fas fa-cash-register"></i>
+                        Point de Vente
+                    </a>
+                </div>
             </div>
         </div>
-        <!-- Stock -->
-        <div class="metric-card warning">
-            <div class="metric-header">
-                <div class="metric-title">
-                    <i class="fas fa-boxes"></i>
-                    STOCK CRITIQUE
+
+        <!-- Graphiques -->
+        <div class="charts-container">
+            <div class="chart-card slide-in-left" style="animation-delay: 0.5s;">
+                <div class="chart-title">
+                    <i class="fas fa-chart-area"></i>
+                    Évolution des commandes - Aujourd'hui
                 </div>
-                <div class="metric-icon warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-            </div>
-            <div class="metric-value" id="nbRuptures">...</div>
-            <div class="metric-subtitle" id="stockSubtitle">...</div>
-            <div class="status-list" id="stockStatusList"></div>
-            <div class="action-buttons">
-                <a href="{{ url_for('purchases.new_purchase') }}" class="btn-action btn-primary">
-                    <i class="fas fa-shopping-cart me-1"></i>
-                    Commander Urgent
-                </a>
-            </div>
-        </div>
-        <!-- RH -->
-        <div class="metric-card success">
-            <div class="metric-header">
-                <div class="metric-title">
-                    <i class="fas fa-users"></i>
-                    ÉQUIPE AUJOURD'HUI
-                </div>
-                <div class="metric-icon success">
-                    <i class="fas fa-check-circle"></i>
+                <div class="chart-container">
+                    <canvas id="ordersChart"></canvas>
                 </div>
             </div>
-            <div class="metric-value" id="nbPresents">...</div>
-            <div class="metric-subtitle" id="rhSubtitle">...</div>
-            <div class="status-list" id="rhStatusList"></div>
-            <div class="progress-section">
-                <div class="progress-text" id="rhProgressText"></div>
-                <div class="progress-bar">
-                    <div class="progress-fill success" id="rhProgressFill" style="width:0%"></div>
+            <div class="chart-card slide-in-right" style="animation-delay: 0.6s;">
+                <div class="chart-title">
+                    <i class="fas fa-chart-pie"></i>
+                    Répartition par statut
+                </div>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
                 </div>
             </div>
-            <div class="action-buttons">
-                <a href="{{ url_for('employees.list_employees') }}" class="btn-action btn-primary">
-                    <i class="fas fa-eye me-1"></i>
-                    Voir Équipe
-                </a>
-            </div>
-        </div>
-        <!-- Finance -->
-        <div class="metric-card info">
-            <div class="metric-header">
-                <div class="metric-title">
-                    <i class="fas fa-euro-sign"></i>
-                    FINANCE LIVE
-                </div>
-                <div class="metric-icon info">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-            </div>
-            <div class="metric-value" id="caTempsReel">...</div>
-            <div class="metric-subtitle" id="financeSubtitle">...</div>
-            <div class="status-list" id="financeStatusList"></div>
-            <div class="action-buttons">
-                <a href="{{ url_for('sales.pos_interface') }}" class="btn-action btn-primary">
-                    <i class="fas fa-cash-register me-1"></i>
-                    Point de Vente
-                </a>
-            </div>
-        </div>
-    </div>
-    <!-- Graphiques -->
-    <div class="charts-section">
-        <div class="chart-card">
-            <div class="chart-title">
-                <i class="fas fa-chart-area text-primary"></i>
-                Évolution des commandes - Aujourd'hui
-            </div>
-            <canvas id="ordersChart" height="250"></canvas>
-        </div>
-        <div class="chart-card">
-            <div class="chart-title">
-                <i class="fas fa-chart-pie text-success"></i>
-                Répartition par statut
-            </div>
-            <canvas id="statusChart" height="250"></canvas>
         </div>
     </div>
 </div>
@@ -494,45 +743,63 @@ document.addEventListener('DOMContentLoaded', function() {
             const stats = data.data.stats;
             document.getElementById('nbRetard').textContent = stats.overdue_count;
             document.getElementById('prodSubtitle').textContent = 'Commandes en retard';
-            // Urgentes et proches
             document.getElementById('commandesUrgentes').textContent = stats.urgent_count;
             document.getElementById('commandesProches').textContent = stats.normal_count;
-            // Liste des commandes en retard
+            
             const list = data.data.overdue_orders.map(o =>
                 `<div class="status-item urgent"><i class="fas fa-clock"></i>${o.customer_name} (${Math.abs(o.time_remaining_hours)}h retard)</div>`
             ).join('');
             document.getElementById('prodStatusList').innerHTML = list;
-            // Objectif et progression
+            
             document.getElementById('prodProgressText').innerHTML = `Objectif jour: ${stats.total_production}/${stats.total_production+3} <span>${Math.round((stats.total_production/(stats.total_production+3))*100)}%</span>`;
             document.getElementById('prodProgressFill').style.width = `${Math.round((stats.total_production/(stats.total_production+3))*100)}%`;
+            
             // Graphique répartition statuts
             const statusCtx = document.getElementById('statusChart').getContext('2d');
-            new Chart(statusCtx, {
+            if (window.statusChartInstance) {
+                window.statusChartInstance.destroy();
+            }
+            
+            window.statusChartInstance = new Chart(statusCtx, {
                 type: 'doughnut',
                 data: {
                     labels: ['En retard', 'Urgentes', 'Normales'],
                     datasets: [{
                         data: [stats.overdue_count, stats.urgent_count, stats.normal_count],
-                        backgroundColor: ['#ef4444','#f59e0b','#2563eb'],
+                        backgroundColor: ['#ef4444','#f59e0b','#6366f1'],
                         borderWidth: 0,
-                        hoverOffset: 4
+                        hoverOffset: 8
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {legend: {position: 'bottom', labels: {padding: 20, usePointStyle: true}}}
+                    animation: { duration: 1000 },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                font: { size: 12 },
+                                color: 'white',
+                                boxWidth: 12,
+                                boxHeight: 12
+                            }
+                        }
+                    }
                 }
             });
         }
     });
+    
     // Stock
     fetch('/dashboards/api/daily/stock').then(r=>r.json()).then(data => {
         if(data.success) {
             const stats = data.data.stats;
             document.getElementById('nbRuptures').textContent = stats.out_of_stock_count;
             document.getElementById('stockSubtitle').textContent = 'Ruptures de stock';
-            // Liste des produits en rupture/alerte
+            
             const ruptures = data.data.out_of_stock.map(p =>
                 `<div class="status-item urgent"><i class="fas fa-times-circle"></i>${p.name} (0 ${p.category})</div>`
             ).join('');
@@ -542,29 +809,31 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('stockStatusList').innerHTML = ruptures + alertes;
         }
     });
+    
     // RH
     fetch('/dashboards/api/daily/employees').then(r=>r.json()).then(data => {
         if(data.success) {
             const stats = data.data.stats;
             document.getElementById('nbPresents').textContent = stats.present_today;
             document.getElementById('rhSubtitle').textContent = `Présents sur ${stats.total_employees} employés`;
-            // Liste des présences
+            
             const list = data.data.employees.filter(e => e.is_present).map(e =>
-                `<div class="status-item success"><i class="fas fa-check"></i>${e.name}: ${e.clocked_in ? new Date(e.clocked_in).toLocaleTimeString('fr-FR') : ''} (OK)</div>`
+                `<div class="status-item success"><i class="fas fa-check"></i>${e.name}: ${e.clocked_in ? new Date(e.clocked_in).toLocaleTimeString('fr-FR') : ''}</div>`
             ).join('');
             document.getElementById('rhStatusList').innerHTML = list;
-            // Performance équipe
-            document.getElementById('rhProgressText').innerHTML = `Performance équipe`;
+            
+            document.getElementById('rhProgressText').innerHTML = `Performance équipe: ${Math.round(stats.attendance_rate)}%`;
             document.getElementById('rhProgressFill').style.width = `${Math.round(stats.attendance_rate)}%`;
         }
     });
+    
     // Finance
     fetch('/dashboards/api/daily/sales').then(r=>r.json()).then(data => {
         if(data.success) {
             const stats = data.data.stats;
             document.getElementById('caTempsReel').textContent = stats.daily_revenue.toLocaleString('fr-DZ') + ' DA';
             document.getElementById('financeSubtitle').textContent = 'CA du jour';
-            // Liste finance
+            
             document.getElementById('financeStatusList').innerHTML =
                 `<div class="status-item success"><i class="fas fa-arrow-up"></i>Objectif: 50 000 DA</div>`+
                 `<div class="status-item success"><i class="fas fa-plus"></i>Bénéfice: +${(stats.daily_revenue - 8200).toLocaleString('fr-DZ')} DA</div>`+
@@ -572,59 +841,62 @@ document.addEventListener('DOMContentLoaded', function() {
                 `<div class="status-item"><i class="fas fa-wallet"></i>Caisse: ${stats.cash_in_today.toLocaleString('fr-DZ')} DA</div>`;
         }
     });
-    // Graphique évolution commandes (par heure)
+    
+    // Graphique évolution commandes
     fetch('/dashboards/api/daily/sales').then(r=>r.json()).then(data => {
         if(data.success) {
             const orders = Object.values(data.data.orders_by_status).reduce((acc, v) => acc + v.count, 0);
-            // Simuler une répartition horaire (à remplacer par une vraie API si besoin)
             const labels = ['6h','8h','10h','12h','14h','16h','18h'];
             const values = [2, 5, 8, 12, 15, 18, orders];
             const ctx = document.getElementById('ordersChart').getContext('2d');
-            new Chart(ctx, {
+            
+            if (window.ordersChartInstance) {
+                window.ordersChartInstance.destroy();
+            }
+            
+            window.ordersChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
                         label: 'Commandes',
                         data: values,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                        borderWidth: 3,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderWidth: 4,
                         fill: true,
                         tension: 0.4,
-                        pointBackgroundColor: '#2563eb',
+                        pointBackgroundColor: '#6366f1',
                         pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7
+                        pointBorderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {legend: {display: false}},
-                    scales: {y: {beginAtZero: true, grid: {color: 'rgba(0,0,0,0.1)'}}, x: {grid: {display: false}}}
+                    animation: { duration: 1500 },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: 'white' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: 'white' }
+                        }
+                    }
                 }
             });
         }
     });
     
-    // Animation des cartes au chargement
-    const cards = document.querySelectorAll('.metric-card');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        
-        setTimeout(() => {
-            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
-    
-    // Auto-refresh des données toutes les 2 minutes
+    // Auto-refresh toutes les 2 minutes
     setInterval(() => {
-        console.log('Rafraîchissement des données journalières...');
+        console.log('Rafraîchissement des données...');
         updateTime();
     }, 120000);
 });
