@@ -163,6 +163,7 @@ env_production.txt
 env_production.sh
 *.env.local
 *.env.production
+*.env
 config_production.py
 config_local.py
 
@@ -172,6 +173,15 @@ postgresql_validation.sh
 postgresql_troubleshooting.sh
 deploy_setup.sh
 deploy_app.sh
+duckdns_update.sh
+
+# Security: Never commit these files
+secrets.txt
+*.key
+*.pem
+*.p12
+tokens.txt
+passwords.txt
 
 # Base de données locales (pointeuse ZKTeco)
 TimeNet.db
