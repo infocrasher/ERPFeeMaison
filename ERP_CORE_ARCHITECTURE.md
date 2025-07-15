@@ -5,6 +5,29 @@
 ### **Source Unique des Modèles**
 Tous les modèles principaux sont centralisés dans **`racine/models.py`** (623 lignes)
 
+### **Structure des Déploiements**
+```
+Machine Locale (Développement)
+fee_maison_gestion_cursor/
+├── models.py              # Modèles principaux
+├── app/
+│   ├── sales/
+│   │   └── models.py      # CashRegisterSession, CashMovement
+│   ├── employees/
+│   │   └── models.py      # Employee, WorkHours, Payroll
+│   └── ...
+
+VPS (Production)
+/opt/erp/app/              # Dépôt Git
+├── models.py              # Modèles principaux
+├── app/
+│   ├── sales/
+│   │   └── models.py      # CashRegisterSession, CashMovement
+│   ├── employees/
+│   │   └── models.py      # Employee, WorkHours, Payroll
+│   └── ...
+```
+
 ### **Modules avec leurs propres modèles**
 ```
 app/
@@ -85,11 +108,21 @@ from models import Product, Order, Recipe
 from app.models import Product
 ```
 
-### **3. Modules Spécialisés**
+### **3. Gestion des Doublons**
+```python
+# ✅ CORRECT - CashRegisterSession uniquement dans app/sales/models.py
+from app.sales.models import CashRegisterSession
+
+# ❌ INCORRECT - Pas de doublon dans racine/models.py
+# La classe CashRegisterSession ne doit PAS être dans racine/models.py
+```
+
+### **4. Modules Spécialisés**
 - Chaque module peut avoir ses propres modèles **spécialisés**
 - Les modèles **principaux** restent dans `racine/models.py`
+- **Aucun doublon** : Un modèle ne doit être défini qu'une seule fois
 
-### **4. Relations Cross-Modules**
+### **5. Relations Cross-Modules**
 ```python
 # Dans app/employees/models.py
 from models import Order  # Pour les relations Order-Employee
@@ -162,6 +195,12 @@ app/dashboards/
 - Tests unitaires doivent importer depuis `racine/models.py`
 - Configuration des tests dans `tests/conftest.py`
 
+### **4. Déploiement**
+- **VPS** : `/opt/erp/app/` contient le dépôt Git complet
+- **Synchronisation** : `git pull origin main` sur le VPS
+- **Services** : Redémarrer après déploiement
+- **Cache** : Vider le cache Python si nécessaire
+
 ## 🔧 Migration Future (Optionnel)
 
 Si le fichier devient trop volumineux (>1000 lignes), considérer :
@@ -190,6 +229,12 @@ app/
 2. Importer les modèles principaux depuis `racine/models.py`
 3. Créer migration Alembic
 
+### **Déploiement des modifications**
+1. **Local** : `git add . && git commit -m "message" && git push origin main`
+2. **VPS** : `cd /opt/erp/app && git pull origin main`
+3. **Services** : `sudo systemctl restart fee-maison-gestion && sudo systemctl restart nginx`
+4. **Cache** : `find . -name "*.pyc" -delete` (si nécessaire)
+
 ### **Ajout d'un nouveau dashboard**
 1. Ajouter route dans `app/dashboards/routes.py`
 2. Ajouter endpoint API dans `app/dashboards/api.py`
@@ -206,7 +251,9 @@ from app.dashboards import dashboards_bp  # Test du module dashboards
 
 ---
 
-**Dernière mise à jour :** $(date)
+**Dernière mise à jour :** 15/07/2025
 **Architecture validée :** ✅
 **Tests passants :** ✅
 **Module dashboards unifié :** ✅
+**Structure déploiement documentée :** ✅
+**Gestion doublons clarifiée :** ✅
