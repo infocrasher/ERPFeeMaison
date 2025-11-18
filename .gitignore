@@ -191,3 +191,21 @@ TimeNet.db
 
 # Fichiers de configuration Pyright
 .pyrightcache/
+
+# Données historiques et fichiers Excel (trop volumineux pour Git)
+donnees_historiques*.csv
+test_extraction*.csv
+*.xlsx
+*.xls
+Téléchargements Comptabilité/
+"Téléchargements Comptabilité"/
+
+# Fichiers de test et développement
+tests/test_*.py
+*_test.py
+flask_form_debug.html
+cookies.txt
+
+# Fichiers temporaires
+*.tmp
+*.temp
