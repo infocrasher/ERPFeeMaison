@@ -1,0 +1,140 @@
+{% extends "reports/_report_base.html" %}
+{% set report_type = 'daily_stock_alerts' %}
+{% block report_icon %}bi-exclamation-triangle{% endblock %}
+{% block report_title %}Alertes de Stock{% endblock %}
+{% block report_description %}Produits nécessitant une attention{% endblock %}
+{% block filters %}{% endblock %}
+{% block kpis %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card kpi-card border-danger">
+            <div class="card-body">
+                <div class="kpi-label">Total Alertes</div>
+                <div class="kpi-value text-danger">{{ data.total_alerts }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-warning">
+            <div class="card-body">
+                <div class="kpi-label">Stock Bas</div>
+                <div class="kpi-value text-warning">{{ data.low_stock_products|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-danger">
+            <div class="card-body">
+                <div class="kpi-label">Ruptures</div>
+                <div class="kpi-value text-danger">{{ data.out_of_stock|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-info">
+            <div class="card-body">
+                <div class="kpi-label">Surstock</div>
+                <div class="kpi-value text-info">{{ data.overstock|length }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block data_tables %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h6 class="mb-0">Produits Sous Seuil</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th class="text-end">Stock</th>
+                                <th class="text-end">Seuil</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in data.low_stock_products %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td class="text-end">{{ product.stock_comptoir }}</td>
+                                <td class="text-end">{{ product.seuil_min_comptoir }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-warning">
+            <div class="card-header bg-warning">
+                <h6 class="mb-0">Ruptures de Stock</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Action Recommandée</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in data.out_of_stock %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td><span class="badge bg-danger">Commander</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block ai_section %}
+<!-- PHASE 3 - Intégration IA -->
+{% include 'components/ai_summary_block.html' %}
+
+<script src="{{ url_for('static', filename='js/ai_forecast.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Attendre que le composant soit chargé
+    setTimeout(function() {
+        // Extraire les métadonnées IA du rapport
+        const metadata = {
+            growth_rate: {{ data.growth_rate | default(0) | tojson }},
+            variance: {{ data.variance | default(0) | tojson }},
+            trend_direction: {{ data.trend_direction | default('stable') | tojson }},
+            benchmark: {{ data.benchmark | default({}) | tojson }}
+        };
+        
+        // Initialiser le module IA
+        if (typeof initAIModule === 'function') {
+            initAIModule({
+                type: "daily",
+                reportName: "stock",
+                endpoints: {
+                    forecast: null,
+                    insights: "/dashboards/api/daily/ai-insights",
+                    anomalies: "/dashboards/api/daily/anomalies"
+                },
+                metadata: metadata
+            });
+        } else {
+            console.error('[AI] ai_forecast.js non chargé - Vérifiez que le fichier est accessible');
+        }
+    }, 100);
+});
+</script>
+{% endblock %}
+

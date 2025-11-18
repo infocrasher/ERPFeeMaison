@@ -155,8 +155,8 @@
         </div>
         <div class="col-md-3">
             <div class="card dashboard-card text-center p-3">
-                <h3 class="mb-1">{{ estimated_consumption or '0' }}%</h3>
-                <small>Consommation Estimée</small>
+                <h3 class="mb-1">{{ total_value or '0' }} DA</h3>
+                <small>Valeur Stock Total</small>
             </div>
         </div>
     </div>
@@ -211,7 +211,7 @@
                         <div class="row">
                             {% for consumable in consumables %}
                             {% set stock_level = consumable.stock_consommables or 0 %}
-                            {% set seuil = consumable.seuil_consommables or 20 %}
+                            {% set seuil = consumable.seuil_min_consommables if consumable.seuil_min_consommables is not none else 0 %}
                             {% if stock_level <= 0 %}
                                 {% set level_class = 'consumable-critical' %}
                                 {% set level_icon = '🔴' %}
@@ -251,7 +251,7 @@
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <small>{{ status_text }}</small><br>
-                                            <small>Seuil: {{ seuil }} {{ consumable.unit or 'unités' }}</small>
+                                            <small>Seuil: {{ "%.2f"|format(seuil) }} {{ consumable.unit or 'unités' }}</small>
                                         </div>
                                         <button class="quick-adjust-btn" 
                                                 data-product-id="{{ consumable.id }}" 

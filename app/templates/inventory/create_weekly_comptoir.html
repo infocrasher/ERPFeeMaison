@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Créer un inventaire hebdomadaire{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-calendar-week me-2"></i>Créer un inventaire hebdomadaire</h2>
+                <a href="{{ url_for('inventory.weekly_comptoir_index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Retour à la liste
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Nouvel inventaire hebdomadaire</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="mb-3">
+                                    {{ form.inventory_date.label(class="form-label") }}
+                                    {{ form.inventory_date(class="form-control") }}
+                                    {% if form.inventory_date.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.inventory_date.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Le numéro de semaine sera calculé automatiquement.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.notes.label(class="form-label") }}
+                                    {{ form.notes(class="form-control", rows="3") }}
+                                    {% if form.notes.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.notes.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{{ url_for('inventory.weekly_comptoir_index') }}" class="btn btn-outline-secondary me-md-2">Annuler</a>
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Informations</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <h6><i class="bi bi-info-circle me-1"></i>Inventaire hebdomadaire</h6>
+                                <p class="mb-0">Cet inventaire inclura tous les produits ayant du stock au comptoir au moment de la création.</p>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <h6><i class="bi bi-exclamation-triangle me-1"></i>Attention</h6>
+                                <p class="mb-0">Un seul inventaire par semaine est autorisé. Vérifiez qu'aucun inventaire n'existe déjà pour cette semaine.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+

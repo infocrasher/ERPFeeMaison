@@ -1,0 +1,734 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Fée Maison{% endblock %}
+
+{% block content %}
+<style>
+/* Améliorations visuelles pour les templates */
+.template-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    cursor: pointer;
+}
+
+.template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    border-color: var(--bs-primary);
+}
+
+.order-item-row {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--bs-primary);
+    margin-bottom: 15px;
+}
+
+/* Animation pour les nouveaux items */
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.order-item-row {
+    animation: slideInDown 0.3s ease;
+}
+
+/* Style pour le toast */
+.toast {
+    min-width: 300px;
+}
+</style>
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        <i class="bi bi-building me-2"></i>{{ title }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" novalidate id="orderForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Informations de base -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.b2b_client_id.label(class="form-label") }}
+                                    {{ form.b2b_client_id(class="form-select" + (" is-invalid" if form.b2b_client_id.errors else "")) }}
+                                    {% if form.b2b_client_id.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.b2b_client_id.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.delivery_date.label(class="form-label") }}
+                                    {{ form.delivery_date(class="form-control" + (" is-invalid" if form.delivery_date.errors else ""), type="date") }}
+                                    {% if form.delivery_date.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.delivery_date.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Option multi-jours -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    {{ form.is_multi_day(class="form-check-input") }}
+                                    {{ form.is_multi_day.label(class="form-check-label") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Période multi-jours (masquée par défaut) -->
+                        <div class="row mb-4" id="periodFields" style="display: none;">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.period_start.label(class="form-label") }}
+                                    {{ form.period_start(class="form-control" + (" is-invalid" if form.period_start.errors else ""), type="date") }}
+                                    {% if form.period_start.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.period_start.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.period_end.label(class="form-label") }}
+                                    {{ form.period_end(class="form-control" + (" is-invalid" if form.period_end.errors else ""), type="date") }}
+                                    {% if form.period_end.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.period_end.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Articles de la commande -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Articles de la commande</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Boutons d'ajout -->
+                                <div class="d-flex gap-2 mb-3">
+                                    <button type="button" class="btn btn-primary" id="add-item-btn">
+                                        <i class="bi bi-plus-circle me-2"></i>Ajouter un article
+                                    </button>
+                                    <button type="button" class="btn btn-success" id="add-composite-btn" data-bs-toggle="modal" data-bs-target="#compositeProductModal">
+                                        <i class="bi bi-layers me-2"></i>Ajouter produit composé
+                                    </button>
+                                </div>
+
+                                <!-- Container pour les lignes d'articles -->
+                                <div id="order-items-container">
+                                    {% for item_form in form.items %}
+                                    <div class="order-item-row mb-3">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Produit</label>
+                                                {{ item_form.product(class="form-select product-select" + (" is-invalid" if item_form.product.errors else "")) }}
+                                                {% if item_form.product.errors %}
+                                                    <div class="invalid-feedback">
+                                                        {% for error in item_form.product.errors %}
+                                                            {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">Quantité</label>
+                                                {{ item_form.quantity(class="form-control quantity-input" + (" is-invalid" if item_form.quantity.errors else ""), step="0.001") }}
+                                                {% if item_form.quantity.errors %}
+                                                    <div class="invalid-feedback">
+                                                        {% for error in item_form.quantity.errors %}
+                                                            {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">Prix unitaire (DA)</label>
+                                                {{ item_form.unit_price(class="form-control price-input" + (" is-invalid" if item_form.unit_price.errors else ""), step="0.01") }}
+                                                {% if item_form.unit_price.errors %}
+                                                    <div class="invalid-feedback">
+                                                        {% for error in item_form.unit_price.errors %}
+                                                            {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Description personnalisée</label>
+                                                <input type="text" name="{{ item_form.description.name }}" 
+                                                       class="form-control" 
+                                                       value="{{ item_form.description.data or '' }}"
+                                                       placeholder="Description optionnelle">
+                                            </div>
+                                            <div class="col-md-1 d-flex align-items-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" style="display: {{ 'none' if loop.first else 'block' }}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <!-- Total -->
+                                <div class="row mt-3">
+                                    <div class="col-md-8"></div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body">
+                                                <h5 class="mb-0">Total: <span id="order-total">0.00</span> DA</h5>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal pour les produits composés -->
+                        <div class="modal fade" id="compositeProductModal" tabindex="-1" aria-labelledby="compositeProductModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-xl">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="compositeProductModalLabel">
+                                            <i class="bi bi-layers me-2"></i>Créer un produit composé
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="composite-product-form">
+                                            <div class="row mb-4">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label" for="composite-name">Nom du produit composé</label>
+                                                        <input type="text" class="form-control" id="composite-name" required>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="mb-3">
+                                                        <label class="form-label" for="composite-quantity">Quantité commandée</label>
+                                                        <input type="number" class="form-control" id="composite-quantity" value="1" min="1" required>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="mb-3">
+                                                        <label class="form-label" for="composite-unit-price">Prix unitaire (DZD)</label>
+                                                        <input type="number" class="form-control" id="composite-unit-price" step="0.01" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">
+                                                        <i class="bi bi-list-ul me-2"></i>Composition du produit
+                                                    </h6>
+                                                    <small class="text-muted">Ajoutez les produits finis qui composent ce produit</small>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-component-btn">
+                                                            <i class="bi bi-plus-circle me-2"></i>Ajouter un produit fini
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <div id="components-container">
+                                                        <!-- Les composants seront ajoutés ici dynamiquement -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                            <i class="bi bi-x-circle me-2"></i>Annuler
+                                        </button>
+                                        <button type="button" class="btn btn-primary" id="save-composite-product-btn">
+                                            <i class="bi bi-check-circle me-2"></i>Ajouter à la commande
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3) }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.notes.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Total -->
+                        <div class="alert alert-info">
+                            <strong>Total de la commande: <span id="orderTotal">0.00</span> DA</strong>
+                        </div>
+
+                        <!-- Boutons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('b2b.list_orders') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>{{ form.submit.label.text }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let orderItemsCounter = 0;
+    let componentsCounter = 0;
+    let availableProducts = []; // Sera chargé depuis l'API
+
+    // Nettoyer l'overlay Bootstrap si il reste bloqué
+    function cleanupModalOverlay() {
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    }
+
+    // Initialisation
+    function init() {
+        loadProducts().then(() => {
+            bindEvents();
+            updateOrderTotal();
+            // Nettoyer l'overlay au cas où il reste bloqué
+            cleanupModalOverlay();
+        });
+    }
+
+    // Charger les produits depuis l'API
+    async function loadProducts() {
+        try {
+            const response = await fetch('/admin/b2b/api/products');
+            if (response.ok) {
+                availableProducts = await response.json();
+                console.log('Produits chargés:', availableProducts.length);
+            } else {
+                console.error('Erreur lors du chargement des produits');
+                // Fallback sur une liste statique en cas d'erreur
+                availableProducts = [
+                    { id: 1, name: 'Mini tarte au citron', price: 80 },
+                    { id: 2, name: 'Mini tarte au chocolat', price: 80 },
+                    { id: 3, name: 'Mini tarte aux fruits secs', price: 90 },
+                    { id: 4, name: 'Pâtisserie au citron', price: 120 },
+                    { id: 5, name: 'Pâtisserie au chocolat', price: 120 },
+                    { id: 6, name: 'Pâtisserie au praliné', price: 130 },
+                    { id: 7, name: 'Rechta au poulet', price: 800 },
+                    { id: 8, name: 'Salade mixte', price: 200 },
+                    { id: 9, name: 'Boisson 33cl', price: 100 },
+                    { id: 10, name: 'Fruit de saison', price: 150 }
+                ];
+            }
+        } catch (error) {
+            console.error('Erreur réseau:', error);
+            // Fallback sur une liste statique
+            availableProducts = [
+                { id: 1, name: 'Mini tarte au citron', price: 80 },
+                { id: 2, name: 'Mini tarte au chocolat', price: 80 },
+                { id: 3, name: 'Mini tarte aux fruits secs', price: 90 },
+                { id: 4, name: 'Pâtisserie au citron', price: 120 },
+                { id: 5, name: 'Pâtisserie au chocolat', price: 120 },
+                { id: 6, name: 'Pâtisserie au praliné', price: 130 },
+                { id: 7, name: 'Rechta au poulet', price: 800 },
+                { id: 8, name: 'Salade mixte', price: 200 },
+                { id: 9, name: 'Boisson 33cl', price: 100 },
+                { id: 10, name: 'Fruit de saison', price: 150 }
+            ];
+        }
+    }
+
+    // Binding des événements principaux
+    function bindEvents() {
+        // Ajouter produit simple
+        const addSimpleBtn = document.getElementById('add-item-btn');
+        if (addSimpleBtn) {
+            addSimpleBtn.addEventListener('click', addSimpleProduct);
+        }
+
+        // Ouvrir modal produit composé
+        const addCompositeBtn = document.getElementById('add-composite-btn');
+        if (addCompositeBtn) {
+            addCompositeBtn.addEventListener('click', openCompositeModal);
+        }
+
+        // Ajouter composant dans le modal
+        const addComponentBtn = document.getElementById('add-component-btn');
+        if (addComponentBtn) {
+            addComponentBtn.addEventListener('click', addComponent);
+        }
+
+        // Sauvegarder le produit composé
+        const saveCompositeBtn = document.getElementById('save-composite-product-btn');
+        if (saveCompositeBtn) {
+            saveCompositeBtn.addEventListener('click', saveCompositeProduct);
+        }
+
+        // Gestionnaire pour le bouton Annuler du modal
+        const cancelCompositeBtn = document.querySelector('[data-bs-dismiss="modal"]');
+        if (cancelCompositeBtn) {
+            cancelCompositeBtn.addEventListener('click', function() {
+                setTimeout(() => {
+                    cleanupModalOverlay();
+                }, 100);
+            });
+        }
+
+        // Calcul automatique du prix
+        const compositeUnitPrice = document.getElementById('composite-unit-price');
+        const compositeQuantity = document.getElementById('composite-quantity');
+        if (compositeUnitPrice) {
+            compositeUnitPrice.addEventListener('input', updateOrderTotal);
+        }
+        if (compositeQuantity) {
+            compositeQuantity.addEventListener('input', updateOrderTotal);
+        }
+
+        // Gestion de l'option multi-jours
+        const multiDayCheckbox = document.querySelector('input[name="is_multi_day"]');
+        const periodFields = document.getElementById('periodFields');
+        
+        if (multiDayCheckbox && periodFields) {
+            multiDayCheckbox.addEventListener('change', function() {
+                periodFields.style.display = this.checked ? 'flex' : 'none';
+            });
+
+            // Initialiser l'affichage
+            if (multiDayCheckbox.checked) {
+                periodFields.style.display = 'flex';
+            }
+        }
+    }
+
+    // Ajouter un produit simple à la commande
+    function addSimpleProduct() {
+        const container = document.getElementById('order-items-container');
+        const itemDiv = createOrderItemHTML('simple', orderItemsCounter, '', 1, 0);
+        container.appendChild(itemDiv);
+        orderItemsCounter++;
+        updateOrderTotal();
+    }
+
+    // Ouvrir le modal de création de produit composé
+    function openCompositeModal() {
+        // Reset du formulaire
+        const form = document.getElementById('composite-product-form');
+        if (form) form.reset();
+        
+        const componentsContainer = document.getElementById('components-container');
+        if (componentsContainer) componentsContainer.innerHTML = '';
+        
+        componentsCounter = 0;
+
+        // Ajouter un composant par défaut
+        addComponent();
+
+        // Ouvrir le modal
+        const modal = new bootstrap.Modal(document.getElementById('compositeProductModal'));
+        modal.show();
+    }
+
+    // Ajouter un composant dans le modal
+    function addComponent() {
+        const container = document.getElementById('components-container');
+        if (!container) return;
+        
+        const componentDiv = createComponentHTML(componentsCounter);
+        container.appendChild(componentDiv);
+        componentsCounter++;
+    }
+
+    // Créer le HTML pour un composant
+    function createComponentHTML(index) {
+        const div = document.createElement('div');
+        div.className = 'component-row mb-3';
+        div.dataset.index = index;
+
+        const productsOptions = availableProducts.map(product => 
+            `<option value="${product.id}" data-price="${product.price}">${product.name}</option>`
+        ).join('');
+
+        div.innerHTML = `
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label">Produit fini</label>
+                    <select class="form-select component-product">
+                        <option value="">Sélectionner un produit</option>
+                        ${productsOptions}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Quantité</label>
+                    <input type="number" class="form-control component-quantity" value="1" min="1">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Prix unitaire (DZD)</label>
+                    <input type="number" class="form-control component-price" step="0.01" readonly>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-component-btn">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Binding des événements pour ce composant
+        bindComponentEvents(div);
+        return div;
+    }
+
+    // Binding des événements pour un composant
+    function bindComponentEvents(componentDiv) {
+        const productSelect = componentDiv.querySelector('.component-product');
+        const quantityInput = componentDiv.querySelector('.component-quantity');
+        const priceInput = componentDiv.querySelector('.component-price');
+        const removeBtn = componentDiv.querySelector('.remove-component-btn');
+
+        // Mise à jour du prix quand on sélectionne un produit
+        if (productSelect) {
+            productSelect.addEventListener('change', function() {
+                const selectedOption = this.selectedOptions[0];
+                if (selectedOption && selectedOption.dataset.price) {
+                    priceInput.value = selectedOption.dataset.price;
+                }
+            });
+        }
+
+        // Supprimer le composant
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                componentDiv.remove();
+            });
+        }
+    }
+
+    // Sauvegarder le produit composé et l'ajouter à la commande
+    function saveCompositeProduct() {
+        const compositeName = document.getElementById('composite-name');
+        const compositeQuantity = document.getElementById('composite-quantity');
+        const compositePrice = document.getElementById('composite-unit-price');
+
+        if (!compositeName || !compositeQuantity || !compositePrice) return;
+
+        const name = compositeName.value.trim();
+        const quantity = parseInt(compositeQuantity.value) || 1;
+        const unitPrice = parseFloat(compositePrice.value) || 0;
+
+        if (!name) {
+            alert('Veuillez saisir le nom du produit composé');
+            return;
+        }
+
+        if (unitPrice <= 0) {
+            alert('Veuillez saisir un prix unitaire valide');
+            return;
+        }
+
+        // Collecter les composants
+        const components = [];
+        const componentRows = document.querySelectorAll('.component-row');
+        
+        componentRows.forEach(row => {
+            const productSelect = row.querySelector('.component-product');
+            const quantity = parseInt(row.querySelector('.component-quantity').value) || 0;
+            const price = parseFloat(row.querySelector('.component-price').value) || 0;
+
+            if (productSelect.value && quantity > 0) {
+                components.push({
+                    productId: productSelect.value,
+                    productName: productSelect.selectedOptions[0].text,
+                    quantity: quantity,
+                    unitPrice: price
+                });
+            }
+        });
+
+        if (components.length === 0) {
+            alert('Veuillez ajouter au moins un produit fini à la composition');
+            return;
+        }
+
+        // Créer l'affichage du produit composé dans la commande
+        const container = document.getElementById('order-items-container');
+        const compositeItem = createCompositeOrderItemHTML(
+            orderItemsCounter,
+            name,
+            quantity,
+            unitPrice,
+            components
+        );
+        
+        container.appendChild(compositeItem);
+        orderItemsCounter++;
+
+        // Fermer le modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('compositeProductModal'));
+        if (modal) {
+            modal.hide();
+            // Forcer la suppression de l'overlay
+            setTimeout(() => {
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+                // Retirer la classe modal-open du body
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, 100);
+        }
+
+        // Mettre à jour le total
+        updateOrderTotal();
+
+        // Message de succès
+        showSuccessMessage(`Produit composé "${name}" ajouté à la commande !`);
+    }
+
+    // Créer le HTML pour un produit composé dans la commande
+    function createCompositeOrderItemHTML(index, name, quantity, unitPrice, components) {
+        const div = document.createElement('div');
+        div.className = 'order-item mb-4';
+        div.dataset.index = index;
+        div.dataset.type = 'composite';
+
+        const compositionDetails = components.map(comp => 
+            `${comp.quantity} × ${comp.productName}`
+        ).join('<br>');
+
+        const totalPrice = quantity * unitPrice;
+
+        div.innerHTML = `
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <strong><i class="bi bi-layers me-2"></i>${name}</strong>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-white mb-1">Quantité</label>
+                            <input type="number" name="items-${index}-quantity" 
+                                   class="form-control form-control-sm" value="${quantity}" min="1" step="1">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-white mb-1">Prix unitaire (DZD)</label>
+                            <input type="number" name="items-${index}-unit_price" 
+                                   class="form-control form-control-sm" value="${unitPrice}" step="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-white mb-1">Total</label>
+                            <div class="text-white"><strong>${totalPrice.toLocaleString()} DZD</strong></div>
+                        </div>
+                        <div class="col-md-1 text-end">
+                            <button type="button" class="btn btn-outline-light btn-sm remove-order-item-btn">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <strong>Composition:</strong><br>
+                            ${compositionDetails}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Description</label>
+                            <input type="text" name="items-${index}-description" 
+                                   class="form-control" value="Produit composé: ${name}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Binding événement suppression
+        const removeBtn = div.querySelector('.remove-order-item-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                div.remove();
+                updateOrderTotal();
+            });
+        }
+
+        // Binding événements pour les champs d'édition
+        const quantityInput = div.querySelector('input[name*="quantity"]');
+        const priceInput = div.querySelector('input[name*="unit_price"]');
+        
+        if (quantityInput) {
+            quantityInput.addEventListener('input', function() {
+                updateOrderTotal();
+                // Mettre à jour l'affichage du total
+                const totalElement = div.querySelector('.text-white strong');
+                if (totalElement) {
+                    const newQuantity = parseFloat(this.value) || 0;
+                    const newPrice = parseFloat(priceInput.value) || 0;
+                    const newTotal = newQuantity * newPrice;
+                    totalElement.textContent = newTotal.toLocaleString() + ' DZD';
+                }
+            });
+        }
+        
+        if (priceInput) {
+            priceInput.addEventListener('input', function() {
+                updateOrderTotal();
+                // Mettre à jour l'affichage du total
+                const totalElement = div.querySelector('.text-white strong');
+                if (totalElement) {
+                    const newQuantity = parseFloat(quantityInput.value) || 0;
+                    const newPrice = parseFloat(this.value) || 0;
+                    const newTotal = newQuantity * newPrice;
+                    totalElement.textContent = newTotal.toLocaleString() + ' DZD';
+                }
+            });
+        }
+
+        // Champ caché pour le nom du produit composé
+        const productNameHidden = document.createElement('input');
+        productNameHidden.type = 'hidden';
+        productNameHidden.name = `

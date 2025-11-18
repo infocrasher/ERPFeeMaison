@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}{{ customer.full_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-person me-2"></i>{{ customer.full_name }}</h2>
+            <div class="text-muted">
+                {% if customer.is_active %}
+                    <span class="badge bg-success">Actif</span>
+                {% else %}
+                    <span class="badge bg-secondary">Inactif</span>
+                {% endif %}
+                <span class="badge bg-{{ 'warning' if customer.customer_type == 'vip' else 'info' if customer.customer_type == 'regular' else 'secondary' }} ms-2">
+                    {% if customer.customer_type == 'regular' %}Régulier
+                    {% elif customer.customer_type == 'vip' %}VIP
+                    {% elif customer.customer_type == 'occasional' %}Occasionnel
+                    {% elif customer.customer_type == 'corporate' %}Entreprise
+                    {% else %}{{ customer.customer_type.title() }}{% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="{{ url_for('customers.edit_customer', customer_id=customer.id) }}" class="btn btn-primary">
+                <i class="bi bi-pencil me-1"></i>Modifier
+            </a>
+            <form method="POST" action="{{ url_for('customers.toggle_customer_status', customer_id=customer.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-outline-{{ 'secondary' if customer.is_active else 'success' }}"
+                        onclick="return confirm('Êtes-vous sûr de vouloir {{ 'désactiver' if customer.is_active else 'activer' }} ce client ?')">
+                    <i class="bi bi-{{ 'pause' if customer.is_active else 'play' }} me-1"></i>
+                    {{ 'Désactiver' if customer.is_active else 'Activer' }}
+                </button>
+            </form>
+            <a href="{{ url_for('customers.list_customers') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations principales -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Informations Personnelles</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Nom complet:</dt>
+                                <dd class="col-sm-8">{{ customer.full_name }}</dd>
+                                
+                                <dt class="col-sm-4">Téléphone:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="tel:{{ customer.phone }}" class="text-decoration-none">
+                                        {{ customer.display_phone }}
+                                    </a>
+                                </dd>
+                                
+                                {% if customer.email %}
+                                <dt class="col-sm-4">Email:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="mailto:{{ customer.email }}" class="text-decoration-none">
+                                        {{ customer.email }}
+                                    </a>
+                                </dd>
+                                {% endif %}
+                                
+                                {% if customer.birth_date %}
+                                <dt class="col-sm-4">Naissance:</dt>
+                                <dd class="col-sm-8">{{ customer.birth_date.strftime('%d/%m/%Y') }}</dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-5">Préférence:</dt>
+                                <dd class="col-sm-7">
+                                    {% if customer.preferred_delivery == 'pickup' %}Retrait en magasin
+                                    {% elif customer.preferred_delivery == 'delivery' %}Livraison à domicile
+                                    {% elif customer.preferred_delivery == 'both' %}Les deux
+                                    {% else %}{{ customer.preferred_delivery }}{% endif %}
+                                </dd>
+                                
+                                <dt class="col-sm-5">Client depuis:</dt>
+                                <dd class="col-sm-7">{{ customer.created_at.strftime('%d/%m/%Y') }}</dd>
+                                
+                                {% if customer.last_order_date %}
+                                <dt class="col-sm-5">Dernière commande:</dt>
+                                <dd class="col-sm-7">{{ customer.last_order_date.strftime('%d/%m/%Y') }}</dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    {% if customer.address %}
+                    <div class="mt-3">
+                        <strong>Adresse principale:</strong>
+                        <div class="mt-1">{{ customer.address|replace('\n', '<br>')|safe }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if customer.delivery_address %}
+                    <div class="mt-3">
+                        <strong>Adresse de livraison:</strong>
+                        <div class="mt-1">{{ customer.delivery_address|replace('\n', '<br>')|safe }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if customer.allergies %}
+                    <div class="mt-3">
+                        <strong><i class="bi bi-exclamation-triangle text-warning me-1"></i>Allergies:</strong>
+                        <div class="mt-1 text-warning">{{ customer.allergies|replace('\n', '<br>')|safe }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if customer.preferences %}
+                    <div class="mt-3">
+                        <strong>Préférences culinaires:</strong>
+                        <div class="mt-1">{{ customer.preferences|replace('\n', '<br>')|safe }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if customer.notes %}
+                    <div class="mt-3">
+                        <strong>Notes:</strong>
+                        <div class="mt-1">{{ customer.notes|replace('\n', '<br>')|safe }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Statistiques</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <h4 class="text-primary mb-0">{{ customer.total_orders }}</h4>
+                                <small class="text-muted">Commandes</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success mb-0">{{ "%.0f"|format(customer.total_spent) if customer.total_spent else 0 }}</h4>
+                            <small class="text-muted">DA dépensés</small>
+                        </div>
+                    </div>
+                    
+                    {% if customer.total_orders > 0 %}
+                    <hr>
+                    <div class="text-center">
+                        <h6 class="text-info mb-0">{{ "%.2f"|format(customer.total_spent / customer.total_orders) if customer.total_spent and customer.total_orders else 0 }} DA</h6>
+                        <small class="text-muted">Panier moyen</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Actions Rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('orders.new_customer_order') }}?customer_id={{ customer.id }}" class="btn btn-outline-primary">
+                            <i class="bi bi-plus-circle me-1"></i>Nouvelle Commande
+                        </a>
+                        <a href="{{ url_for('orders.list_orders') }}?customer={{ customer.full_name }}" class="btn btn-outline-info">
+                            <i class="bi bi-list-ul me-1"></i>Voir toutes les commandes
+                        </a>
+                        <a href="tel:{{ customer.phone }}" class="btn btn-outline-success">
+                            <i class="bi bi-telephone me-1"></i>Appeler
+                        </a>
+                        {% if customer.email %}
+                        <a href="mailto:{{ customer.email }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-envelope me-1"></i>Envoyer un email
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commandes récentes -->
+    {% if recent_orders %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Commandes Récentes</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Statut</th>
+                            <th>Montant</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td>{{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <span class="badge bg-info">
+                                    {% if order.order_type == 'customer_order' %}Commande
+                                    {% elif order.order_type == 'in_store' %}Vente directe
+                                    {% else %}{{ order.order_type.title() }}{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' if order.status in ['in_production', 'ready'] else 'secondary' }}">
+                                    {{ order.status.title() }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if order.total_amount %}
+                                    {{ "%.2f"|format(order.total_amount) }} DA
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+

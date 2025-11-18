@@ -14,20 +14,20 @@ dashboard_bp = Blueprint('dashboard', __name__)
 def production_dashboard():
     """Dashboard de production pour Rayan"""
     
-    # ### DEBUT DE LA CORRECTION ###
-    # On récupère toutes les commandes qui doivent être produites
-    # C'est-à-dire celles "En attente" ET "En production"
+    # Récupérer les commandes normales
     orders_to_produce = Order.query.filter(
         Order.status.in_(['pending', 'in_production'])
     ).order_by(Order.due_date.asc()).all()
-    # ### FIN DE LA CORRECTION ###
     
-    # Calcul des stats pour l'en-tête (basé sur la nouvelle requête)
+    # Calcul des stats pour l'en-tête
     now = datetime.utcnow()
     orders_on_time = 0
     orders_soon = 0
     orders_overdue = 0
+    orders_wall = []
+    
     for order in orders_to_produce:
+        order_items = order.items.all() if hasattr(order.items, 'all') else (order.items or [])
         if order.due_date:
             time_diff_hours = (order.due_date - now).total_seconds() / 3600
             if time_diff_hours < 0:
@@ -36,16 +36,61 @@ def production_dashboard():
                 orders_soon += 1
             else:
                 orders_on_time += 1
+        total_qty = sum(float(item.quantity) for item in order_items)
+        if total_qty.is_integer():
+            quantity_label = f"{int(total_qty)} pcs"
+        else:
+            quantity_label = f"{total_qty:.1f} pcs"
+        primary_product = None
+        if order_items:
+            first_item = order_items[0]
+            if first_item.product:
+                primary_product = first_item.product.name
+        primary_product = primary_product or order.customer_name or f"Commande #{order.id}"
+        if order.due_date:
+            diff_minutes = int((order.due_date - now).total_seconds() // 60)
+            diff_hours = diff_minutes / 60.0
+
+            if diff_minutes < 0:
+                hours_late = int(abs(diff_hours))
+                time_label = f"Retard {hours_late}h"
+                priority = 'overdue'
+            elif diff_minutes <= 30:
+                time_label = "0h"
+                priority = 'urgent'
+            elif diff_minutes <= 120:
+                hours = diff_minutes / 60.0
+                time_label = f"{hours:.1f}h"
+                priority = 'urgent'
+            else:
+                hours = int(round(diff_hours))
+                time_label = f"{hours}h"
+                priority = 'normal'
+        else:
+            diff_minutes = 0
+            time_label = 'Sans horaire'
+            priority = 'normal'
+        orders_wall.append({
+            'id': order.id,
+            'primary_product': primary_product,
+            'quantity_label': quantity_label,
+            'time_label': time_label,
+            'priority': priority,
+            'customer': order.customer_name or '-',
+            'due_time': order.due_date.strftime('%H:%M') if order.due_date else '--'
+        })
+    
+    total_orders = len(orders_to_produce)
     
     return render_template('dashboards/production_dashboard.html',
-                         orders=orders_to_produce,  # On passe la bonne variable au template
+                         orders=orders_to_produce,
+                         orders_wall=orders_wall,
                          orders_on_time=orders_on_time,
                          orders_soon=orders_soon,
                          orders_overdue=orders_overdue,
-                         total_orders=len(orders_to_produce),
+                         total_orders=total_orders,
                          title="Dashboard Production")
 
-# ... (le reste de tes routes de dashboard reste identique)
 @dashboard_bp.route('/shop')
 @login_required
 @admin_required
@@ -69,10 +114,12 @@ def shop_dashboard():
         Order.delivery_option == 'delivery'
     ).order_by(Order.due_date.asc()).all()
     
-    # 4. Au comptoir (ordres de production terminés)
+    # 4. Au comptoir (ordres de production terminés - visibles 24h)
+    cutoff_datetime = datetime.utcnow() - timedelta(days=1)
     orders_at_counter = Order.query.filter(
         Order.status == 'completed',
-        Order.order_type == 'counter_production_request'
+        Order.order_type == 'counter_production_request',
+        Order.created_at >= cutoff_datetime
     ).order_by(Order.created_at.desc()).limit(10).all()
     
     # 5. Livré Non Payé (commandes livrées en attente paiement)

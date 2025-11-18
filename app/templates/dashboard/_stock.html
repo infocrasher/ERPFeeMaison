@@ -1,0 +1,105 @@
+<section class="section-card section-midnight">
+    <div class="section-header">
+        <div>
+            <h3 class="section-title text-white">Stock & Achats</h3>
+            <p class="section-subtitle">Analyse 7 jours + ruptures</p>
+        </div>
+        <div class="chip glow">Monitoring intelligent</div>
+    </div>
+
+    <div class="kpi-grid compact">
+        <div class="kpi-card neon">
+            <span>Valeur totale</span>
+            <div class="value">{{ data.stock.total_value|currency }}</div>
+            <small>Stock global</small>
+        </div>
+        <div class="kpi-card neon">
+            <span>Ingrédients en rupture</span>
+            <div class="value">{{ data.stock.out_of_stock|length }}</div>
+            <small>à réapprovisionner</small>
+        </div>
+        <div class="kpi-card neon">
+            <span>Sous le minimum</span>
+            <div class="value">{{ data.stock.low_stock|length }}</div>
+            <small>surveillance</small>
+        </div>
+        <div class="kpi-card neon">
+            <span>Achats du jour</span>
+            <div class="value">{{ data.stock.purchase_today|currency }}</div>
+            <small>Semaine {{ data.stock.purchase_week|currency }}</small>
+        </div>
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-3 mb-6">
+        <div class="panel-card gradient">
+            <div class="panel-header">
+                <h4>Variation valeur ({{ data.period == 'month' and 30 or 7 }} jours)</h4>
+            </div>
+            <div class="chart-wrapper h-64">
+                <canvas id="stock-value-line"></canvas>
+            </div>
+        </div>
+        <div class="panel-card gradient">
+            <div class="panel-header">
+                <h4>Consommation ingrédient</h4>
+                <span class="tag">Top 6</span>
+            </div>
+            <div class="chart-wrapper h-64">
+                <canvas id="stock-heatmap"></canvas>
+            </div>
+        </div>
+        <div class="panel-card gradient">
+            <div class="panel-header">
+                <h4>Mouvements du jour</h4>
+            </div>
+            <div class="chart-wrapper h-56">
+                <canvas id="stock-movement-bar"></canvas>
+            </div>
+            <div class="movement-meta">
+                <span>Entrées : <strong>{{ data.stock.movements.incoming|currency }}</strong></span>
+                <span>Sorties : <strong>{{ data.stock.movements.outgoing|currency }}</strong></span>
+                <span>Net : <strong>{{ data.stock.movements.net|currency }}</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+        <div class="panel-card dark">
+            <div class="panel-header">
+                <h4>Ruptures immédiates</h4>
+            </div>
+            <ul class="list scrollable">
+                {% for item in data.stock.out_of_stock %}
+                <li class="list-item">
+                    <div>
+                        <p class="list-title">{{ item.name }}</p>
+                        <small>{{ item.category }}</small>
+                    </div>
+                    <span class="chip danger">0 en stock</span>
+                </li>
+                {% else %}
+                <li class="empty-state">Aucune rupture détectée.</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="panel-card dark">
+            <div class="panel-header">
+                <h4>Ingrédients sous le minimum</h4>
+            </div>
+            <ul class="list scrollable">
+                {% for item in data.stock.low_stock %}
+                <li class="list-item">
+                    <div>
+                        <p class="list-title">{{ item.name }}</p>
+                        <small>Stock {{ item.stock_magasin }} / Min {{ item.min_magasin }}</small>
+                    </div>
+                    <span class="chip warning">{{ item.category }}</span>
+                </li>
+                {% else %}
+                <li class="empty-state">Aucun ingrédient sous seuil.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</section>
+

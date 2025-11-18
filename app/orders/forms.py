@@ -79,6 +79,7 @@ class OrderForm(FlaskForm):
     customer_name = StringField('Nom du client', validators=[Optional(), Length(max=100)])
     customer_phone = StringField('Téléphone', validators=[Optional(), Length(max=20)])
     customer_address = TextAreaField('Adresse de livraison', validators=[Optional(), Length(max=300)])
+    delivery_zone = StringField('Commune de livraison', validators=[Optional(), Length(max=100)])
     
     delivery_option = SelectField(
         'Option de service',
@@ -137,9 +138,10 @@ class OrderForm(FlaskForm):
                 self.due_date.errors.append('La date de retrait/livraison est requise.')
                 return False
 
+        # Pour les commandes client en livraison on rend la commune obligatoire
         if self.order_type.data == 'customer_order' and self.delivery_option.data == 'delivery':
-            if not self.customer_address.data:
-                self.customer_address.errors.append("L'adresse de livraison est requise pour une livraison.")
+            if not (self.delivery_zone.data or '').strip():
+                self.delivery_zone.errors.append("La commune de livraison est requise pour une livraison.")
                 return False
 
         return True
@@ -148,6 +150,7 @@ class CustomerOrderForm(FlaskForm):
     customer_name = StringField('Nom du client', validators=[DataRequired("Le nom du client est requis."), Length(max=100)])
     customer_phone = StringField('Téléphone', validators=[DataRequired("Le téléphone est requis."), Length(max=20)])
     customer_address = TextAreaField('Adresse de livraison', validators=[Optional(), Length(max=300)])
+    delivery_zone = StringField('Commune de livraison', validators=[Optional(), Length(max=100)])
     
     delivery_option = SelectField(
         'Option de retrait',
@@ -213,9 +216,10 @@ class CustomerOrderForm(FlaskForm):
         if not initial_validation:
             return False
 
-        if self.delivery_option.data == 'delivery' and not self.customer_address.data:
-            self.customer_address.errors.append("L'adresse de livraison est requise pour une livraison.")
-            return False
+        if self.delivery_option.data == 'delivery':
+            if not (self.delivery_zone.data or '').strip():
+                self.delivery_zone.errors.append("La commune de livraison est requise pour une livraison.")
+                return False
 
         return True
 

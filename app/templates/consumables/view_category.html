@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Catégorie : {{ category.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-tag me-2"></i>{{ category.name }}</h2>
+                <div>
+                    <a href="{{ url_for('consumables.test_category', category_id=category.id) }}" 
+                       target="_blank"
+                       class="btn btn-info">
+                        <i class="bi bi-play-circle me-1"></i>Tester
+                    </a>
+                    <a href="{{ url_for('consumables.categories_index') }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Retour
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Informations</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-3">Nom</dt>
+                                <dd class="col-sm-9">{{ category.name }}</dd>
+                                
+                                <dt class="col-sm-3">Description</dt>
+                                <dd class="col-sm-9">{{ category.description or '-' }}</dd>
+                                
+                                <dt class="col-sm-3">Catégorie de produits</dt>
+                                <dd class="col-sm-9">{{ category.product_category.name }}</dd>
+                                
+                                <dt class="col-sm-3">Statut</dt>
+                                <dd class="col-sm-9">
+                                    {% if category.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </dd>
+                                
+                                <dt class="col-sm-3">Plages configurées</dt>
+                                <dd class="col-sm-9">
+                                    <span class="badge bg-primary">{{ ranges|length }} plage(s)</span>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Plages de quantités</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if ranges %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Plage</th>
+                                            <th>Consommable</th>
+                                            <th>Quantité/unité</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for range in ranges %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ range.min_quantity }}-{{ range.max_quantity }}</strong>
+                                                <br><small class="text-muted">pièces</small>
+                                            </td>
+                                            <td>{{ range.consumable_product.name }}</td>
+                                            <td>{{ range.quantity_per_unit }}</td>
+                                            <td>
+                                                <form method="POST" 
+                                                      action="{{ url_for('consumables.delete_range', category_id=category.id, range_id=range.id) }}" 
+                                                      style="display: inline;"
+                                                      onsubmit="return confirm('Supprimer cette plage ?');">
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Aucune plage configurée. Ajoutez-en pour activer le système.
+                            </div>
+                            {% endif %}
+
+                            <hr>
+
+                            <h6 class="mb-3">Ajouter une plage</h6>
+                            <form id="add-range-form">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Min</label>
+                                        <input type="number" class="form-control" id="min_quantity" min="1" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Max</label>
+                                        <input type="number" class="form-control" id="max_quantity" min="1" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Consommable</label>
+                                        <select class="form-select" id="consumable_product_id" required>
+                                            <option value="">Sélectionner...</option>
+                                            <!-- Sera rempli par JavaScript -->
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Guide d'utilisation</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="bi bi-1-circle me-1"></i>Définir les plages</h6>
+                            <p class="text-muted small mb-3">Créez des plages de quantités et associez un consommable à chacune.</p>
+                            
+                            <h6><i class="bi bi-2-circle me-1"></i>Ordre des plages</h6>
+                            <p class="text-muted small mb-3">Les plages ne doivent pas se chevaucher. Par exemple :</p>
+                            <ul class="small">
+                                <li>1-8 pièces</li>
+                                <li>9-12 pièces</li>
+                                <li>13-20 pièces</li>
+                                <li>21-70 pièces</li>
+                            </ul>
+                            
+                            <h6><i class="bi bi-3-circle me-1"></i>Calcul automatique</h6>
+                            <p class="text-muted small">
+                                Pour une vente de 25 pièces, le système calculera :
+                                <br>→ Utilise les plus grandes boîtes d'abord
+                                <br>→ Complète avec les plus petites
+                            </p>
+
+                            <div class="alert alert-danger">
+                                <form method="POST" action="{{ url_for('consumables.delete_category', category_id=category.id) }}" 
+                                      onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ? Cette action est irréversible.');"
+                                      class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-danger w-100">
+                                        <i class="bi bi-trash"></i> Supprimer la catégorie
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Charger les consommables
+    fetch('{{ url_for("consumables.search_products") }}?category=consumable')
+        .then(response => response.json())
+        .then(products => {
+            const select = document.getElementById('consumable_product_id');
+            products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.id;
+                option.textContent = `${product.name} (Stock: ${product.stock})`;
+                select.appendChild(option);
+            });
+        });
+
+    // Gérer l'ajout de plage
+    document.getElementById('add-range-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const data = {
+            min_quantity: document.getElementById('min_quantity').value,
+            max_quantity: document.getElementById('max_quantity').value,
+            consumable_product_id: document.getElementById('consumable_product_id').value
+        };
+        
+        fetch('{{ url_for("consumables.add_range", category_id=category.id) }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + result.message);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+

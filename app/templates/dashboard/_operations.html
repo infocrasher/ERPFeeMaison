@@ -1,0 +1,74 @@
+<section class="section-card">
+    <div class="section-header">
+        <div>
+            <h3 class="section-title">Opérations & RH</h3>
+            <p class="section-subtitle">Flux caisse et présence équipe</p>
+        </div>
+        <div class="chip">Temps réel</div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+        <div class="panel-card dark">
+            <div class="panel-header">
+                <h4>Flux de caisse</h4>
+                <span class="tag">{{ 'Session ouverte' if data.cash.session_open else 'Session fermée' }}</span>
+            </div>
+            <div class="cash-summary">
+                <div>
+                    <small>Entrées</small>
+                    <strong>{{ data.cash.cash_in|currency }}</strong>
+                </div>
+                <div>
+                    <small>Sorties</small>
+                    <strong>{{ data.cash.cash_out|currency }}</strong>
+                </div>
+                <div>
+                    <small>Net</small>
+                    <strong>{{ data.cash.net|currency }}</strong>
+                </div>
+            </div>
+            <div class="chart-wrapper h-48">
+                <canvas id="cash-history-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="panel-card dark">
+            <div class="panel-header">
+                <h4>Présence équipe</h4>
+                <span class="tag">{{ data.hr.present }}/{{ data.hr.total }} présents</span>
+            </div>
+            <div class="presence-highlight">
+                <div>
+                    <small>Taux de présence</small>
+                    <strong>{{ data.hr.presence_rate }}%</strong>
+                </div>
+                {% if data.hr.best_employee %}
+                <div>
+                    <small>Employé du jour</small>
+                    <strong>{{ data.hr.best_employee.name }}</strong>
+                </div>
+                <div>
+                    <small>Heures</small>
+                    <strong>{{ data.hr.best_employee.hours }} h</strong>
+                </div>
+                {% endif %}
+            </div>
+            <div class="chart-wrapper h-48">
+                <canvas id="attendance-sparkline"></canvas>
+            </div>
+            <ul class="list mt-4">
+                {% for worker in data.hr.top_workers %}
+                <li class="list-item">
+                    <div>
+                        <p class="list-title">{{ worker.name }}</p>
+                    </div>
+                    <span class="chip">{{ worker.hours }} h</span>
+                </li>
+                {% else %}
+                <li class="empty-state">Aucun pointage enregistré aujourd'hui.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</section>
+

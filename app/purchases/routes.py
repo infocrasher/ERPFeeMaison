@@ -20,7 +20,7 @@ from sqlalchemy import and_, or_, desc, func
 from datetime import datetime, timedelta
 import json
 import pytz
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Optional
 
 # ### DEBUT DE LA MODIFICATION ###
@@ -170,6 +170,12 @@ def new_purchase():
 
                 quantity_in_base_unit = float(quantity_ordered * unit_object.conversion_factor)
                 
+                # Calculer price_per_base_unit AVANT les blocs if/elif
+                conversion_factor = Decimal(unit_object.conversion_factor)
+                if conversion_factor == 0:
+                    raise ValueError(f"Le facteur de conversion pour l'unité '{unit_object.name}' ne peut pas être zéro.")
+                price_per_base_unit = price_per_unit_achat / conversion_factor
+                
                 # DEBUG: Log des données avant mise à jour
                 debug_info = f"DEBUG - Produit: {product.name}, Stock avant: {product.stock_ingredients_magasin} (magasin), {product.stock_ingredients_local} (local), Quantité à ajouter: {quantity_in_base_unit}"
                 current_app.logger.info(debug_info)
@@ -177,7 +183,17 @@ def new_purchase():
                 if product.product_type == 'consommable':
                     stock_location = 'stock_consommables'
                     current_app.logger.info(f"DEBUG - Mise à jour consommable: {stock_location}")
-                    product.update_stock_by_location(stock_location, quantity_in_base_unit)
+                    product.update_stock_by_location(
+                        stock_location,
+                        quantity_in_base_unit,
+                        unit_cost_override=price_per_base_unit
+                    )
+                    total_qty_decimal = Decimal(str(product.total_stock_all_locations or 0))
+                    if total_qty_decimal > 0:
+                        new_cost_price = (Decimal(str(product.total_stock_value or 0.0)) / total_qty_decimal).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                        product.cost_price = new_cost_price
+                    else:
+                        product.cost_price = Decimal(str(price_per_base_unit))
                 
                 elif product.product_type == 'ingredient':
                     # Mapping des localisations vers les attributs de stock
@@ -188,31 +204,25 @@ def new_purchase():
                         'consommables': 'stock_consommables'
                     }
                     stock_location_key = location_mapping.get(stock_locations[i], 'stock_ingredients_magasin')
-                    conversion_factor = Decimal(unit_object.conversion_factor)
                     
-                    if conversion_factor == 0:
-                        raise ValueError(f"Le facteur de conversion pour l'unité '{unit_object.name}' ne peut pas être zéro.")
-                        
-                    price_per_base_unit = price_per_unit_achat / conversion_factor
+                    # conversion_factor et price_per_base_unit sont déjà calculés plus haut
                     purchase_value = Decimal(quantity_in_base_unit) * price_per_base_unit
 
                     current_app.logger.info(f"DEBUG - Mise à jour ingrédient: {stock_location_key}")
                     current_app.logger.info(f"DEBUG - Valeur d'achat: {purchase_value}")
                     
-                    product.total_stock_value = (product.total_stock_value or Decimal('0.0')) + purchase_value
-                    product.update_stock_by_location(stock_location_key, quantity_in_base_unit)
+                    product.update_stock_by_location(
+                        stock_location_key,
+                        quantity_in_base_unit,
+                        unit_cost_override=price_per_base_unit
+                    )
                     
-                    # Incrémenter la valeur du stock par emplacement
-                    if stock_location_key == "stock_ingredients_magasin":
-                        product.valeur_stock_ingredients_magasin = float(getattr(product, "valeur_stock_ingredients_magasin", 0.0)) + float(purchase_value)
-                    elif stock_location_key == "stock_ingredients_local":
-                        product.valeur_stock_ingredients_local = float(getattr(product, "valeur_stock_ingredients_local", 0.0)) + float(purchase_value)
-                    
-                    new_total_stock_qty = Decimal(product.total_stock_all_locations)
-                    if new_total_stock_qty > 0:
-                        product.cost_price = product.total_stock_value / new_total_stock_qty
+                    total_qty_decimal = Decimal(str(product.total_stock_all_locations or 0))
+                    if total_qty_decimal > 0:
+                        new_cost_price = (Decimal(str(product.total_stock_value or 0.0)) / total_qty_decimal).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                        product.cost_price = new_cost_price
                     else:
-                        product.cost_price = price_per_base_unit
+                        product.cost_price = Decimal(str(price_per_base_unit))
                 
                 # DEBUG: Log des données après mise à jour
                 debug_after = f"DEBUG - Stock après: {product.stock_ingredients_magasin} (magasin), {product.stock_ingredients_local} (local), Valeur totale: {product.total_stock_value}"
@@ -278,6 +288,7 @@ def mark_as_paid(id):
     if form.validate_on_submit():
         purchase.is_paid = True
         purchase.payment_date = form.payment_date.data
+        purchase.payment_method = form.payment_method.data
         
         # Intégration comptable automatique
         try:
@@ -285,7 +296,7 @@ def mark_as_paid(id):
             AccountingIntegrationService.create_purchase_entry(
                 purchase_id=purchase.id,
                 purchase_amount=float(purchase.total_amount),
-                payment_method='cash',  # Par défaut cash, peut être amélioré avec un champ dans le formulaire
+                payment_method=form.payment_method.data,  # Utiliser la valeur du formulaire
                 description=f'Achat {purchase.reference} - {purchase.supplier_name}'
             )
         except Exception as e:
@@ -488,6 +499,12 @@ def edit_purchase(id):
 
                 quantity_in_base_unit = float(quantity_ordered * unit_object.conversion_factor)
                 
+                # Calculer price_per_base_unit AVANT les blocs if/elif
+                conversion_factor = Decimal(unit_object.conversion_factor)
+                if conversion_factor == 0:
+                    raise ValueError(f"Le facteur de conversion pour l'unité '{unit_object.name}' ne peut pas être zéro.")
+                price_per_base_unit = price_per_unit_achat / conversion_factor
+                
                 # DEBUG: Log des données avant mise à jour
                 debug_info = f"DEBUG - Produit: {product.name}, Stock avant: {product.stock_ingredients_magasin} (magasin), {product.stock_ingredients_local} (local), Quantité à ajouter: {quantity_in_base_unit}"
                 current_app.logger.info(debug_info)
@@ -506,12 +523,8 @@ def edit_purchase(id):
                         'consommables': 'stock_consommables'
                     }
                     stock_location_key = location_mapping.get(stock_locations[i], 'stock_ingredients_magasin')
-                    conversion_factor = Decimal(unit_object.conversion_factor)
                     
-                    if conversion_factor == 0:
-                        raise ValueError(f"Le facteur de conversion pour l'unité '{unit_object.name}' ne peut pas être zéro.")
-                        
-                    price_per_base_unit = price_per_unit_achat / conversion_factor
+                    # conversion_factor et price_per_base_unit sont déjà calculés plus haut
                     purchase_value = Decimal(quantity_in_base_unit) * price_per_base_unit
 
                     current_app.logger.info(f"DEBUG - Mise à jour ingrédient: {stock_location_key}")

@@ -342,27 +342,26 @@ class PayrollCalculationForm(FlaskForm):
     """Formulaire pour calculer et valider la paie"""
     
     employee_id = SelectField('Employé', choices=[], validators=[DataRequired()])
-    period_month = IntegerField('Mois', validators=[DataRequired()])
+    period_month = SelectField('Mois', choices=[
+        ('1', 'Janvier'), ('2', 'Février'), ('3', 'Mars'), ('4', 'Avril'),
+        ('5', 'Mai'), ('6', 'Juin'), ('7', 'Juillet'), ('8', 'Août'),
+        ('9', 'Septembre'), ('10', 'Octobre'), ('11', 'Novembre'), ('12', 'Décembre')
+    ], validators=[DataRequired()])
     period_year = IntegerField('Année', validators=[DataRequired()])
     
-    # Calculs automatiques (affichage seulement)
-    base_salary = DecimalField('Salaire de base', validators=[DataRequired()], places=2)
+    # Calculs automatiques (affichage seulement) - PAS DE VALIDATION REQUISE
+    base_salary = DecimalField('Salaire de base', validators=[Optional()], places=2, default=0)
     overtime_amount = DecimalField('Montant heures sup.', validators=[Optional()], places=2, default=0)
     total_bonuses = DecimalField('Total primes', validators=[Optional()], places=2, default=0)
     total_deductions = DecimalField('Total déductions', validators=[Optional()], places=2, default=0)
     
-    # Charges sociales
-    social_security_rate = DecimalField('Taux sécu. sociale (%)', validators=[DataRequired()], 
-                                       places=2, default=9.0)
-    unemployment_rate = DecimalField('Taux chômage (%)', validators=[DataRequired()], 
-                                    places=2, default=1.5)
-    retirement_rate = DecimalField('Taux retraite (%)', validators=[DataRequired()], 
-                                  places=2, default=7.0)
+    # Charges sociales (taux fixes, non modifiables)
+    # Les taux sont définis automatiquement dans le modèle PayrollCalculation
     
-    # Résultats
-    gross_salary = DecimalField('Salaire brut', validators=[DataRequired()], places=2)
-    total_charges = DecimalField('Total charges', validators=[DataRequired()], places=2)
-    net_salary = DecimalField('Salaire net', validators=[DataRequired()], places=2)
+    # Résultats - PAS DE VALIDATION REQUISE (calculés automatiquement)
+    gross_salary = DecimalField('Salaire brut', validators=[Optional()], places=2, default=0)
+    total_charges = DecimalField('Total charges', validators=[Optional()], places=2, default=0)
+    net_salary = DecimalField('Salaire net', validators=[Optional()], places=2, default=0)
     
     # Validation
     is_validated = BooleanField('Valider cette paie')

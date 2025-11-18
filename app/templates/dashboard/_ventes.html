@@ -1,0 +1,98 @@
+<section class="section-card section-dark">
+    <div class="section-header">
+        <div>
+            <h3 class="section-title text-white">Ventes & Magasin</h3>
+            <p class="section-subtitle">CA multi-périodes, canaux et catégories</p>
+        </div>
+        <div class="chip neon">Commerce live</div>
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-3">
+        <div class="panel-card gradient">
+            <div class="panel-header">
+                <h4>Tendance CA ({{ '30' if data.period == 'month' else '7' }} jours)</h4>
+            </div>
+            <div class="chart-wrapper h-56">
+                <canvas id="revenue-trend-chart"></canvas>
+            </div>
+        </div>
+        <div class="panel-card gradient">
+            <div class="panel-header">
+                <h4>CA par catégorie</h4>
+            </div>
+            <div class="chart-wrapper h-48 mx-auto">
+                <canvas id="category-donut"></canvas>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-4">
+                {% for category in data.sales.category_breakdown %}
+                <div class="payment-chip">
+                    <span>{{ category.name }}</span>
+                    <strong>{{ "{:,.0f}".format(category.revenue).replace(",", " ") }} DA</strong>
+                </div>
+                {% else %}
+                <p class="empty-state col-span-2">Aucune vente catégorisée aujourd'hui.</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="panel-card gradient">
+            <div class="panel-header">
+                <h4>Commandes par canal</h4>
+            </div>
+            <div class="chart-wrapper h-56">
+                <canvas id="order-type-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-3 mt-6">
+        <div class="panel-card dark xl:col-span-2">
+            <div class="panel-header">
+                <h4>Top 5 produits</h4>
+                <span class="tag">Historique du jour</span>
+            </div>
+            <div class="chart-wrapper h-60">
+                <canvas id="sales-bar"></canvas>
+            </div>
+            <div class="top-list mt-4">
+                {% for product in data.sales.top_products %}
+                <div class="list-item">
+                    <div>
+                        <p class="list-title">{{ product.name }}</p>
+                        <small>{{ product.quantity }} ventes</small>
+                    </div>
+                    <span class="chip">{{ product.revenue|currency }}</span>
+                </div>
+                {% else %}
+                <p class="empty-state">Pas encore de ventes aujourd'hui.</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="panel-card dark">
+            <div class="panel-header">
+                <h4>Heatmap horaire</h4>
+                <span class="tag">00h → 23h</span>
+            </div>
+            {% set hours = namespace(values={}) %}
+            {% for point in data.sales.hourly_sales %}
+                {% set _ = hours.values.update({point.hour: point.revenue}) %}
+            {% endfor %}
+            <div class="heatmap-grid">
+                {% for hour in range(0, 24) %}
+                {% set value = hours.values.get(hour, 0) %}
+                {% set tone = 'none' %}
+                {% if value >= 10000 %}
+                    {% set tone = 'high' %}
+                {% elif value >= 3000 %}
+                    {% set tone = 'mid' %}
+                {% elif value > 0 %}
+                    {% set tone = 'low' %}
+                {% endif %}
+                <div class="heatmap-cell heat-{{ tone }}">
+                    <span>{{ "%02d"|format(hour) }}h</span>
+                    <strong>{{ "{:,.0f}".format(value).replace(",", " ") }} DA</strong>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>

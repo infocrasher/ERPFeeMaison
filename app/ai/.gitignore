@@ -1,0 +1,29 @@
+# Modèles Prophet entraînés (fichiers .pkl)
+models/*.pkl
+
+# Cache temporaire
+cache/*
+!cache/.gitkeep
+
+# Logs du module AI
+*.log
+
+# Fichiers Python temporaires
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environnements virtuels
+venv/
+env/
+
+# Données de test
+test_data/
+*.csv
+*.xlsx
+
+# Notebooks Jupyter (si utilisés pour tests)
+*.ipynb
+.ipynb_checkpoints/
+

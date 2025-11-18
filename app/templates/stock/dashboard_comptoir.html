@@ -122,8 +122,8 @@
         </div>
         <div class="col-md-3">
             <div class="card dashboard-card text-center p-3">
-                <h3 class="mb-1">{{ revenue_today or '0' }} DA</h3>
-                <small>Chiffre d'Affaires</small>
+                <h3 class="mb-1">{{ total_value or '0' }} DA</h3>
+                <small>Valeur Stock Total</small>
             </div>
         </div>
     </div>
@@ -164,7 +164,7 @@
                         <div class="row">
                             {% for product in products %}
                             {% set stock_level = product.stock_comptoir or 0 %}
-                            {% set seuil = product.seuil_comptoir or 5 %}
+                            {% set seuil = product.seuil_min_comptoir if product.seuil_min_comptoir is not none else 0 %}
                             {% if stock_level <= 0 %}
                                 {% set level_class = 'product-out' %}
                                 {% set level_icon = '🔴' %}

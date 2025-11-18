@@ -1,0 +1,59 @@
+<section class="production-tv-section">
+    <div class="production-tv-header">
+        <div>
+            <p class="production-eyebrow">Suivi en temps réel</p>
+            <h3>Production du jour</h3>
+            <span class="production-subtitle">{{ data.production.total_orders }} commandes actives</span>
+        </div>
+        <div class="production-tv-stats">
+            <div class="production-stat">
+                <small>Total à produire</small>
+                <strong>{{ data.production.total_units|float|round(0)|int }}</strong>
+            </div>
+            <div class="production-stat">
+                <small>Alertes</small>
+                <strong>{{ data.production.urgent_orders + data.production.overdue_orders }}</strong>
+            </div>
+            <div class="production-stat">
+                <small>Couverture ingrédients</small>
+                <strong>{{ data.production.availability_percent }}%</strong>
+            </div>
+        </div>
+        <div class="production-tv-clock" id="production-dashboard-clock">--:--</div>
+    </div>
+
+    {% if data.production.orders %}
+    <div class="production-tv-grid">
+        {% for order in data.production.orders %}
+        <div class="production-card priority-{{ order.priority }}">
+            <div class="production-card-header">
+                <span class="production-product">{{ order.primary_product }}</span>
+                <span class="production-qty">{{ order.quantity_display }}</span>
+            </div>
+            <div class="production-time">{{ order.time_label }}</div>
+            <div class="production-meta">
+                <span>#{{ order.id }}</span>
+                <span>{{ order.customer }}</span>
+                <span>{{ order.due_date }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state-tv">Aucune commande en production</p>
+    {% endif %}
+</section>
+
+<script>
+(function () {
+    const clockEl = document.getElementById('production-dashboard-clock');
+    if (!clockEl) return;
+    function updateClock() {
+        const now = new Date();
+        clockEl.textContent = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+})();
+</script>
+

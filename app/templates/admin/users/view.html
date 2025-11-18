@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Fée Maison{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-user me-2"></i>{{ title }}
+                </h1>
+                <div>
+                    <a href="{{ url_for('users_admin.edit_user', user_id=user.id) }}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>Modifier
+                    </a>
+                    <a href="{{ url_for('users_admin.list_users') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Retour
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Informations générales -->
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Nom d'utilisateur :</strong> {{ user.username }}</p>
+                            <p><strong>Email :</strong> {{ user.email }}</p>
+                            <p><strong>Rôle :</strong> 
+                                {% if user.role == 'admin' %}
+                                    <span class="badge bg-danger">Administrateur</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Utilisateur</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Profil :</strong> 
+                                {% if user.profile %}
+                                    <span class="badge bg-info">{{ user.profile.name }}</span>
+                                    <br>
+                                    <small class="text-muted">{{ user.profile.description or 'Aucune description' }}</small>
+                                {% else %}
+                                    <span class="badge bg-secondary">Aucun profil assigné</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Statut :</strong> 
+                                <span class="badge bg-success">Actif</span>
+                            </p>
+                            <p><strong>Créé le :</strong> {{ user.created_at.strftime('%d/%m/%Y %H:%M') if user.created_at else '-' }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Permissions du profil -->
+                {% if user.profile %}
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-key me-2"></i>Permissions (via profil {{ user.profile.name }})
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">
+                                L'utilisateur a accès aux permissions définies dans son profil.
+                                <a href="{{ url_for('profiles_admin.view_profile', profile_id=user.profile.id) }}" class="text-primary">
+                                    Voir les détails du profil
+                                </a>
+                            </p>
+                            <p>
+                                <strong>Permissions actives :</strong>
+                                <span class="badge bg-info">
+                                    {{ user.profile.permissions.values() | select('equalto', True) | list | length }} permissions
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Aucun profil assigné</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">
+                                Cet utilisateur n'a pas de profil assigné. 
+                                <a href="{{ url_for('users_admin.edit_user', user_id=user.id) }}" class="text-primary">
+                                    Assigner un profil
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

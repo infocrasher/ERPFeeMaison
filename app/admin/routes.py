@@ -6,6 +6,9 @@ from decorators import admin_required
 
 admin = Blueprint('admin', __name__)
 
+# Importer et enregistrer le blueprint de l'imprimante
+from .printer_routes import printer_admin
+
 @admin.route('/dashboard')
 @login_required
 @admin_required

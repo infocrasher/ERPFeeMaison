@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Validation - {{ inventory.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">✅ Validation de l'inventaire</h2>
+                    <p class="text-muted mb-0">{{ inventory.title }}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('inventory.view', id=inventory.id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Retour
+                    </a>
+                </div>
+            </div>
+
+            <!-- Résumé des ajustements -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">📊 Résumé des ajustements à appliquer</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if items_to_adjust %}
+                                <div class="alert alert-warning">
+                                    <h6 class="alert-heading">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        {{ items_to_adjust | length }} ajustements seront appliqués
+                                    </h6>
+                                    <p class="mb-0">Les stocks des produits suivants seront mis à jour selon les valeurs physiques comptées.</p>
+                                </div>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Produit</th>
+                                                <th>Emplacement</th>
+                                                <th class="text-end">Théorique</th>
+                                                <th class="text-end">Physique</th>
+                                                <th class="text-end">Écart</th>
+                                                <th class="text-end">Valeur</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in items_to_adjust %}
+                                                <tr>
+                                                    <td>
+                                                        <strong>{{ item.product.name }}</strong>
+                                                        {% if item.adjustment_reason %}
+                                                            <br><small class="text-muted">{{ item.adjustment_reason.value }}</small>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if item.location_type == 'ingredients_magasin' %}
+                                                            📦 Magasin
+                                                        {% elif item.location_type == 'ingredients_local' %}
+                                                            🏭 Local
+                                                        {% elif item.location_type == 'consommables' %}
+                                                            📋 Consommables
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-end">{{ item.product.format_quantity_display(item.theoretical_stock) }}</td>
+                                                    <td class="text-end">{{ item.product.format_quantity_display(item.physical_stock) }}</td>
+                                                    <td class="text-end">
+                                                        <span class="{% if item.variance > 0 %}text-success{% elif item.variance < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                            {{ "+" if item.variance > 0 else "" }}{{ item.product.format_quantity_display(item.variance) }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        {% if item.variance_value %}
+                                                            <span class="{% if item.variance_value > 0 %}text-success{% elif item.variance_value < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                                {{ "%.2f"|format(item.variance_value) }} DA
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="text-muted">-</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-success">
+                                    <h6 class="alert-heading">
+                                        <i class="bi bi-check-circle me-2"></i>Aucun ajustement nécessaire
+                                    </h6>
+                                    <p class="mb-0">Tous les stocks physiques correspondent aux stocks théoriques. Aucun ajustement ne sera appliqué.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">📈 Statistiques</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center mb-3">
+                                <div class="col-6">
+                                    <h4 class="text-primary">{{ inventory.total_products }}</h4>
+                                    <small class="text-muted">Produits</small>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-warning">{{ inventory.products_with_variance }}</h4>
+                                    <small class="text-muted">Avec écart</small>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="text-center">
+                                <h5 class="text-info">{{ "%.2f"|format(inventory.total_variance_value) }} DA</h5>
+                                <small class="text-muted">Valeur totale des écarts</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulaire de validation -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">✅ Validation finale</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-4">
+                            {{ form.validation_notes.label(class="form-label fw-bold") }}
+                            {{ form.notes(class="form-control", rows="3", placeholder="Commentaires sur la validation de cet inventaire...") }}
+                            <div class="form-text">{{ form.validation_notes.description }}</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                {{ form.apply_adjustments(class="form-check-input") }}
+                                {{ form.apply_adjustments.label(class="form-check-label fw-bold") }}
+                            </div>
+                            <div class="form-text">{{ form.apply_adjustments.description }}</div>
+                            
+                            {% if items_to_adjust %}
+                                <div class="alert alert-info mt-2">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Attention :</strong> Si cette option est cochée, les stocks des produits seront automatiquement mis à jour avec les valeurs physiques comptées. Cette action est irréversible.
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('inventory.view', id=inventory.id) }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Annuler
+                            </a>
+                            {{ form.submit(class="btn btn-success") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-person me-2"></i>{{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.csrf_token }}
+                        
+                        <!-- Informations personnelles -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="bi bi-person-badge me-2"></i>Informations Personnelles
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.first_name.label(class="form-label required") }}
+                                {{ form.first_name(class="form-control") }}
+                                {% if form.first_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.first_name.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.last_name.label(class="form-label required") }}
+                                {{ form.last_name(class="form-control") }}
+                                {% if form.last_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.last_name.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.phone.label(class="form-label required") }}
+                                {{ form.phone(class="form-control") }}
+                                {% if form.phone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.phone.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.email.label(class="form-label") }}
+                                {{ form.email(class="form-control", type="email") }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.email.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.birth_date.label(class="form-label") }}
+                                {{ form.birth_date(class="form-control") }}
+                                {% if form.birth_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.birth_date.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.customer_type.label(class="form-label") }}
+                                {{ form.customer_type(class="form-select") }}
+                            </div>
+                        </div>
+
+                        <!-- Adresses -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="bi bi-geo-alt me-2"></i>Adresses
+                                </h5>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                {{ form.address.label(class="form-label") }}
+                                {{ form.address(class="form-control", rows="3") }}
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                {{ form.delivery_address.label(class="form-label") }}
+                                {{ form.delivery_address(class="form-control", rows="3") }}
+                                <div class="form-text">Laissez vide si identique à l'adresse principale</div>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                {{ form.preferred_delivery.label(class="form-label") }}
+                                {{ form.preferred_delivery(class="form-select") }}
+                            </div>
+                        </div>
+
+                        <!-- Préférences et notes -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="bi bi-heart me-2"></i>Préférences et Notes
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.allergies.label(class="form-label") }}
+                                {{ form.allergies(class="form-control", rows="3", placeholder="Allergies alimentaires connues...") }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.preferences.label(class="form-label") }}
+                                {{ form.preferences(class="form-control", rows="3", placeholder="Préférences culinaires, goûts...") }}
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                {{ form.notes.label(class="form-label") }}
+                                {{ form.notes(class="form-control", rows="4", placeholder="Notes générales, informations importantes...") }}
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <div class="form-check">
+                                    {{ form.is_active(class="form-check-input") }}
+                                    {{ form.is_active.label(class="form-check-label") }}
+                                </div>
+                                <div class="form-text">Les clients inactifs n'apparaissent pas dans les sélecteurs</div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                            <a href="{{ url_for('customers.list_customers') }}" class="btn btn-outline-secondary">
+                                Annuler
+                            </a>
+                            {% if customer %}
+                            <a href="{{ url_for('customers.view_customer', customer_id=customer.id) }}" class="btn btn-outline-info">
+                                <i class="bi bi-eye me-1"></i>Voir
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.required::after {
+    content: " *";
+    color: red;
+}
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+
+

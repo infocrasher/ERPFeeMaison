@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}Déclarer des invendus{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-trash3 me-2"></i>Déclarer des invendus</h2>
+                <a href="{{ url_for('inventory.daily_waste_index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Retour à la liste
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-md-9">
+                    <div class="card">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Déclaration d'invendus (multi-produits)</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" id="wasteForm">
+                                {{ form.hidden_tag() }}
+                                
+                                <!-- Date de l'invendu -->
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">{{ form.waste_date.label }}</label>
+                                        {{ form.waste_date(class="form-control") }}
+                                        {% if form.waste_date.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.waste_date.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Lignes d'invendus -->
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="wasteTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 30%">Produit</th>
+                                                <th style="width: 15%">Quantité</th>
+                                                <th style="width: 15%">Raison</th>
+                                                <th style="width: 25%">Notes</th>
+                                                <th style="width: 10%">Valeur perdue</th>
+                                                <th style="width: 5%">
+                                                    <button type="button" class="btn btn-sm btn-success" onclick="addWasteLine()">
+                                                        <i class="bi bi-plus-circle"></i>
+                                                    </button>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="wasteLines">
+                                            {% for line in form.lines %}
+                                            <tr class="waste-line" data-index="{{ loop.index0 }}">
+                                                <td>
+                                                    {{ line.product_id(class="form-control form-control-sm product-select", onchange="updateLineInfo(this)") }}
+                                                    {% if line.product_id.errors %}
+                                                        <div class="text-danger">
+                                                            {% for error in line.product_id.errors %}
+                                                                <small>{{ error }}</small>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="input-group input-group-sm">
+                                                        {{ line.quantity(class="form-control form-control-sm quantity-input", onchange="calculateLineValue(this)") }}
+                                                        <span class="input-group-text unit-display">unité</span>
+                                                    </div>
+                                                    {% if line.quantity.errors %}
+                                                        <div class="text-danger">
+                                                            {% for error in line.quantity.errors %}
+                                                                <small>{{ error }}</small>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {{ line.reason(class="form-control form-control-sm") }}
+                                                    {% if line.reason.errors %}
+                                                        <div class="text-danger">
+                                                            {% for error in line.reason.errors %}
+                                                                <small>{{ error }}</small>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {{ line.notes(class="form-control form-control-sm", rows="1") }}
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="value-display text-danger fw-bold">0.00 DA</span>
+                                                    <input type="hidden" class="line-value" value="0">
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-sm btn-danger" onclick="removeWasteLine(this)" {% if loop.index0 == 0 %}disabled{% endif %}>
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot class="table-light">
+                                            <tr>
+                                                <td colspan="4" class="text-end fw-bold">Total valeur perdue estimée :</td>
+                                                <td class="text-end">
+                                                    <span id="totalValue" class="text-danger fw-bold fs-5">0.00 DA</span>
+                                                </td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+                                <!-- Notes générales -->
+                                <div class="mb-3">
+                                    {{ form.global_notes.label(class="form-label fw-bold") }}
+                                    {{ form.global_notes(class="form-control", rows="3", placeholder="Notes communes à tous les invendus déclarés...") }}
+                                </div>
+
+                                <!-- Validation des erreurs -->
+                                {% if form.lines.errors %}
+                                    <div class="alert alert-danger">
+                                        {% for error in form.lines.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                <!-- Boutons d'action -->
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{{ url_for('inventory.daily_waste_index') }}" class="btn btn-outline-secondary me-md-2">
+                                        <i class="bi bi-x-circle me-1"></i>Annuler
+                                    </a>
+                                    {{ form.submit(class="btn btn-danger btn-lg") }}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card mb-3">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i>Informations</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="small mb-2"><strong>Déclaration multi-produits</strong></p>
+                            <p class="small mb-0">Vous pouvez déclarer plusieurs produits invendus en une seule fois. Cliquez sur <i class="bi bi-plus-circle text-success"></i> pour ajouter une ligne.</p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-warning">
+                            <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Attention</h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="small mb-0 ps-3">
+                                <li>Le stock comptoir sera ajusté automatiquement</li>
+                                <li>La valeur perdue est calculée automatiquement</li>
+                                <li>Les déclarations sont définitives</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            <h6 class="mb-0"><i class="bi bi-lightbulb me-1"></i>Astuce</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="small mb-0">Vous pouvez déclarer des invendus pour une date antérieure en modifiant la date en haut du formulaire.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Données des produits passées depuis le serveur
+const productsData = {{ products_data | tojson }};
+let lineIndex = {{ form.lines | length }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser les lignes existantes
+    document.querySelectorAll('.waste-line').forEach(line => {
+        const select = line.querySelector('.product-select');
+        if (select && select.value) {
+            updateLineInfo(select);
+        }
+    });
+    
+    updateTotalValue();
+});
+
+function updateLineInfo(selectElement) {
+    const row = selectElement.closest('tr');
+    const productId = parseInt(selectElement.value);
+    const unitDisplay = row.querySelector('.unit-display');
+    const quantityInput = row.querySelector('.quantity-input');
+    
+    if (productId && productsData[productId]) {
+        const product = productsData[productId];
+        unitDisplay.textContent = product.unit;
+        
+        // Mettre à jour la valeur si une quantité est déjà saisie
+        if (quantityInput.value) {
+            calculateLineValue(quantityInput);
+        }
+    } else {
+        unitDisplay.textContent = 'unité';
+        row.querySelector('.value-display').textContent = '0.00 DA';
+        row.querySelector('.line-value').value = '0';
+    }
+    
+    updateTotalValue();
+}
+
+function calculateLineValue(quantityInput) {
+    const row = quantityInput.closest('tr');
+    const productSelect = row.querySelector('.product-select');
+    const productId = parseInt(productSelect.value);
+    const quantity = parseFloat(quantityInput.value) || 0;
+    
+    if (productId && productsData[productId]) {
+        const product = productsData[productId];
+        const value = quantity * product.cost_price;
+        
+        row.querySelector('.value-display').textContent = value.toFixed(2) + ' DA';
+        row.querySelector('.line-value').value = value.toFixed(2);
+        
+        // Vérifier le stock disponible
+        if (quantity > product.stock) {
+            quantityInput.classList.add('is-invalid');
+            quantityInput.title = `Stock disponible: ${product.stock} ${product.unit}`;
+        } else {
+            quantityInput.classList.remove('is-invalid');
+            quantityInput.title = '';
+        }
+    }
+    
+    updateTotalValue();
+}
+
+function updateTotalValue() {
+    let total = 0;
+    document.querySelectorAll('.line-value').forEach(input => {
+        total += parseFloat(input.value) || 0;
+    });
+    
+    document.getElementById('totalValue').textContent = total.toFixed(2) + ' DA';
+}
+
+function addWasteLine() {
+    const tbody = document.getElementById('wasteLines');
+    const newRow = document.createElement('tr');
+    newRow.className = 'waste-line';
+    newRow.dataset.index = lineIndex;
+    
+    // Construire les options du select
+    let optionsHtml = '<option value="">-- Sélectionner un produit --</option>';
+    for (const [id, product] of Object.entries(productsData)) {
+        optionsHtml += `<option value="${id}">${product.name} - ${product.stock} ${product.unit}</option>`;
+    }
+    
+    newRow.innerHTML = `
+        <td>
+            <select name="lines-${lineIndex}-product_id" id="lines-${lineIndex}-product_id" 
+                    class="form-control form-control-sm product-select" onchange="updateLineInfo(this)">
+                ${optionsHtml}
+            </select>
+        </td>
+        <td>
+            <div class="input-group input-group-sm">
+                <input type="number" step="0.001" name="lines-${lineIndex}-quantity" id="lines-${lineIndex}-quantity" 
+                       class="form-control form-control-sm quantity-input" onchange="calculateLineValue(this)">
+                <span class="input-group-text unit-display">unité</span>
+            </div>
+        </td>
+        <td>
+            <select name="lines-${lineIndex}-reason" id="lines-${lineIndex}-reason" class="form-control form-control-sm">
+                <option value="">-- Sélectionner --</option>
+                <option value="peremption">Péremption</option>
+                <option value="invendu">Invendu</option>
+                <option value="casse">Casse</option>
+                <option value="don">Don gratuit</option>
+            </select>
+        </td>
+        <td>
+            <textarea name="lines-${lineIndex}-notes" id="lines-${lineIndex}-notes" 
+                      class="form-control form-control-sm" rows="1"></textarea>
+        </td>
+        <td class="text-end">
+            <span class="value-display text-danger fw-bold">0.00 DA</span>
+            <input type="hidden" class="line-value" value="0">
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeWasteLine(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    lineIndex++;
+}
+
+function removeWasteLine(button) {
+    const row = button.closest('tr');
+    row.remove();
+    updateTotalValue();
+}
+
+// Validation avant soumission
+document.getElementById('wasteForm').addEventListener('submit', function(e) {
+    const lines = document.querySelectorAll('.waste-line');
+    let validLines = 0;
+    
+    lines.forEach(line => {
+        const productId = line.querySelector('.product-select').value;
+        const quantity = line.querySelector('.quantity-input').value;
+        const reason = line.querySelector('select[name*="reason"]').value;
+        
+        if (productId && quantity && reason) {
+            validLines++;
+        }
+    });
+    
+    if (validLines === 0) {
+        e.preventDefault();
+        alert('Veuillez remplir au moins une ligne complète (Produit + Quantité + Raison)');
+        return false;
+    }
+});
+</script>
+
+<style>
+.waste-line:hover {
+    background-color: #f8f9fa;
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.unit-display {
+    min-width: 60px;
+    font-size: 0.875rem;
+}
+
+.value-display {
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}

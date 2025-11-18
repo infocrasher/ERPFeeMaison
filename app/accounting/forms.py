@@ -4,7 +4,7 @@ Formulaires pour le module comptabilité
 
 from flask_wtf import FlaskForm
 from wtforms import (StringField, TextAreaField, SelectField, DecimalField, 
-                     DateField, BooleanField, SubmitField, FieldList, FormField)
+                     DateField, BooleanField, SubmitField, FieldList, FormField, IntegerField)
 from wtforms.validators import DataRequired, Length, NumberRange, Optional, ValidationError
 from datetime import date
 from .models import AccountType, AccountNature, JournalType
@@ -189,35 +189,83 @@ class ExpenseForm(FlaskForm):
         NumberRange(min=0.01, message="Le montant doit être positif")
     ], places=2)
     category = SelectField('Catégorie', validators=[DataRequired(message="La catégorie est obligatoire")])
+    other_category = StringField('Précision (optionnel)', validators=[Optional(), Length(max=100)])
     payment_method = SelectField('Mode de paiement', choices=[
+        ('bank', 'Virement bancaire (par défaut)'),
         ('cash', 'Espèces (Caisse)'),
-        ('bank', 'Virement bancaire'),
         ('check', 'Chèque')
-    ], validators=[DataRequired(message="Le mode de paiement est obligatoire")])
+    ], default='bank', validators=[DataRequired(message="Le mode de paiement est obligatoire")])
     supplier = StringField('Fournisseur/Bénéficiaire', validators=[Optional(), Length(max=100)])
     reference = StringField('Référence (facture, reçu...)', validators=[Optional(), Length(max=100)])
     notes = TextAreaField('Notes', validators=[Optional()])
-    is_paid = BooleanField('Payé', default=True)
-    submit = SubmitField('Enregistrer')
+    is_paid = BooleanField('Payé automatiquement', default=True)
+    submit = SubmitField('Enregistrer et Déduire de la Banque')
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Catégories de dépenses courantes pour une boulangerie
+        # Catégories de charges basées sur les comptes comptables existants
         self.category.choices = [
-            ('601', '601 - Achats matières premières'),
-            ('602', '602 - Achats emballages'),
-            ('606', '606 - Achats fournitures'),
-            ('613', '613 - Locations'),
-            ('615', '615 - Entretien et réparations'),
-            ('616', '616 - Assurances'),
-            ('621', '621 - Personnel extérieur'),
-            ('622', '622 - Rémunérations intermédiaires'),
-            ('625', '625 - Déplacements'),
-            ('626', '626 - Frais postaux'),
-            ('627', '627 - Services bancaires'),
-            ('628', '628 - Divers'),
-            ('641', '641 - Rémunérations du personnel'),
-            ('645', '645 - Charges de sécurité sociale'),
-            ('661', '661 - Charges d\'intérêts'),
-            ('681', '681 - Dotations aux amortissements')
-        ] 
+            ('613', 'Loyer (613 - Locations)'),
+            ('615', 'Réparations (615 - Entretien et réparations)'),
+            ('616', 'Assurance (616 - Primes d\'assurance)'),
+            ('621', 'Personnel extérieur (621)'),
+            ('625', 'Déplacements (625)'),
+            ('626', 'Frais postaux et téléphone (626)'),
+            ('627', 'Services bancaires (627)'),
+            ('628', 'Divers (628)'),
+            ('641', 'Salaires (641 - Rémunérations du personnel)'),
+            ('645', 'Charges sociales (645)'),
+            ('658', 'Charges diverses (658)'),
+            ('661', 'Charges financières (661)'),
+            ('681', 'Amortissements (681)')
+        ]
+    
+    def validate(self, extra_validators=None):
+        """Validation personnalisée"""
+        if not super().validate(extra_validators):
+            return False
+        
+        # Si la catégorie est "628" (Divers), le champ other_category peut être utilisé pour préciser
+        # Mais ce n'est pas obligatoire
+        
+        return True
+
+
+class BusinessConfigForm(FlaskForm):
+    """Formulaire de configuration des objectifs métier"""
+    
+    # Objectifs financiers
+    monthly_objective = DecimalField('Objectif mensuel (DZD)', validators=[
+        DataRequired(message="L'objectif mensuel est obligatoire"),
+        NumberRange(min=1, message="L'objectif doit être positif")
+    ], places=2)
+    
+    daily_objective = DecimalField('Objectif journalier (DZD)', validators=[
+        DataRequired(message="L'objectif journalier est obligatoire"),
+        NumberRange(min=1, message="L'objectif doit être positif")
+    ], places=2)
+    
+    yearly_objective = DecimalField('Objectif annuel (DZD)', validators=[
+        DataRequired(message="L'objectif annuel est obligatoire"),
+        NumberRange(min=1, message="L'objectif doit être positif")
+    ], places=2)
+    
+    # Paramètres stock
+    stock_rotation_days = IntegerField('Période rotation stock (jours)', validators=[
+        DataRequired(message="La période est obligatoire"),
+        NumberRange(min=1, max=365, message="Entre 1 et 365 jours")
+    ], default=30)
+    
+    # Paramètres qualité
+    quality_target_percent = DecimalField('Objectif qualité (%)', validators=[
+        DataRequired(message="L'objectif qualité est obligatoire"),
+        NumberRange(min=50, max=100, message="Entre 50% et 100%")
+    ], places=1, default=95.0)
+    
+    # Paramètres RH
+    standard_work_hours_per_day = DecimalField('Heures standard/jour', validators=[
+        DataRequired(message="Les heures standard sont obligatoires"),
+        NumberRange(min=1, max=12, message="Entre 1 et 12 heures")
+    ], places=1, default=8.0)
+    
+    submit = SubmitField('Enregistrer la Configuration') 

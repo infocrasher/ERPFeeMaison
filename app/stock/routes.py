@@ -26,78 +26,147 @@ from . import bp as stock
 @login_required
 @admin_required
 def overview():
-    """Vue d'ensemble globale des 4 stocks"""
-    low_stock_threshold = current_app.config.get('LOW_STOCK_THRESHOLD', 5)
-    
-    # Récupération de tous les produits
+    """Vue globale consolidée de tous les stocks"""
     products = Product.query.all()
+    low_stock_fallback = current_app.config.get('LOW_STOCK_THRESHOLD', 5)
     
-    # ✅ CORRECTION : Analyse par localisation avec vrais attributs
-    comptoir_low = []
-    local_low = []
-    magasin_low = []
-    consommables_low = []
-    out_of_stock_products = []  # ✅ AJOUT : Variable manquante
+    location_configs = [
+        {
+            'key': 'magasin',
+            'label': 'Réserve Magasin',
+            'icon': 'bi bi-building',
+            'gradient': 'gradient-magasin',
+            'stock_attr': 'stock_ingredients_magasin',
+            'value_attr': 'valeur_stock_ingredients_magasin',
+            'threshold_attr': 'seuil_min_ingredients_magasin'
+        },
+        {
+            'key': 'local',
+            'label': 'Labo Local',
+            'icon': 'bi bi-tools',
+            'gradient': 'gradient-local',
+            'stock_attr': 'stock_ingredients_local',
+            'value_attr': 'valeur_stock_ingredients_local',
+            'threshold_attr': 'seuil_min_ingredients_local'
+        },
+        {
+            'key': 'comptoir',
+            'label': 'Comptoir Vente',
+            'icon': 'bi bi-shop',
+            'gradient': 'gradient-comptoir',
+            'stock_attr': 'stock_comptoir',
+            'value_attr': 'valeur_stock_comptoir',
+            'threshold_attr': 'seuil_min_comptoir'
+        },
+        {
+            'key': 'consommables',
+            'label': 'Consommables',
+            'icon': 'bi bi-box',
+            'gradient': 'gradient-consommables',
+            'stock_attr': 'stock_consommables',
+            'value_attr': 'valeur_stock_consommables',
+            'threshold_attr': 'seuil_min_consommables'
+        }
+    ]
+    
+    summary_cards = []
+    low_stock_rows = []
+    critical_products = []
+    value_distribution = []
+    
+    product_low_cache = {}
+    
+    total_value_global = 0
+    
+    for config in location_configs:
+        qty_total = sum(float(getattr(p, config['stock_attr']) or 0) for p in products)
+        value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in products)
+        total_value_global += value_total
+        under_threshold_count = 0
+        
+        for product in products:
+            stock_level = float(getattr(product, config['stock_attr']) or 0)
+            threshold_value = getattr(product, config['threshold_attr'])
+            threshold = float(threshold_value) if threshold_value is not None else float(low_stock_fallback)
+            if threshold <= 0:
+                continue
+            if stock_level <= threshold:
+                under_threshold_count += 1
+                entry = product_low_cache.setdefault(product.id, {
+                    'product': product,
+                    'locations': {}
+                })
+                entry['locations'][config['key']] = {
+                    'stock': stock_level,
+                    'threshold': threshold
+                }
+        
+        summary_cards.append({
+            'key': config['key'],
+            'label': config['label'],
+            'icon': config['icon'],
+            'gradient': config['gradient'],
+            'quantity': qty_total,
+            'value': value_total,
+            'under_threshold': under_threshold_count
+        })
+        
+        value_distribution.append({
+            'label': config['label'],
+            'value': value_total
+        })
+    
+    low_stock_rows = sorted(product_low_cache.values(), key=lambda x: x['product'].name)
     
     for product in products:
-        # Stock comptoir bas
-        if (product.stock_comptoir or 0) <= (product.seuil_min_comptoir or 5):
-            comptoir_low.append(product)
-        
-        # Stock local bas
-        if (product.stock_ingredients_local or 0) <= (product.seuil_min_ingredients_local or 5):
-            local_low.append(product)
-        
-        # Stock magasin bas
-        if (product.stock_ingredients_magasin or 0) <= (product.seuil_min_ingredients_magasin or 5):
-            magasin_low.append(product)
-        
-        # Stock consommables bas
-        if (product.stock_consommables or 0) <= (product.seuil_min_consommables or 5):
-            consommables_low.append(product)
-        
-        # ✅ AJOUT : Produits en rupture totale (toutes localisations)
-        total_stock = ((product.stock_comptoir or 0) + 
-                      (product.stock_ingredients_local or 0) + 
-                      (product.stock_ingredients_magasin or 0) + 
-                      (product.stock_consommables or 0))
+        total_stock = (product.stock_comptoir or 0) + (product.stock_ingredients_local or 0) + \
+                      (product.stock_ingredients_magasin or 0) + (product.stock_consommables or 0)
         if total_stock <= 0:
-            out_of_stock_products.append(product)
+            critical_products.append(product)
     
-    # Calcul des valeurs totales par stock
-    total_value_comptoir = sum((p.stock_comptoir or 0) * float(p.cost_price or 0) for p in products)
-    total_value_local = sum((p.stock_ingredients_local or 0) * float(p.cost_price or 0) for p in products)
-    total_value_magasin = sum((p.stock_ingredients_magasin or 0) * float(p.cost_price or 0) for p in products)
-    total_value_consommables = sum((p.stock_consommables or 0) * float(p.cost_price or 0) for p in products)
+    top_value_products = sorted(
+        products,
+        key=lambda p: float(p.total_stock_value or 0),
+        reverse=True
+    )[:8]
     
-    # Calculs corrigés
-    total_stock_value = total_value_comptoir + total_value_local + total_value_magasin + total_value_consommables
-    low_stock_products = comptoir_low + local_low + magasin_low + consommables_low
+    total_deficit = sum(float(p.value_deficit_total or 0) for p in products)
+    deficit_by_location = {
+        'magasin': sum(float(p.deficit_stock_ingredients_magasin or 0) for p in products),
+        'local': sum(float(p.deficit_stock_ingredients_local or 0) for p in products),
+        'comptoir': sum(float(p.deficit_stock_comptoir or 0) for p in products),
+        'consommables': sum(float(p.deficit_stock_consommables or 0) for p in products)
+    }
     
-    # Transferts en attente (simulation si table pas encore créée)
     try:
         pending_transfers = StockTransfer.query.filter(
             StockTransfer.status.in_([TransferStatus.REQUESTED, TransferStatus.APPROVED])
-        ).count()
-    except:
-        pending_transfers = 0
+        ).order_by(StockTransfer.created_at.desc()).limit(5).all()
+    except Exception:
+        pending_transfers = []
+    
+    try:
+        from app.purchases.models import Purchase, PurchaseStatus
+        pending_purchases = Purchase.query.filter(
+            Purchase.status.in_([PurchaseStatus.REQUESTED, PurchaseStatus.APPROVED])
+        ).order_by(Purchase.requested_date.desc()).limit(5).all()
+    except Exception:
+        pending_purchases = []
     
     return render_template(
         'stock/stock_overview.html',
-        title="Vue d'ensemble des 4 Stocks",
-        comptoir_low=comptoir_low,
-        local_low=local_low,
-        magasin_low=magasin_low,
-        consommables_low=consommables_low,
-        total_value_comptoir=total_value_comptoir,
-        total_value_local=total_value_local,
-        total_value_magasin=total_value_magasin,
-        total_value_consommables=total_value_consommables,
+        title="Vue Globale Stocks",
+        summary_cards=summary_cards,
+        low_stock_rows=low_stock_rows,
+        critical_products=critical_products,
+        value_distribution=value_distribution,
+        total_value_global=total_value_global,
+        top_value_products=top_value_products,
+        total_products_count=len(products),
+        total_deficit=total_deficit,
+        deficit_by_location=deficit_by_location,
         pending_transfers=pending_transfers,
-        total_stock_value=total_stock_value,
-        low_stock_products=low_stock_products,
-        # ✅ AJOUT : Variable manquante pour le template
-        out_of_stock_products=out_of_stock_products
+        pending_purchases=pending_purchases
     )
 
 @stock.route('/quick_entry', methods=['GET', 'POST'])
@@ -268,6 +337,9 @@ def dashboard_local():
     orders_pending = len(pending_orders)
     production_capacity = 85  # Pourcentage simulation
     
+    # ✅ Calcul de la valeur totale du stock local
+    total_value_local = sum(float(p.valeur_stock_ingredients_local or 0) for p in ingredients_local)
+    
     return render_template(
         'stock/dashboard_local.html',
         title="Dashboard Stock Local",
@@ -279,7 +351,8 @@ def dashboard_local():
         total_ingredients_local=total_ingredients_local,
         ingredients_needed=ingredients_needed,
         orders_pending=orders_pending,
-        production_capacity=production_capacity
+        production_capacity=production_capacity,
+        total_value=f"{total_value_local:,.0f}"  # ✅ Ajout de la valeur totale
     )
 
 @stock.route('/dashboard/comptoir')
@@ -323,6 +396,9 @@ def dashboard_comptoir():
     sales_today = 12  # Simulation
     revenue_today = '15750'  # Simulation
     
+    # ✅ Calcul de la valeur totale du stock comptoir
+    total_value_comptoir = sum(float(p.valeur_stock_comptoir or 0) for p in all_products)
+    
     return render_template(
         'stock/dashboard_comptoir.html',
         title="Dashboard Stock Comptoir",
@@ -333,7 +409,8 @@ def dashboard_comptoir():
         total_products_comptoir=total_products_comptoir,
         products_out_of_stock=products_out_of_stock,
         sales_today=sales_today,
-        revenue_today=revenue_today
+        revenue_today=revenue_today,
+        total_value=f"{total_value_comptoir:,.0f}"  # ✅ Ajout de la valeur totale
     )
 
 @stock.route('/dashboard/consommables')
@@ -387,6 +464,9 @@ def dashboard_consommables():
     adjustments_this_month = 8  # Simulation
     estimated_consumption = 72  # Pourcentage simulation
     
+    # ✅ Calcul de la valeur totale du stock consommables
+    total_value_consommables = sum(float(p.valeur_stock_consommables or 0) for p in all_consommables)
+    
     return render_template(
         'stock/dashboard_consommables.html',
         title="Dashboard Stock Consommables",
@@ -397,7 +477,8 @@ def dashboard_consommables():
         total_consommables=total_consommables,
         critical_consommables=critical_consommables,
         adjustments_this_month=adjustments_this_month,
-        estimated_consumption=estimated_consumption
+        estimated_consumption=estimated_consumption,
+        total_value=f"{total_value_consommables:,.0f}"  # ✅ Ajout de la valeur totale
     )
 
 # ==================== ROUTES GESTION DES TRANSFERTS ====================
@@ -414,11 +495,31 @@ def transfers_list():
         transfers=transfers
     )
 
+@stock.route('/transfers/<int:transfer_id>')
+@login_required
+def view_transfer(transfer_id):
+    """Voir les détails d'un transfert"""
+    transfer = StockTransfer.query.get_or_404(transfer_id)
+    
+    return render_template(
+        'stock/view_transfer.html',
+        title=f"Transfert {transfer.reference}",
+        transfer=transfer
+    )
+
 @stock.route('/transfers/create', methods=['GET', 'POST'])
 @login_required
 def create_transfer():
     """Création d'un nouveau transfert"""
     form = StockTransferForm()
+    
+    # DEBUG: Log pour comprendre le problème
+    if request.method == 'POST':
+        current_app.logger.info(f"DEBUG - Form submitted")
+        current_app.logger.info(f"DEBUG - Form is valid: {form.validate_on_submit()}")
+        if not form.validate():
+            current_app.logger.error(f"DEBUG - Form errors: {form.errors}")
+            flash(f'Erreurs de validation: {form.errors}', 'danger')
     
     if form.validate_on_submit():
         # Création du transfert principal
@@ -435,14 +536,17 @@ def create_transfer():
         db.session.flush()  # Pour obtenir l'ID du transfert
         
         # Ajout des lignes de transfert
-        for line_data in form.transfer_lines.data:
-            if line_data['product_id'] and line_data['quantity_requested'] > 0:
+        for line_form in form.transfer_lines:
+            product_obj = line_form.product.data
+            quantity_requested = line_form.quantity_requested.data
+            
+            if product_obj and quantity_requested and quantity_requested > 0:
                 transfer_line = StockTransferLine(
                     transfer_id=transfer.id,
-                    product_id=line_data['product_id'],
-                    quantity_requested=line_data['quantity_requested'],
-                    unit_cost=Product.query.get(line_data['product_id']).cost_price or 0.0,
-                    notes=line_data.get('notes', '')
+                    product_id=product_obj.id,
+                    quantity_requested=quantity_requested,
+                    unit_cost=float(product_obj.cost_price or 0.0),
+                    notes=line_form.notes.data or ''
                 )
                 
                 db.session.add(transfer_line)
@@ -457,6 +561,21 @@ def create_transfer():
         form=form
     )
 
+@stock.route('/transfers/<int:transfer_id>/request', methods=['POST'])
+@login_required
+def request_transfer(transfer_id):
+    """Passer un transfert de DRAFT à REQUESTED"""
+    transfer = StockTransfer.query.get_or_404(transfer_id)
+    
+    if transfer.status == TransferStatus.DRAFT:
+        transfer.status = TransferStatus.REQUESTED
+        db.session.commit()
+        flash(f'Transfert {transfer.reference} envoyé pour approbation.', 'success')
+    else:
+        flash('Ce transfert ne peut pas être envoyé.', 'danger')
+        
+    return redirect(url_for('stock.view_transfer', transfer_id=transfer.id))
+
 @stock.route('/transfers/<int:transfer_id>/approve', methods=['POST'])
 @login_required
 @admin_required
@@ -470,7 +589,7 @@ def approve_transfer(transfer_id):
     else:
         flash('Impossible d\'approuver ce transfert.', 'danger')
         
-    return redirect(url_for('stock.transfers_list'))
+    return redirect(url_for('stock.view_transfer', transfer_id=transfer.id))
 
 @stock.route('/transfers/<int:transfer_id>/complete', methods=['POST'])
 @login_required
@@ -488,17 +607,30 @@ def complete_transfer(transfer_id):
             product = line.product
             quantity = line.quantity_requested
             
+            # Mapping des Enum vers les clés de stock (avec prefix stock_)
+            location_map = {
+                'INGREDIENTS_MAGASIN': 'stock_ingredients_magasin',
+                'INGREDIENTS_LOCAL': 'stock_ingredients_local',
+                'COMPTOIR': 'stock_comptoir',
+                'CONSOMMABLES': 'stock_consommables'
+            }
+            
+            source_stock_key = location_map.get(transfer.source_location.name, f'stock_{transfer.source_location.value}')
+            dest_stock_key = location_map.get(transfer.destination_location.name, f'stock_{transfer.destination_location.value}')
+            
             # Vérification du stock source
-            source_stock = product.get_stock_by_location_type(transfer.source_location.value)
+            source_stock = product.get_stock_by_location_type(transfer.source_location.value.replace('stock_', ''))
             if source_stock < quantity:
                 flash(f'Stock insuffisant pour {product.name} (disponible: {source_stock}, demandé: {quantity}).', 'danger')
                 return redirect(url_for('stock.transfers_list'))
             
             # Décrémentation stock source
-            product.update_stock_location(transfer.source_location.value, -quantity)
+            product.update_stock_by_location(source_stock_key, -quantity)
             
             # Incrémentation stock destination
-            product.update_stock_location(transfer.destination_location.value, quantity)
+            product.update_stock_by_location(dest_stock_key, quantity)
+            
+            current_app.logger.info(f"DEBUG - Transfert {transfer.reference}: {product.name} -{quantity} ({source_stock_key}) +{quantity} ({dest_stock_key})")
             
             # Création des mouvements de traçabilité
             # Mouvement sortie

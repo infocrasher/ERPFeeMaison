@@ -43,7 +43,9 @@
                                             <span class="badge bg-info">{{ transfer.status.value }}</span>
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-primary">Voir</button>
+                                            <a href="{{ url_for('stock.view_transfer', transfer_id=transfer.id) }}" class="btn btn-sm btn-outline-primary">
+                                                Voir
+                                            </a>
                                         </td>
                                     </tr>
                                     {% endfor %}

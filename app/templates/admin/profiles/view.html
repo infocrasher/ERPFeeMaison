@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Fée Maison{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-user-cog me-2"></i>{{ title }}
+                </h1>
+                <div>
+                    <a href="{{ url_for('profiles_admin.edit_profile', profile_id=profile.id) }}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>Modifier
+                    </a>
+                    <a href="{{ url_for('profiles_admin.list_profiles') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Retour
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Informations générales -->
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Nom :</strong> {{ profile.name }}</p>
+                            <p><strong>Description :</strong> {{ profile.description or '-' }}</p>
+                            <p><strong>Statut :</strong> 
+                                {% if profile.is_active %}
+                                    <span class="badge bg-success">Actif</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactif</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Créé le :</strong> {{ profile.created_at.strftime('%d/%m/%Y %H:%M') if profile.created_at else '-' }}</p>
+                            <p><strong>Modifié le :</strong> {{ profile.updated_at.strftime('%d/%m/%Y %H:%M') if profile.updated_at else '-' }}</p>
+                            <p><strong>Utilisateurs :</strong> 
+                                <span class="badge bg-secondary">{{ users|length }} utilisateur(s)</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Liste des utilisateurs -->
+                    {% if users %}
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Utilisateurs</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                {% for user in users %}
+                                <li class="list-group-item">
+                                    <strong>{{ user.username }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ user.email }}</small>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Permissions -->
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-key me-2"></i>Permissions
+                                <span class="badge bg-info ms-2">
+                                    {{ profile.permissions.values() | select('equalto', True) | list | length }} permissions actives
+                                </span>
+                            </h5>
+                        </div>
+                        <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                            {% for module_name, module_perms in all_permissions.items() %}
+                            <div class="permission-module mb-4">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-folder me-2"></i>{{ module_name }}
+                                </h6>
+                                <div class="module-permissions">
+                                    {% set permissions_active = [] %}
+                                    {% for perm_key, perm_label in module_perms.items() %}
+                                        {% if profile.permissions.get(perm_key, False) %}
+                                            {% set _ = permissions_active.append(perm_label) %}
+                                            <div class="mb-2">
+                                                <i class="fas fa-check text-success me-2"></i>
+                                                <strong>{{ perm_label }}</strong>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if permissions_active|length == 0 %}
+                                    <div class="text-muted">
+                                        <em>Aucune permission activée dans ce module</em>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <hr>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.permission-module {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #0d6efd;
+}
+
+.module-permissions {
+    padding-left: 20px;
+}
+</style>
+{% endblock %}
+

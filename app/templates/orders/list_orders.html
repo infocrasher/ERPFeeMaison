@@ -45,6 +45,7 @@
                                 <th scope="col" style="width: 10%;">Service</th> {# Largeur ajustée #}
                                 <th scope="col" class="text-end" style="width: 10%;">Montant (DA)</th> {# Largeur ajustée #}
                                 <th scope="col" class="text-center" style="width: 10%;">Statut</th> {# Largeur ajustée #}
+                                <th scope="col" class="text-center" style="width: 10%;">Paiement</th>
                                 <th scope="col" class="text-center" style="width: 5%;">Articles</th> {# Largeur ajustée #}
                                 <th scope="col" class="text-end" style="width: 10%;">Actions</th> {# Largeur ajustée #}
                             </tr>
@@ -81,26 +82,30 @@
                                     <span class="badge bg-{{ status_class }}">{{ order.get_status_display() }}</span>
                                 </td>
                                 <td class="text-center align-middle"><span class="badge bg-info rounded-pill">{{ order.get_items_count() }}</span></td>
+                                <td class="text-center align-middle">
+                                    {% set pay_status = order.payment_status or 'pending' %}
+                                    {% set pay_badge = 'bg-secondary' %}
+                                    {% set pay_label = 'En attente' %}
+                                    {% if pay_status == 'paid' %}
+                                        {% set pay_badge = 'bg-success' %}
+                                        {% set pay_label = 'Payé' %}
+                                    {% elif pay_status == 'partial' %}
+                                        {% set pay_badge = 'bg-warning text-dark' %}
+                                        {% set pay_label = 'Partiel' %}
+                                    {% endif %}
+                                    <span class="badge {{ pay_badge }}">{{ pay_label }}</span>
+                                    <div class="small text-muted mt-1">
+                                        {{ "%.2f"|format(order.amount_paid_value) }} / {{ "%.2f"|format(order.total_amount|float) }} DA
+                                    </div>
+                                </td>
                                 <td class="text-end align-middle">
                                     <div class="btn-group btn-group-sm">
                                         <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="btn btn-outline-info" title="Voir Détails"><i class="bi bi-eye-fill"></i></a>
                                         <a href="{{ url_for('orders.edit_order_status', order_id=order.id) }}" class="btn btn-outline-primary" title="Modifier Statut"><i class="bi bi-pencil-square"></i></a>
-                                        {% if order.order_type == 'customer_order' and cash_session_open %}
-                                            {% set existing_movement = false %}
-                                            {% if order.cash_movements %}
-                                                {% for movement in order.cash_movements %}
-                                                    {% if movement.reason and 'commande #' + order.id|string in movement.reason and movement.amount == order.total_amount %}
-                                                        {% set existing_movement = true %}
-                                                    {% endif %}
-                                                {% endfor %}
-                                            {% endif %}
-                                            {% if not existing_movement %}
-                                                <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" class="d-inline">
-                                                    <button type="submit" class="btn btn-outline-success" title="Encaisser" onclick="return confirm('Encaisser cette commande ?')">
-                                                        <i class="bi bi-cash-coin"></i>
-                                                    </button>
-                                                </form>
-                                            {% endif %}
+                                        {% if order.order_type == 'customer_order' and cash_session_open and order.balance_due_value > 0 %}
+                                            <a href="{{ url_for('orders.view_order', order_id=order.id) }}#paiements" class="btn btn-outline-success" title="Encaisser un paiement">
+                                                <i class="bi bi-cash-coin"></i>
+                                            </a>
                                         {% endif %}
                                     </div>
                                 </td>

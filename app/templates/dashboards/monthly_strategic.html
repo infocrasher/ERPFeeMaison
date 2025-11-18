@@ -533,6 +533,185 @@
         }
     }
 
+    /* ========================================
+       PHASE 2 - Sections IA Mensuelles
+       ======================================== */
+    
+    /* Section Résumé Stratégique IA */
+    .ai-strategic-section {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 35px;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .ai-strategic-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(139, 92, 246, 0.1), transparent);
+        animation: shimmer 5s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .ai-strategic-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .ai-strategic-badge {
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        padding: 10px 20px;
+        border-radius: 14px;
+        font-size: 1rem;
+        font-weight: 700;
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+    }
+
+    .ai-strategic-title {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: white;
+        flex: 1;
+        text-align: center;
+    }
+
+    .ai-summary-content {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 18px;
+        padding: 30px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .ai-summary-text {
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.8;
+        font-size: 1rem;
+        margin-bottom: 25px;
+        white-space: pre-line;
+    }
+
+    .ai-recommendations {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        margin-top: 25px;
+    }
+
+    .ai-recommendation-card {
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-left: 4px solid #6366f1;
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .ai-recommendation-card:hover {
+        background: rgba(99, 102, 241, 0.15);
+        transform: translateX(5px);
+        box-shadow: 0 5px 20px rgba(99, 102, 241, 0.2);
+    }
+
+    .ai-recommendation-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ai-recommendation-text {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .ai-confidence-score {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .ai-confidence-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+    }
+
+    .ai-confidence-bar {
+        flex: 1;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .ai-confidence-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #6366f1);
+        transition: width 1s ease;
+    }
+
+    .ai-confidence-value {
+        color: white;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .ai-loading-strategic {
+        text-align: center;
+        padding: 60px 20px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 1.2rem;
+    }
+
+    .ai-loading-strategic i {
+        animation: spin 2s linear infinite;
+        font-size: 2rem;
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .ai-fallback-strategic {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        border-radius: 14px;
+        padding: 25px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
     /* Animations d'entrée */
     .fade-in {
         opacity: 0;
@@ -703,6 +882,24 @@
                 </div>
                 <div class="chart-container">
                     <canvas id="costChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 2 - Section Résumé Stratégique IA -->
+        <div class="ai-strategic-section slide-in-left" style="animation-delay: 0.65s;">
+            <div class="ai-strategic-header">
+                <span class="ai-strategic-badge">
+                    <i class="fas fa-brain"></i>
+                    Intelligence Artificielle
+                </span>
+                <h2 class="ai-strategic-title">Résumé Stratégique Mensuel</h2>
+            </div>
+            
+            <div id="aiStrategicContent" class="ai-summary-content">
+                <div class="ai-loading-strategic">
+                    <i class="fas fa-spinner"></i>
+                    Génération du résumé stratégique IA...
                 </div>
             </div>
         </div>
@@ -951,6 +1148,104 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Changement de période:', period);
         // Ici vous pouvez ajouter la logique pour charger les données de la période sélectionnée
     };
+    
+    // PHASE 2 - Chargement du résumé stratégique IA
+    async function loadMonthlyAISummary() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const year = urlParams.get('year') || new Date().getFullYear();
+            const month = urlParams.get('month') || (new Date().getMonth() + 1);
+            
+            console.info('[AI] Chargement résumé stratégique IA...');
+            const res = await fetch(`/dashboards/api/monthly/ai-summary?year=${year}&month=${month}`);
+            
+            if (!res.ok) throw new Error('Erreur API IA');
+            
+            const data = await res.json();
+            console.info('[AI] Résumé stratégique IA chargé');
+            
+            const container = document.getElementById('aiStrategicContent');
+            if (!container) return;
+            
+            if (data.success && data.data) {
+                const summary = data.data;
+                let html = '';
+                
+                // Texte résumé
+                if (summary.summary && summary.summary.trim().length > 0) {
+                    html += `<div class="ai-summary-text">${summary.summary}</div>`;
+                } else {
+                    // Résumé par défaut si manquant
+                    html += `<div class="ai-summary-text">Analyse mensuelle en cours de génération. Les données financières sont en cours d'analyse par l'IA pour fournir des insights stratégiques.</div>`;
+                }
+                
+                // Recommandations
+                if (summary.recommendations && Array.isArray(summary.recommendations) && summary.recommendations.length > 0) {
+                    html += `<div class="ai-recommendations">`;
+                    summary.recommendations.forEach((rec, idx) => {
+                        if (rec && rec.trim().length > 0) {
+                            html += `
+                                <div class="ai-recommendation-card">
+                                    <div class="ai-recommendation-title">
+                                        <i class="fas fa-lightbulb"></i>
+                                        Recommandation ${idx + 1}
+                                    </div>
+                                    <div class="ai-recommendation-text">${rec}</div>
+                                </div>
+                            `;
+                        }
+                    });
+                    html += `</div>`;
+                } else {
+                    // Recommandations par défaut si manquantes
+                    html += `<div class="ai-recommendations">`;
+                    const defaultRecommendations = [
+                        'Analysez les tendances de croissance mensuelles pour identifier les opportunités',
+                        'Optimisez les coûts opérationnels selon les KPIs financiers',
+                        'Planifiez les stocks selon les prévisions de demande'
+                    ];
+                    defaultRecommendations.forEach((rec, idx) => {
+                        html += `
+                            <div class="ai-recommendation-card">
+                                <div class="ai-recommendation-title">
+                                    <i class="fas fa-lightbulb"></i>
+                                    Recommandation ${idx + 1}
+                                </div>
+                                <div class="ai-recommendation-text">${rec}</div>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                }
+                
+                // Confiance IA
+                const confidence = summary.confidence_score || 75;
+                html += `
+                    <div class="ai-confidence-score">
+                        <span class="ai-confidence-label">Confiance IA :</span>
+                        <div class="ai-confidence-bar">
+                            <div class="ai-confidence-fill" style="width: ${confidence}%"></div>
+                        </div>
+                        <span class="ai-confidence-value">${confidence}%</span>
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<div class="ai-fallback-strategic">⚠️ Mode IA indisponible - Consultez les rapports standards.</div>';
+            }
+            
+        } catch (err) {
+            console.warn('[AI] Résumé stratégique IA non disponible', err);
+            const container = document.getElementById('aiStrategicContent');
+            if (container) {
+                container.innerHTML = '<div class="ai-fallback-strategic">⚠️ Résumé stratégique IA temporairement indisponible - Mode hors ligne.</div>';
+            }
+        }
+    }
+    
+    // Lancer le chargement du résumé IA
+    loadMonthlyAISummary();
 });
 </script>
 {% endblock %}

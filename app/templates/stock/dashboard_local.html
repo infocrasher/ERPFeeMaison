@@ -111,8 +111,8 @@
         </div>
         <div class="col-md-3">
             <div class="card dashboard-card text-center p-3">
-                <h3 class="mb-1">{{ production_capacity or '100' }}%</h3>
-                <small>Capacité Production</small>
+                <h3 class="mb-1">{{ total_value or '0' }} DA</h3>
+                <small>Valeur Stock Total</small>
             </div>
         </div>
     </div>
@@ -152,7 +152,7 @@
                     <div class="row">
                         {% for ingredient in ingredients_local %}
                         {% set stock_level = ingredient.stock_ingredients_local or 0 %}
-                        {% set seuil = ingredient.seuil_local or 10 %}
+                        {% set seuil = ingredient.seuil_min_ingredients_local if ingredient.seuil_min_ingredients_local is not none else 0 %}
                         {% if stock_level <= 0 %}
                             {% set level_class = 'ingredient-critical' %}
                             {% set level_icon = '🔴' %}

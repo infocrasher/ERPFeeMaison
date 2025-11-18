@@ -30,13 +30,26 @@
             <!-- Statistiques rapides (placeholders) -->
             <div class="row mb-4">
                 <div class="col-md-3 mb-3">
-                    <div class="card text-center h-100">
-                        <div class="card-body">
-                            <i class="bi bi-people fs-1 text-primary mb-2"></i>
-                            <h5 class="card-title">Utilisateurs</h5>
-                            <p class="card-text text-muted">Gestion des comptes</p>
+                    <a href="{{ url_for('users_admin.list_users') }}" class="text-decoration-none">
+                        <div class="card text-center h-100 border-primary hover-shadow">
+                            <div class="card-body">
+                                <i class="bi bi-people fs-1 text-primary mb-2"></i>
+                                <h5 class="card-title">Utilisateurs</h5>
+                                <p class="card-text text-muted">Gestion des comptes</p>
+                            </div>
                         </div>
-                    </div>
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{{ url_for('profiles_admin.list_profiles') }}" class="text-decoration-none">
+                        <div class="card text-center h-100 border-info hover-shadow">
+                            <div class="card-body">
+                                <i class="bi bi-person-badge fs-1 text-info mb-2"></i>
+                                <h5 class="card-title">Profils</h5>
+                                <p class="card-text text-muted">Gestion des profils</p>
+                            </div>
+                        </div>
+                    </a>
                 </div>
                 <div class="col-md-3 mb-3">
                     <div class="card text-center h-100">
@@ -56,15 +69,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center h-100">
-                        <div class="card-body">
-                            <i class="bi bi-gear fs-1 text-secondary mb-2"></i>
-                            <h5 class="card-title">Configuration</h5>
-                            <p class="card-text text-muted">Paramètres système</p>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- Actions administrateur (placeholders) -->
@@ -77,10 +81,28 @@
                             </h5>
                         </div>
                         <div class="card-body">
-                            <!-- Contenu des actions à venir -->
-                            <div class="alert alert-warning mt-3" role="alert">
-                                <i class="bi bi-exclamation-triangle me-2"></i>
-                                <strong>Note :</strong> Les fonctionnalités administrateur seront implémentées dans les prochaines phases du développement.
+                            <!-- Actions rapides -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-grid">
+                                        <a href="{{ url_for('users_admin.list_users') }}" class="btn btn-primary btn-lg">
+                                            <i class="bi bi-people me-2"></i>Gestion des Utilisateurs
+                                        </a>
+                                    </div>
+                                    <p class="text-muted small mt-2 mb-0">
+                                        Créer, modifier et supprimer des utilisateurs. Assigner des profils.
+                                    </p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-grid">
+                                        <a href="{{ url_for('profiles_admin.list_profiles') }}" class="btn btn-info btn-lg">
+                                            <i class="bi bi-person-badge me-2"></i>Gestion des Profils
+                                        </a>
+                                    </div>
+                                    <p class="text-muted small mt-2 mb-0">
+                                        Créer et configurer les profils avec permissions granulaires.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -101,4 +123,14 @@
         </div>
     </div>
 </div>
+
+<style>
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+.hover-shadow:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+</style>
 {% endblock %}

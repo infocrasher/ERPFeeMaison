@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Fée Maison{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-users-cog me-2"></i>{{ title }}
+                </h1>
+                <a href="{{ url_for('profiles_admin.new_profile') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Nouveau Profil
+                </a>
+            </div>
+
+            <!-- Messages flash -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Liste des profils -->
+            <div class="card">
+                <div class="card-body">
+                    {% if profiles %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Nom</th>
+                                        <th>Description</th>
+                                        <th>Permissions actives</th>
+                                        <th>Utilisateurs</th>
+                                        <th>Statut</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for profile in profiles %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ profile.name }}</strong>
+                                        </td>
+                                        <td>
+                                            {{ profile.description or '-' }}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">
+                                                {{ profile.permissions.values() | select('equalto', True) | list | length }} permissions
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                {{ profile.users.count() }} utilisateur(s)
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if profile.is_active %}
+                                                <span class="badge bg-success">Actif</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactif</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('profiles_admin.view_profile', profile_id=profile.id) }}" 
+                                                   class="btn btn-outline-info" title="Voir">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{{ url_for('profiles_admin.edit_profile', profile_id=profile.id) }}" 
+                                                   class="btn btn-outline-primary" title="Modifier">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                {% if profile.users.count() == 0 %}
+                                                <form method="POST" action="{{ url_for('profiles_admin.delete_profile', profile_id=profile.id) }}" 
+                                                      style="display: inline;" 
+                                                      onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce profil ?');">
+                                                    <button type="submit" class="btn btn-outline-danger" title="Supprimer">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                                {% else %}
+                                                <button type="button" class="btn btn-outline-secondary" disabled title="Impossible de supprimer (utilisateurs associés)">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Aucun profil créé pour le moment. 
+                            <a href="{{ url_for('profiles_admin.new_profile') }}">Créer le premier profil</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Invendus Quotidiens{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-trash3 me-2"></i>Invendus Quotidiens</h2>
+                <a href="{{ url_for('inventory.declare_daily_waste') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Déclarer un invendu
+                </a>
+            </div>
+
+            <!-- Filtres par période -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Filtres par période</h5>
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Période</label>
+                            <select name="period" class="form-select" onchange="this.form.submit()">
+                                <option value="30" {% if request.args.get('period') == '30' %}selected{% endif %}>30 derniers jours</option>
+                                <option value="7" {% if request.args.get('period') == '7' %}selected{% endif %}>7 derniers jours</option>
+                                <option value="month" {% if request.args.get('period') == 'month' %}selected{% endif %}>Ce mois</option>
+                                <option value="last_month" {% if request.args.get('period') == 'last_month' %}selected{% endif %}>Mois dernier</option>
+                                <option value="year" {% if request.args.get('period') == 'year' %}selected{% endif %}>Cette année</option>
+                                <option value="custom" {% if request.args.get('period') == 'custom' %}selected{% endif %}>Période personnalisée</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="custom-dates" style="display: {% if request.args.get('period') == 'custom' %}block{% else %}none{% endif %};">
+                            <label class="form-label">Date de début</label>
+                            <input type="date" name="start_date" class="form-control" value="{{ request.args.get('start_date', '') }}">
+                        </div>
+                        <div class="col-md-3" id="custom-dates-end" style="display: {% if request.args.get('period') == 'custom' %}block{% else %}none{% endif %};">
+                            <label class="form-label">Date de fin</label>
+                            <input type="date" name="end_date" class="form-control" value="{{ request.args.get('end_date', '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Filtrer</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="card-title">{{ "%.2f"|format(total_waste_value) }} DA</h4>
+                                    <p class="card-text">Valeur totale perdue</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-currency-exchange fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Répartition par raison</h5>
+                            <div class="row">
+                                {% for reason, data in waste_by_reason.items() %}
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h6 class="text-muted">{{ reason.replace('_', ' ').title() }}</h6>
+                                        <h5 class="text-danger">{{ data.count }} déclarations</h5>
+                                        <small class="text-muted">{{ "%.2f"|format(data.value) }} DA</small>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphiques par période -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Évolution hebdomadaire</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="weeklyChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Évolution mensuelle</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="monthlyChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des déclarations -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Déclarations des 30 derniers jours</h5>
+                </div>
+                <div class="card-body">
+                    {% if waste_declarations %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Produit</th>
+                                        <th class="text-end">Quantité</th>
+                                        <th>Raison</th>
+                                        <th class="text-end">Valeur perdue</th>
+                                        <th>Déclaré par</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for waste in waste_declarations %}
+                                    <tr>
+                                        <td>{{ waste.waste_date.strftime('%d/%m/%Y') }}</td>
+                                        <td>
+                                            <strong>{{ waste.product.name }}</strong>
+                                            <br><small class="text-muted">{{ waste.product.unit }}</small>
+                                        </td>
+                                        <td class="text-end">{{ waste.product.format_quantity_display(waste.quantity) }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if waste.reason == 'peremption' %}danger{% elif waste.reason == 'invendu' %}warning{% elif waste.reason == 'casse' %}secondary{% else %}info{% endif %}">
+                                                {{ waste.reason.replace('_', ' ').title() }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end text-danger">
+                                            <strong>{{ "%.2f"|format(waste.value_lost) }} DA</strong>
+                                        </td>
+                                        <td>{{ waste.declared_by.username }}</td>
+                                        <td>
+                                            {% if waste.notes %}
+                                                <small class="text-muted">{{ waste.notes[:50] }}{% if waste.notes|length > 50 %}...{% endif %}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                            <h5 class="text-muted mt-3">Aucune déclaration</h5>
+                            <p class="text-muted">Aucun invendu n'a été déclaré dans les 30 derniers jours.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des filtres personnalisés
+    const periodSelect = document.querySelector('select[name="period"]');
+    const customDates = document.getElementById('custom-dates');
+    const customDatesEnd = document.getElementById('custom-dates-end');
+    
+    periodSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customDates.style.display = 'block';
+            customDatesEnd.style.display = 'block';
+        } else {
+            customDates.style.display = 'none';
+            customDatesEnd.style.display = 'none';
+        }
+    });
+    
+    // Données pour les graphiques (à remplacer par les vraies données du serveur)
+    const weeklyData = {{ weekly_data | tojson }};
+    const monthlyData = {{ monthly_data | tojson }};
+    
+    // Graphique hebdomadaire
+    const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+    new Chart(weeklyCtx, {
+        type: 'line',
+        data: {
+            labels: weeklyData.labels,
+            datasets: [{
+                label: 'Valeur perdue (DA)',
+                data: weeklyData.values,
+                borderColor: 'rgb(220, 53, 69)',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Valeur (DA)'
+                    }
+                }
+            }
+        }
+    });
+    
+    // Graphique mensuel
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'bar',
+        data: {
+            labels: monthlyData.labels,
+            datasets: [{
+                label: 'Valeur perdue (DA)',
+                data: monthlyData.values,
+                backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                borderColor: 'rgb(220, 53, 69)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Valeur (DA)'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

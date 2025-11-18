@@ -62,3 +62,29 @@ def require_closed_cash_session(f):
             return redirect(url_for('sales.list_cash_sessions'))
         return f(*args, **kwargs)
     return decorated_function
+
+def permission_required(permission_key):
+    """
+    Décorateur pour vérifier si l'utilisateur a une permission spécifique via son profil.
+    Usage: @permission_required('ventes_pos')
+    Doit être utilisé APRÈS @login_required.
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated:
+                abort(401)  # Non authentifié
+            
+            # Admin a tous les accès
+            if current_user.is_admin:
+                return f(*args, **kwargs)
+            
+            # Vérifier via profil
+            if hasattr(current_user, 'has_permission') and current_user.has_permission(permission_key):
+                return f(*args, **kwargs)
+            
+            # Accès interdit
+            flash('Vous n\'avez pas les permissions nécessaires pour accéder à cette page.', 'error')
+            abort(403)
+        return decorated_function
+    return decorator

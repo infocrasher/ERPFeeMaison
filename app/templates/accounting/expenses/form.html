@@ -6,9 +6,20 @@
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">{{ form_title|default('Nouvelle Dépense') }}</h3>
+                    <h3 class="card-title">{{ form_title|default('Nouvelle Charge') }}</h3>
                 </div>
                 <div class="card-body">
+                    <!-- Alerte informative -->
+                    <div class="alert alert-info d-flex align-items-center mb-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <div>
+                            <strong>Déduction automatique :</strong> 
+                            Cette charge sera automatiquement déduite de votre compte bancaire et validée comptablement.
+                            {% if bank_balance %}
+                            <br><small class="text-muted">Solde bancaire actuel : <strong>{{ "{:,.2f}".format(bank_balance) }} DZD</strong></small>
+                            {% endif %}
+                        </div>
+                    </div>
                     <form method="POST" novalidate>
                         {{ form.hidden_tag() }}
 
@@ -37,9 +48,9 @@
 
                         <div class="row">
                             <div class="col-md-6">
-                        <div class="mb-3">
-                            {{ form.category.label(class="form-label") }}
-                            {{ form.category(class="form-select") }}
+                                <div class="mb-3">
+                                    {{ form.category.label(class="form-label") }}
+                                    {{ form.category(class="form-select") }}
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -48,6 +59,19 @@
                                     {{ form.payment_method(class="form-select") }}
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Champ de précision pour "Autres" -->
+                        <div class="mb-3" id="other-category-field" style="display: none;">
+                            {{ form.other_category.label(class="form-label") }}
+                            {{ form.other_category(class="form-control", placeholder="Précisez de quoi il s'agit...") }}
+                            {% if form.other_category.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.other_category.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
 
                         <div class="row">
@@ -70,10 +94,8 @@
                             {{ form.notes(class="form-control", rows="3") }}
                         </div>
 
-                        <div class="form-check mb-3">
-                            {{ form.is_paid(class="form-check-input") }}
-                            {{ form.is_paid.label(class="form-check-label") }}
-                        </div>
+                        <!-- Case "Payé" masquée car toujours cochée pour déduction automatique -->
+                        {{ form.is_paid(style="display: none;") }}
                         
                         <div class="d-flex justify-content-end">
                             <a href="{{ url_for('accounting.list_expenses') }}" class="btn btn-secondary me-2">Annuler</a>
@@ -91,24 +113,66 @@
 document.addEventListener('DOMContentLoaded', function() {
     const categorySelect = document.getElementById('category');
     const supplierField = document.getElementById('supplier');
+    const otherCategoryField = document.getElementById('other-category-field');
+    const otherCategoryInput = document.getElementById('other_category');
     
-    // Suggestions automatiques selon la catégorie
+    // Fonction pour gérer l'affichage du champ "Autres"
+    function toggleOtherCategory() {
+        const category = categorySelect.value;
+        if (category === 'Autres') {
+            otherCategoryField.style.display = 'block';
+            otherCategoryInput.setAttribute('required', 'required');
+        } else {
+            otherCategoryField.style.display = 'none';
+            otherCategoryInput.removeAttribute('required');
+            otherCategoryInput.value = '';
+        }
+    }
+    
+    // Gérer l'affichage du champ "Autres"
     categorySelect.addEventListener('change', function() {
+        toggleOtherCategory();
+        
+        // Suggestions automatiques selon la catégorie
         const category = this.value;
         switch(category) {
-            case '601':
-                supplierField.placeholder = 'Ex: Moulin de la Mitidja, Sarl Semoulerie...';
+            case 'Électricité':
+                supplierField.placeholder = 'Ex: Sonelgaz, fournisseur électricité...';
                 break;
-            case '613':
-                supplierField.placeholder = 'Ex: Propriétaire, Agence immobilière...';
+            case 'Comptable':
+                supplierField.placeholder = 'Ex: Cabinet comptable, expert-comptable...';
                 break;
-            case '641':
+            case 'Yassir':
+                supplierField.placeholder = 'Ex: Yassir, livreur...';
+                break;
+            case 'Téléphone':
+                supplierField.placeholder = 'Ex: Djezzy, Ooredoo, Mobilis...';
+                break;
+            case 'Loyer':
+                supplierField.placeholder = 'Ex: Propriétaire, agence immobilière...';
+                break;
+            case 'Assurance':
+                supplierField.placeholder = 'Ex: Compagnie d\'assurance...';
+                break;
+            case 'Réparations':
+                supplierField.placeholder = 'Ex: Plombier, électricien, artisan...';
+                break;
+            case 'Salaires':
                 supplierField.placeholder = 'Ex: Nom de l\'employé...';
+                break;
+            case 'Tirelire':
+                supplierField.placeholder = 'Ex: Épargne, fonds de réserve...';
+                break;
+            case 'Autres':
+                supplierField.placeholder = 'Nom du fournisseur ou bénéficiaire';
                 break;
             default:
                 supplierField.placeholder = 'Nom du fournisseur ou bénéficiaire';
         }
     });
+    
+    // Initialiser l'état du champ "Autres" au chargement
+    toggleOtherCategory();
 });
 </script>
 {% endblock %}

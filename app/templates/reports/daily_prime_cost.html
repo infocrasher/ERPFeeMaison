@@ -1,0 +1,244 @@
+{% extends "reports/_report_base.html" %}
+
+{% set report_type = 'daily_prime_cost' %}
+{% set export_params = '?date=' + (data.date.strftime('%Y-%m-%d') if data.date else '') %}
+
+{% block report_icon %}bi-calculator{% endblock %}
+{% block report_title %}Coût de Revient Quotidien (Prime Cost){% endblock %}
+{% block report_description %}
+    Analyse du coût de revient du {{ data.date.strftime('%d/%m/%Y') }}
+{% endblock %}
+
+{% block filter_fields %}
+<div class="col-md-3">
+    <label class="form-label">Date du rapport</label>
+    <input type="date" name="date" class="form-control" value="{{ data.date.strftime('%Y-%m-%d') }}">
+</div>
+{% endblock %}
+
+{% block kpis %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card kpi-card border-primary">
+            <div class="card-body">
+                <div class="kpi-label">Chiffre d'Affaires</div>
+                <div class="kpi-value text-primary">{{ "{:,.2f}".format(data.revenue) }} DA</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-warning">
+            <div class="card-body">
+                <div class="kpi-label">COGS</div>
+                <div class="kpi-value text-warning">{{ "{:,.2f}".format(data.cogs) }} DA</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-info">
+            <div class="card-body">
+                <div class="kpi-label">Main d'Œuvre</div>
+                <div class="kpi-value text-info">{{ "{:,.2f}".format(data.labor_cost) }} DA</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card {% if data.is_profitable %}border-success{% else %}border-danger{% endif %}">
+            <div class="card-body">
+                <div class="kpi-label">Prime Cost %</div>
+                <div class="kpi-value {% if data.is_profitable %}text-success{% else %}text-danger{% endif %}">
+                    {{ "{:.1f}".format(data.prime_cost_percentage) }}%
+                </div>
+                <small class="text-muted">Cible: ≤ 68%</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block charts %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Décomposition des Coûts (Waterfall)</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="waterfallChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block data_tables %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>Détails des Coûts</h6>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td><strong>Chiffre d'Affaires</strong></td>
+                            <td class="text-end">{{ "{:,.2f}".format(data.revenue) }} DA</td>
+                        </tr>
+                        <tr>
+                            <td>- COGS</td>
+                            <td class="text-end text-danger">{{ "{:,.2f}".format(data.cogs) }} DA</td>
+                        </tr>
+                        <tr>
+                            <td>- Main d'Œuvre</td>
+                            <td class="text-end text-danger">{{ "{:,.2f}".format(data.labor_cost) }} DA</td>
+                        </tr>
+                        <tr class="table-active">
+                            <td><strong>= Prime Cost</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(data.prime_cost) }} DA</strong></td>
+                        </tr>
+                        <tr class="table-success">
+                            <td><strong>= Marge Brute</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(data.gross_margin) }} DA</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card {% if data.is_profitable %}border-success{% else %}border-danger{% endif %}">
+            <div class="card-header {% if data.is_profitable %}bg-success{% else %}bg-danger{% endif %} text-white">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Analyse</h6>
+            </div>
+            <div class="card-body">
+                {% if data.is_profitable %}
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-check-circle me-2"></i>Journée Rentable</h6>
+                    <p class="mb-0">Le Prime Cost est de {{ "{:.1f}".format(data.prime_cost_percentage) }}%, ce qui est en dessous de la cible de 68%.</p>
+                </div>
+                {% else %}
+                <div class="alert alert-danger">
+                    <h6><i class="bi bi-exclamation-triangle me-2"></i>Attention</h6>
+                    <p class="mb-0">Le Prime Cost est de {{ "{:.1f}".format(data.prime_cost_percentage) }}%, ce qui dépasse la cible de 68%. Actions recommandées :</p>
+                    <ul class="mb-0">
+                        <li>Réviser les coûts d'approvisionnement</li>
+                        <li>Optimiser les plannings du personnel</li>
+                        <li>Analyser les prix de vente</li>
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <h6 class="mt-3">Répartition</h6>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>COGS</span>
+                        <span>{{ "{:.1f}".format((data.cogs / data.revenue * 100) if data.revenue > 0 else 0) }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning" style="width: {{ (data.cogs / data.revenue * 100) if data.revenue > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Main d'Œuvre</span>
+                        <span>{{ "{:.1f}".format((data.labor_cost / data.revenue * 100) if data.revenue > 0 else 0) }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-info" style="width: {{ (data.labor_cost / data.revenue * 100) if data.revenue > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="d-flex justify-content-between">
+                        <span>Marge Brute</span>
+                        <span>{{ "{:.1f}".format(data.gross_margin_percentage) }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: {{ data.gross_margin_percentage }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block chart_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Graphique Waterfall
+    new Chart(document.getElementById('waterfallChart'), {
+        type: 'bar',
+        data: {
+            labels: ['CA', 'COGS', 'Main d\'Œuvre', 'Marge Brute'],
+            datasets: [{
+                label: 'Montant (DA)',
+                data: [
+                    {{ data.revenue }},
+                    -{{ data.cogs }},
+                    -{{ data.labor_cost }},
+                    {{ data.gross_margin }}
+                ],
+                backgroundColor: [
+                    'rgba(13, 110, 253, 0.8)',
+                    'rgba(255, 193, 7, 0.8)',
+                    'rgba(13, 202, 240, 0.8)',
+                    'rgba(25, 135, 84, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' DA';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block ai_section %}
+<!-- PHASE 3 - Intégration IA -->
+{% include 'components/ai_summary_block.html' %}
+
+<script src="{{ url_for('static', filename='js/ai_forecast.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Extraire les métadonnées IA du rapport
+    const metadata = {
+        growth_rate: {{ data.growth_rate | default(0) | tojson }},
+        variance: {{ data.variance | default(0) | tojson }},
+        trend_direction: {{ data.trend_direction | default('stable') | tojson }},
+        benchmark: {{ data.benchmark | default({}) | tojson }}
+    };
+    
+    // Initialiser le module IA
+    initAIModule({
+        type: "daily",
+        reportName: "prime_cost",
+        endpoints: {
+            forecast: null,
+            insights: "/dashboards/api/daily/ai-insights",
+            anomalies: null
+        },
+        metadata: metadata
+    });
+});
+</script>
+{% endblock %}
+

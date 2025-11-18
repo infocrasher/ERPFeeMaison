@@ -92,6 +92,11 @@ def new_product():
         product = Product()
         form.populate_obj(product)
         product.category = form.category.data
+        
+        # ✅ CORRECTION : Convertir SKU vide en None pour éviter les doublons
+        if product.sku == '':
+            product.sku = None
+        
         # Gestion de l'image
         if form.image.data:
             filename = secure_filename(form.image.data.filename)
@@ -113,6 +118,11 @@ def edit_product(product_id):
     if form.validate_on_submit():
         form.populate_obj(product)
         product.category = form.category.data
+        
+        # ✅ CORRECTION : Convertir SKU vide en None pour éviter les doublons
+        if product.sku == '':
+            product.sku = None
+        
         # Gestion de l'image
         if form.image.data:
             filename = secure_filename(form.image.data.filename)

@@ -265,6 +265,7 @@
 </style>
 {% endblock %}
 
+
 {% block content %}
 <div class="shop-header">
     <div class="container">
@@ -411,8 +412,16 @@
                             <i class="bi bi-eye me-1"></i>Voir
                         </a>
                         {% if cash_session_open %}
-                            <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" style="display: inline;">
-                                <button type="submit" class="action-btn btn-cash" onclick="return confirm('Encaisser cette commande ?')">
+                            <form method="POST"
+                                  action="{{ url_for('orders.pay_order', order_id=order.id) }}"
+                                  class="shop-pay-form"
+                                  data-order-id="{{ order.id }}"
+                                  data-total="{{ '%.2f'|format(order.total_amount|float) if order.total_amount else '0.00' }}"
+                                  data-paid="{{ '%.2f'|format(order.amount_paid_value) if order.amount_paid_value else '0.00' }}"
+                                  data-balance="{{ '%.2f'|format(order.balance_due_value) if order.balance_due_value else '0.00' }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="amount_received" value="">
+                                <button type="button" class="action-btn btn-cash shop-pay-trigger">
                                     <i class="bi bi-cash-coin me-1"></i>Encaisser
                                 </button>
                             </form>
@@ -494,6 +503,20 @@
                             <i class="bi bi-person-plus me-1"></i>Assigner Livreur
                         </a>
                         {% if cash_session_open %}
+                            <form method="POST"
+                                  action="{{ url_for('orders.pay_order', order_id=order.id) }}"
+                                  class="shop-pay-form"
+                                  data-order-id="{{ order.id }}"
+                                  data-total="{{ '%.2f'|format(order.total_amount|float) if order.total_amount else '0.00' }}"
+                                  data-paid="{{ '%.2f'|format(order.amount_paid_value) if order.amount_paid_value else '0.00' }}"
+                                  data-balance="{{ '%.2f'|format(order.balance_due_value) if order.balance_due_value else '0.00' }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="amount_received" value="">
+                                <button type="button" class="action-btn btn-cash shop-pay-trigger">
+                                    <i class="bi bi-cash-coin me-1"></i>Encaisser
+                                </button>
+                            </form>
+                        {% else %}
                             <span class="action-btn btn-cash-disabled">
                                 <i class="bi bi-cash-coin me-1"></i>Encaisser
                             </span>
@@ -620,8 +643,16 @@
                             <i class="bi bi-eye me-1"></i>Voir
                         </a>
                         {% if cash_session_open %}
-                            <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" style="display: inline;">
-                                <button type="submit" class="action-btn btn-cash" onclick="return confirm('Encaisser cette commande ?')">
+                            <form method="POST"
+                                  action="{{ url_for('orders.pay_order', order_id=order.id) }}"
+                                  class="shop-pay-form"
+                                  data-order-id="{{ order.id }}"
+                                  data-total="{{ '%.2f'|format(order.total_amount|float) if order.total_amount else '0.00' }}"
+                                  data-paid="{{ '%.2f'|format(order.amount_paid_value) if order.amount_paid_value else '0.00' }}"
+                                  data-balance="{{ '%.2f'|format(order.balance_due_value) if order.balance_due_value else '0.00' }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="amount_received" value="">
+                                <button type="button" class="action-btn btn-cash shop-pay-trigger">
                                     <i class="bi bi-cash-coin me-1"></i>Encaisser
                                 </button>
                             </form>
@@ -658,6 +689,37 @@
         {% endif %}
     </div>
 </div>
+
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentModalLabel">
+                    <i class="bi bi-cash-stack me-2 text-success"></i>Encaisser un paiement
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="paymentAmountInput" class="form-label fw-semibold">Montant reçu</label>
+                    <input type="number" class="form-control" id="paymentAmountInput" step="0.01" min="0" placeholder="0.00">
+                </div>
+                <div class="alert alert-secondary">
+                    <div>Total commande : <strong id="paymentModalTotal">0.00 DA</strong></div>
+                    <div>Déjà encaissé : <strong id="paymentModalPaid">0.00 DA</strong></div>
+                    <div>Solde actuel : <strong id="paymentModalBalance">0.00 DA</strong></div>
+                    <hr class="my-2">
+                    <div>Solde après encaissement : <strong id="paymentModalBalanceAfter">0.00 DA</strong></div>
+                    <div>Monnaie à rendre : <strong id="paymentModalChange">0.00 DA</strong></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" id="paymentModalConfirm">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -685,6 +747,87 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         window.location.reload();
     }, 2 * 60 * 1000);
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modalElement = document.getElementById('paymentModal');
+    const amountInput = document.getElementById('paymentAmountInput');
+    const totalDisplay = document.getElementById('paymentModalTotal');
+    const paidDisplay = document.getElementById('paymentModalPaid');
+    const balanceDisplay = document.getElementById('paymentModalBalance');
+    const balanceAfterDisplay = document.getElementById('paymentModalBalanceAfter');
+    const changeDisplay = document.getElementById('paymentModalChange');
+    const confirmBtn = document.getElementById('paymentModalConfirm');
+
+    if (!modalElement || !amountInput) {
+        return;
+    }
+
+    const modal = new bootstrap.Modal(modalElement);
+
+    function formatAmount(val) {
+        return (parseFloat(val) || 0).toFixed(2) + ' DA';
+    }
+
+    function refreshDisplays(outstanding) {
+        const amount = parseFloat(amountInput.value || '0') || 0;
+        const balanceAfter = Math.max(outstanding - amount, 0);
+        const change = amount > outstanding ? amount - outstanding : 0;
+        balanceAfterDisplay.textContent = formatAmount(balanceAfter);
+        changeDisplay.textContent = formatAmount(change);
+    }
+
+    document.querySelectorAll('.shop-pay-trigger').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            const form = button.closest('form');
+            if (!form) {
+                return;
+            }
+
+            const balance = parseFloat(form.dataset.balance || '0') || 0;
+            const paid = parseFloat(form.dataset.paid || '0') || 0;
+            const total = parseFloat(form.dataset.total || '0') || 0;
+
+            if (balance <= 0) {
+                alert('Cette commande est déjà totalement réglée.');
+                return;
+            }
+
+            if (paid > 0) {
+                totalDisplay.textContent = formatAmount(total);
+                paidDisplay.textContent = formatAmount(paid);
+                balanceDisplay.textContent = formatAmount(balance);
+                amountInput.value = balance.toFixed(2);
+                refreshDisplays(balance);
+
+                confirmBtn.onclick = function() {
+                    const amountField = form.querySelector('input[name="amount_received"]');
+                    if (amountField) {
+                        amountField.value = amountInput.value;
+                    }
+                    modal.hide();
+                    form.submit();
+                };
+
+                amountInput.oninput = function() {
+                    refreshDisplays(balance);
+                };
+
+                modal.show();
+                amountInput.focus();
+                amountInput.select();
+            } else {
+                const amountField = form.querySelector('input[name="amount_received"]');
+                if (amountField) {
+                    amountField.value = '';
+                }
+                form.submit();
+            }
+        });
+    });
 });
 </script>
 {% endblock %}

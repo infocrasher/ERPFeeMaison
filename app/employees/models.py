@@ -706,6 +706,15 @@ class PayrollCalculation(db.Model):
     validated_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     validation_notes = db.Column(db.Text)
     
+    # Paiement
+    is_paid = db.Column(db.Boolean, nullable=False, default=False)
+    paid_at = db.Column(db.DateTime)
+    paid_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    
+    # Liens comptables
+    payroll_entry_id = db.Column(db.Integer, db.ForeignKey('accounting_journal_entries.id'))  # Écriture de calcul
+    payment_entry_id = db.Column(db.Integer, db.ForeignKey('accounting_journal_entries.id'))  # Écriture de paiement
+    
     # Métadonnées
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -713,45 +722,55 @@ class PayrollCalculation(db.Model):
     
     # Relations
     employee = db.relationship('Employee', backref='payroll_calculations')
-    work_hours = db.relationship('WorkHours', backref='payroll_calculation')
+    work_hours = db.relationship('WorkHours', foreign_keys=[work_hours_id], backref='payroll_calculation')
+    validated_by_user = db.relationship('User', foreign_keys=[validated_by])
+    paid_by_user = db.relationship('User', foreign_keys=[paid_by])
+    # Note: Relations vers JournalEntry définies dynamiquement pour éviter les imports circulaires
     
     # Contrainte unique
     __table_args__ = (db.UniqueConstraint('employee_id', 'period_month', 'period_year', 
                                          name='unique_payroll_period'),)
     
     def calculate_all(self):
-        """Calcule tous les montants automatiquement"""
+        """Calcule tous les montants automatiquement depuis le pointage"""
+        # Récupérer les WorkHours directement via l'ID
+        work_hours = WorkHours.query.get(self.work_hours_id)
+        if not work_hours:
+            raise ValueError(f"WorkHours avec ID {self.work_hours_id} non trouvé")
+        
         # Montant des heures normales
-        self.regular_amount = float(self.work_hours.regular_hours) * float(self.hourly_rate)
+        self.regular_amount = float(work_hours.regular_hours) * float(self.hourly_rate)
         
         # Montant des heures supplémentaires
-        self.overtime_amount = float(self.work_hours.overtime_hours) * float(self.overtime_rate)
+        self.overtime_amount = float(work_hours.overtime_hours) * float(self.overtime_rate)
         
         # Total des primes et déductions
-        self.total_bonuses = self.work_hours.get_total_bonuses()
-        self.total_deductions = self.work_hours.get_total_deductions()
+        self.total_bonuses = work_hours.get_total_bonuses()
+        self.total_deductions = work_hours.get_total_deductions()
         
-        # Salaire brut
+        # Salaire brut = heures + primes
         self.gross_salary = self.regular_amount + self.overtime_amount + self.total_bonuses
         
-        # Calcul des charges sociales
-        self.social_security_amount = self.gross_salary * (float(self.social_security_rate) / 100)
-        self.unemployment_amount = self.gross_salary * (float(self.unemployment_rate) / 100)
-        self.retirement_amount = self.gross_salary * (float(self.retirement_rate) / 100)
+        # Pas de charges sociales automatiques (gérées manuellement en charges trimestrielles)
+        self.social_security_amount = 0
+        self.unemployment_amount = 0
+        self.retirement_amount = 0
+        self.total_charges = 0
         
-        self.total_charges = self.social_security_amount + self.unemployment_amount + self.retirement_amount
-        
-        # Salaire net
-        self.net_salary = self.gross_salary - self.total_charges - self.total_deductions
+        # Salaire net = salaire brut - avances/déductions
+        self.net_salary = self.gross_salary - self.total_deductions
         
         return self.net_salary
     
     def get_payslip_data(self):
         """Retourne les données formatées pour le bulletin de paie"""
+        # Récupérer les WorkHours directement via l'ID
+        work_hours = WorkHours.query.get(self.work_hours_id) if self.work_hours_id else None
+        
         return {
             'employee': self.employee,
             'period': f"{self.period_month:02d}/{self.period_year}",
-            'work_hours': self.work_hours,
+            'work_hours': work_hours,
             'base_salary': f"{float(self.base_salary):,.2f} DA",
             'regular_amount': f"{float(self.regular_amount):,.2f} DA",
             'overtime_amount': f"{float(self.overtime_amount):,.2f} DA",

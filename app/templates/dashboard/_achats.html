@@ -1,0 +1,127 @@
+<section class="section-card section-midnight">
+    <div class="section-header">
+        <div>
+            <h3 class="section-title text-white">Listes actionnables</h3>
+            <p class="section-subtitle">Achats, ruptures et commandes à risque</p>
+        </div>
+        <div class="chip neon">MàJ {{ data.purchases.last_update }}</div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+        <div class="panel-card dark">
+            <div class="panel-header">
+                <h4>Ingrédients sous le seuil</h4>
+            </div>
+            <div class="table-responsive">
+                <table class="table-modern">
+                    <thead>
+                        <tr>
+                            <th>Produit</th>
+                            <th>Stock</th>
+                            <th>Min</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in data.tables.low_stock %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.stock_magasin }}</td>
+                            <td>{{ item.min_magasin }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="empty-state">Aucun stock critique.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="panel-card dark">
+            <div class="panel-header">
+                <h4>Commandes en retard</h4>
+            </div>
+            <div class="table-responsive">
+                <table class="table-modern">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Client</th>
+                            <th>Retard (h)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in data.tables.delayed_orders %}
+                        <tr>
+                            <td>#{{ order.id }}</td>
+                            <td>{{ order.customer }}</td>
+                            <td>{{ order.delay_hours }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="empty-state">Aucun retard détecté.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2 mt-6">
+        <div class="panel-card dark">
+            <div class="panel-header">
+                <h4>Liste achats du jour</h4>
+                <span class="tag">{{ data.purchases.pending|length }} items</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table-modern">
+                    <thead>
+                        <tr>
+                            <th>Ingrédient</th>
+                            <th>Manque</th>
+                            <th>À acheter</th>
+                            <th>Limite</th>
+                        </tr>
+                    </thead>
+                    <tbody id="purchase-table">
+                        {% for item in data.purchases.pending %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>-{{ item.missing }} {{ item.unit }}</td>
+                            <td class="text-emerald-400 fw-semibold">{{ item.to_buy }} {{ item.unit }}</td>
+                            <td>{{ item.deadline }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="empty-state">Aucun achat requis pour l'instant.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="panel-card dark">
+            <div class="panel-header">
+                <h4>Top produits (table)</h4>
+            </div>
+            <div class="table-responsive">
+                <table class="table-modern">
+                    <thead>
+                        <tr>
+                            <th>Produit</th>
+                            <th>Qté</th>
+                            <th>CA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in data.tables.top_products %}
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.quantity }}</td>
+                            <td>{{ product.revenue|currency }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="empty-state">Pas encore de ventes.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+

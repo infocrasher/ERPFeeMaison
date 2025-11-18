@@ -1,0 +1,497 @@
+{% extends "base.html" %}
+
+{% block title %}Analyses IA & Recommandations{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+<style>
+    .insight-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+        border-left: 4px solid;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card.revenue { border-left-color: #10b981; }
+    .stat-card.purchases { border-left-color: #f59e0b; }
+    .stat-card.salaries { border-left-color: #3b82f6; }
+    .stat-card.profit { border-left-color: #8b5cf6; }
+    
+    .recommendation-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #10b981;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .recommendation-card.warning {
+        border-left-color: #f59e0b;
+    }
+    
+    .recommendation-card.critical {
+        border-left-color: #ef4444;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .ai-analysis-box {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #667eea;
+    }
+    
+    .forecast-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    
+    .forecast-badge.up {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .forecast-badge.down {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .forecast-badge.stable {
+        background: #fef3c7;
+        color: #92400e;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-robot me-2 text-primary"></i>Analyses IA & Recommandations
+            </h2>
+            <p class="text-muted mb-0">Prévisions Prophet et recommandations intelligentes pour optimiser votre activité</p>
+        </div>
+        <div>
+            <span class="badge bg-primary">Prophet + LLM</span>
+        </div>
+    </div>
+
+    <!-- Statistiques clés -->
+    {% if stats %}
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="stat-card revenue">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-1 small">CA Total (6 mois)</p>
+                        <h3 class="mb-0 text-success">{{ stats.total_revenue|format_number }} DA</h3>
+                        <p class="text-muted mb-0 small mt-2">Moyenne: {{ stats.avg_daily_revenue|format_number }} DA/jour</p>
+                    </div>
+                    <i class="bi bi-cash-stack fs-1 text-success opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="stat-card purchases">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-1 small">Achats Total</p>
+                        <h3 class="mb-0 text-warning">{{ stats.total_purchases|format_number }} DA</h3>
+                        <p class="text-muted mb-0 small mt-2">{{ "%.1f"|format(stats.purchases_ratio) }}% du CA</p>
+                    </div>
+                    <i class="bi bi-cart fs-1 text-warning opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="stat-card salaries">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-1 small">Salaires Total</p>
+                        <h3 class="mb-0 text-info">{{ stats.total_salaries|format_number }} DA</h3>
+                        <p class="text-muted mb-0 small mt-2">{{ "%.1f"|format(stats.salaries_ratio) }}% du CA</p>
+                    </div>
+                    <i class="bi bi-people fs-1 text-info opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="stat-card profit">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-1 small">Bénéfice Net</p>
+                        <h3 class="mb-0 {% if stats.total_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ stats.total_profit|format_number }} DA
+                        </h3>
+                        <p class="text-muted mb-0 small mt-2">Marge: {{ "%.1f"|format(stats.profit_margin) }}%</p>
+                    </div>
+                    <i class="bi bi-graph-up-arrow fs-1 text-primary opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Graphiques historiques -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="bi bi-graph-up me-2"></i>Évolution des Performances (6 derniers mois)
+                </h5>
+                <canvas id="historicalChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prévisions Prophet -->
+    {% if forecasts.revenue %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="bi bi-crystal-ball me-2"></i>Prévisions Prophet - Chiffre d'Affaires (7 prochains jours)
+                    <span class="forecast-badge up">IA Prophet</span>
+                </h5>
+                <canvas id="forecastChart" height="60"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Analyses IA -->
+    {% if ai_analyses.sales %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="ai-analysis-box">
+                <h5 class="mb-3">
+                    <i class="bi bi-lightbulb me-2"></i>Analyse IA - Ventes
+                    <span class="badge bg-primary ms-2">LLM</span>
+                </h5>
+                <div class="bg-white p-3 rounded">
+                    <p class="mb-0" style="white-space: pre-wrap; line-height: 1.8;">{{ ai_analyses.sales }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommandations -->
+    {% if ai_recommendations.sales %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">
+                <i class="bi bi-megaphone me-2 text-primary"></i>Recommandations pour Améliorer les Performances
+            </h4>
+            
+            {% for recommendation in ai_recommendations.sales %}
+            <div class="recommendation-card {% if 'critique' in recommendation|lower or 'urgent' in recommendation|lower %}critical{% elif 'attention' in recommendation|lower or 'améliorer' in recommendation|lower %}warning{% endif %}">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-check-circle-fill me-3 mt-1 {% if 'critique' in recommendation|lower %}text-danger{% elif 'attention' in recommendation|lower %}text-warning{% else %}text-success{% endif %}"></i>
+                    <div>
+                        <p class="mb-0">{{ recommendation }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Graphique de répartition des charges -->
+    {% if stats %}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="bi bi-pie-chart me-2"></i>Répartition des Charges
+                </h5>
+                <canvas id="expensesChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="bi bi-bar-chart me-2"></i>Évolution de la Marge
+                </h5>
+                <canvas id="marginChart" height="60"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Message si pas de données -->
+    {% if not chart_data.dates %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Aucune donnée historique disponible.</strong> 
+        Importez les données historiques depuis les fichiers Excel pour activer les analyses IA.
+        <a href="{{ url_for('reports.index') }}" class="alert-link">Voir les autres rapports</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Données pour les graphiques
+    const chartData = {{ chart_data|tojson }};
+    const forecasts = {{ forecasts|tojson }};
+    const stats = {{ stats|tojson }};
+
+    // Graphique historique
+    if (chartData.dates && chartData.dates.length > 0) {
+        const ctx1 = document.getElementById('historicalChart');
+        new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: chartData.dates.map(d => new Date(d).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })),
+                datasets: [
+                    {
+                        label: 'CA Journalier',
+                        data: chartData.revenue,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Achats',
+                        data: chartData.purchases,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Bénéfice Net',
+                        data: chartData.net_profit,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toLocaleString('fr-FR') + ' DA';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('fr-FR') + ' DA';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Graphique prévisions
+    if (forecasts.revenue && forecasts.revenue.length > 0) {
+        const ctx2 = document.getElementById('forecastChart');
+        const forecastData = forecasts.revenue;
+        const forecastDates = forecastData.map(f => new Date(f.ds).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }));
+        const forecastValues = forecastData.map(f => f.yhat);
+        const forecastLower = forecastData.map(f => f.yhat_lower || f.yhat);
+        const forecastUpper = forecastData.map(f => f.yhat_upper || f.yhat);
+        
+        new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: forecastDates,
+                datasets: [
+                    {
+                        label: 'Prévision Prophet',
+                        data: forecastValues,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 3
+                    },
+                    {
+                        label: 'Intervalle de confiance (min)',
+                        data: forecastLower,
+                        borderColor: 'rgba(102, 126, 234, 0.3)',
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Intervalle de confiance (max)',
+                        data: forecastUpper,
+                        borderColor: 'rgba(102, 126, 234, 0.3)',
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toLocaleString('fr-FR') + ' DA';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('fr-FR') + ' DA';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Graphique répartition charges
+    if (stats && stats.total_purchases > 0) {
+        const ctx3 = document.getElementById('expensesChart');
+        new Chart(ctx3, {
+            type: 'doughnut',
+            data: {
+                labels: ['Achats', 'Salaires', 'Loyer', 'Autres'],
+                datasets: [{
+                    data: [
+                        stats.total_purchases,
+                        stats.total_salaries,
+                        stats.total_rent,
+                        (stats.total_revenue - stats.total_purchases - stats.total_salaries - stats.total_rent - stats.total_profit)
+                    ],
+                    backgroundColor: [
+                        '#f59e0b',
+                        '#3b82f6',
+                        '#8b5cf6',
+                        '#6b7280'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed;
+                                const percentage = ((value / stats.total_revenue) * 100).toFixed(1);
+                                return context.label + ': ' + value.toLocaleString('fr-FR') + ' DA (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Graphique évolution marge
+    if (chartData.dates && chartData.net_profit && chartData.revenue) {
+        const ctx4 = document.getElementById('marginChart');
+        const margins = chartData.revenue.map((rev, i) => {
+            if (rev > 0) {
+                return ((chartData.net_profit[i] / rev) * 100).toFixed(1);
+            }
+            return 0;
+        });
+        
+        new Chart(ctx4, {
+            type: 'bar',
+            data: {
+                labels: chartData.dates.map(d => new Date(d).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })),
+                datasets: [{
+                    label: 'Marge Nette (%)',
+                    data: margins,
+                    backgroundColor: margins.map(m => parseFloat(m) >= 0 ? '#10b981' : '#ef4444')
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Marge: ' + context.parsed.y + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
+

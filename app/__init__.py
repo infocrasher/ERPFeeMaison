@@ -97,6 +97,20 @@ def create_app(config_name=None):
         except (ValueError, TypeError):
             return "0,00 DA"
     
+    @app.template_filter('format_number')
+    def format_number_filter(value):
+        """Formate un nombre avec des espaces comme séparateurs de milliers (format français)"""
+        if value is None:
+            return "0"
+        try:
+            # Convertir en entier ou float
+            num = float(value)
+            # Formater avec virgule comme séparateur de milliers
+            formatted = f"{num:,.0f}".replace(',', ' ')
+            return formatted
+        except (ValueError, TypeError):
+            return "0"
+    
     @app.template_filter('stock_status')
     def stock_status_filter(quantity):
         """Retourne une classe CSS selon le niveau de stock"""
@@ -110,6 +124,15 @@ def create_app(config_name=None):
                 return 'text-success'  # Vert pour stock OK
         except (ValueError, TypeError):
             return 'text-muted'
+    
+    # Filtres pour les factures PDF WeasyPrint
+    from app.utils.filters import format_dzd, date_fr, montant_en_lettres_dzd, format_phone, truncate_text, capitalize_first
+    app.jinja_env.filters['dzd'] = format_dzd
+    app.jinja_env.filters['date_fr'] = date_fr
+    app.jinja_env.filters['lettres_dzd'] = montant_en_lettres_dzd
+    app.jinja_env.filters['format_phone'] = format_phone
+    app.jinja_env.filters['truncate'] = truncate_text
+    app.jinja_env.filters['capitalize_first'] = capitalize_first
     
     # Enregistrement des Blueprints
     from app.main.routes import main as main_blueprint
@@ -133,14 +156,29 @@ def create_app(config_name=None):
 
     from app.admin.routes import admin as admin_blueprint
     app.register_blueprint(admin_blueprint, url_prefix='/admin')
+    
+    # ✅ AJOUT : Blueprint printer admin pour la gestion de l'imprimante
+    from app.admin.printer_routes import printer_admin
+    app.register_blueprint(printer_admin)
+    
+    # ✅ AJOUT : Blueprint profiles admin pour la gestion des profils
+    from app.admin.profiles_routes import profiles_admin
+    app.register_blueprint(profiles_admin, url_prefix='/admin')
+    
+    # ✅ AJOUT : Blueprint users admin pour la gestion des utilisateurs
+    from app.admin.users_routes import users_admin
+    app.register_blueprint(users_admin, url_prefix='/admin')
 
     # ✅ CORRECTION : Import correct du blueprint purchases
     from app.purchases import bp as purchases_blueprint
     app.register_blueprint(purchases_blueprint, url_prefix='/admin/purchases')
 
     # Blueprints spéciaux (existants)
+    from app.routes import dashboard as unified_dashboard_routes  # noqa: F401
     from app.orders.dashboard_routes import dashboard_bp
+    from app.delivery_zones import delivery_zones_bp
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
+    app.register_blueprint(delivery_zones_bp)
 
     from app.orders.status_routes import status_bp
     app.register_blueprint(status_bp, url_prefix='/orders')
@@ -178,6 +216,10 @@ def create_app(config_name=None):
     # ✅ AJOUT : Blueprint ZKTeco pour la pointeuse
     from app.zkteco import zkteco as zkteco_blueprint
     app.register_blueprint(zkteco_blueprint, url_prefix='/zkteco')
+    
+    # ✅ AJOUT : Blueprint B2B pour la facturation B2B
+    from app.b2b import b2b as b2b_blueprint
+    app.register_blueprint(b2b_blueprint, url_prefix='/admin/b2b')
     
 
 
@@ -231,5 +273,46 @@ def create_app(config_name=None):
         print(f"\nProduits - Ingrédients: {ingredients}")
         print(f"Produits - Finis: {finished}")
         print(f"Produits - Stock bas: {low_stock}")
+
+    # Initialiser le service d'impression
+    try:
+        from app.services.printer_service import get_printer_service
+        printer_service = get_printer_service()
+        print(f"\n🖨️ Service d'impression initialisé (Activé: {printer_service.config.enabled})")
+    except Exception as e:
+        print(f"\n⚠️ Erreur initialisation service impression: {e}")
+
+    # Enregistrer les nouveaux blueprints clients et fournisseurs
+    from app.suppliers import suppliers
+    from app.customers import customers
+    app.register_blueprint(suppliers)
+    app.register_blueprint(customers)
+    print("📋 Modules Clients et Fournisseurs enregistrés")
+
+    # ✅ AJOUT : Blueprint inventory pour la gestion d'inventaire
+    from app.inventory import inventory
+    app.register_blueprint(inventory, url_prefix='/admin/inventory')
+    
+    # ✅ AJOUT : Import des modèles inventory pour Flask-Migrate
+    from app.inventory import models as inventory_models
+    print("📋 Module Inventaire enregistré")
+    
+    # ✅ AJOUT : Blueprint consumables pour la gestion des consommables
+    from app.consumables import consumables
+    app.register_blueprint(consumables, url_prefix='/admin/consumables')
+    
+    # ✅ AJOUT : Import des modèles consumables pour Flask-Migrate
+    from app.consumables import models as consumables_models
+    print("📦 Module Consommables enregistré")
+    
+    # ✅ AJOUT : Blueprint reports pour la génération de rapports
+    from app.reports import reports
+    app.register_blueprint(reports, url_prefix='/admin/reports')
+    print("📊 Module Rapports enregistré")
+    
+    # ✅ AJOUT : Blueprint AI pour l'intelligence artificielle (Prophet + LLM)
+    from app.ai import ai
+    app.register_blueprint(ai, url_prefix='/ai')
+    print("🤖 Module AI enregistré (Prophet + LLM)")
 
     return app

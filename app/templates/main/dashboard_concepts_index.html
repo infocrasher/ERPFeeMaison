@@ -82,7 +82,7 @@
         --card-color: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
     }
     
-    .concept-card.concept3 {
+    .concept-card.concept-main {
         --card-color: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     }
     
@@ -107,7 +107,7 @@
         background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
     }
     
-    .concept3 .concept-icon {
+    .concept-main .concept-icon {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     }
     
@@ -171,7 +171,7 @@
         background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
     }
     
-    .concept3 .concept-btn {
+    .concept-main .concept-btn {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     }
     
@@ -279,23 +279,23 @@
                 </a>
             </div>
             
-            <!-- Concept 3 -->
-            <div class="concept-card concept3">
+            <!-- Dashboard central -->
+            <div class="concept-card concept-main">
                 <div class="status-badge">Prêt</div>
                 <div class="concept-icon">
                     <i class="bi bi-speedometer2"></i>
                 </div>
-                <h3 class="concept-title">Concept 3</h3>
+                <h3 class="concept-title">Dashboard Central</h3>
                 <p class="concept-description">
-                    Dashboard opérationnel avec focus sur les actions rapides et le workflow quotidien.
+                    Nouvelle vue globale : KPI, production, stock, achats et ventes dans un seul dashboard Tailwind.
                 </p>
                 <ul class="concept-features">
-                    <li><i class="bi bi-check-circle"></i> Actions rapides</li>
-                    <li><i class="bi bi-check-circle"></i> Workflow optimisé</li>
-                    <li><i class="bi bi-check-circle"></i> Interface moderne</li>
+                    <li><i class="bi bi-check-circle"></i> KPI unifiés</li>
+                    <li><i class="bi bi-check-circle"></i> Graphiques Chart.js</li>
+                    <li><i class="bi bi-check-circle"></i> Liste d'achats intelligente</li>
                 </ul>
-                <a href="{{ url_for('main.dashboard_concept3') }}" class="concept-btn">
-                    Voir Concept 3
+                <a href="{{ url_for('dashboard.unified_dashboard') }}" class="concept-btn">
+                    Ouvrir le dashboard
                 </a>
             </div>
         </div>

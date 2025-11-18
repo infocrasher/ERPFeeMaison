@@ -1,0 +1,65 @@
+# ============================================================================
+# CONFIGURATION DES BENCHMARKS MÉTIER - MODULE RAPPORTS
+# ============================================================================
+# Ce fichier centralise toutes les cibles métier utilisées dans les rapports.
+# Modifiable sans toucher au code Python.
+# ============================================================================
+
+# Rapports Quotidiens (Daily)
+# ----------------------------------------------------------------------------
+daily_sales:
+  target_revenue: 50000.0  # Objectif CA quotidien (DA)
+  description: "Chiffre d'affaires cible par jour"
+
+daily_prime_cost:
+  target_percentage: 68.0  # Prime Cost maximum acceptable (%)
+  description: "Prime Cost = (COGS + Main d'œuvre) / CA - Cible: ≤ 68%"
+
+daily_production:
+  target_efficiency: 80.0  # Taux d'efficacité minimum (%)
+  description: "Unités produites par commande - Cible: ≥ 80%"
+
+daily_stock_alerts:
+  target_alerts: 0  # Nombre d'alertes cible
+  description: "Objectif: 0 alerte de stock (rupture ou sous-seuil)"
+
+daily_waste_loss:
+  target_percentage: 5.0  # Perte maximum acceptable (% du coût alimentaire)
+  description: "Gaspillage - Cible: < 5% du coût alimentaire"
+
+# Rapports Hebdomadaires (Weekly)
+# ----------------------------------------------------------------------------
+weekly_product_performance:
+  target_growth: 0.0  # Croissance minimum (%)
+  description: "Croissance des ventes - Cible: > 0%"
+
+weekly_stock_rotation:
+  target_days_min: 7  # Jours de stock minimum
+  target_days_max: 14  # Jours de stock maximum
+  target_days_optimal: 10.5  # Milieu de la fourchette
+  description: "Rotation des stocks - Cible: 7-14 jours (1-2 semaines)"
+
+weekly_labor_cost:
+  target_ratio_min: 25.0  # Ratio minimum du CA (%)
+  target_ratio_max: 30.0  # Ratio maximum du CA (%)
+  target_ratio_optimal: 27.5  # Milieu de la fourchette
+  description: "Coût main d'œuvre / CA - Cible: 25-30%"
+
+weekly_cash_flow:
+  target_balance: 0.0  # Solde minimum prévisionnel
+  description: "Solde prévisionnel - Cible: > 0 (positif)"
+
+# Rapports Mensuels (Monthly)
+# ----------------------------------------------------------------------------
+monthly_gross_margin:
+  target_percentage: 60.0  # Marge brute globale minimum (%)
+  description: "Marge brute globale - Cible: ≥ 60%"
+
+monthly_profit_loss:
+  target_net_margin: 10.0  # Marge nette minimum (%)
+  description: "Marge nette (résultat net / CA) - Cible: ≥ 10%"
+
+# Paramètres Globaux
+# ----------------------------------------------------------------------------
+trend_threshold: 5.0  # Seuil de sensibilité pour tendance up/down (%)
+

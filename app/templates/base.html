@@ -58,6 +58,17 @@
                             <li><a class="dropdown-item" href="{{ url_for('deliverymen.list_deliverymen') }}">
                                 <i class="bi bi-truck me-2"></i>Livreurs
                             </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('delivery_zones.manage_zones') }}">
+                                <i class="bi bi-geo-alt me-2"></i>Livraison - Communes
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Clients & Fournisseurs</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('customers.list_customers') }}">
+                                <i class="bi bi-people me-2"></i>Clients Particuliers
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('suppliers.list_suppliers') }}">
+                                <i class="bi bi-building me-2"></i>Fournisseurs
+                            </a></li>
                         </ul>
                     </li>
                     {% endif %}
@@ -88,6 +99,20 @@
                             </a></li>
                             <li><a class="dropdown-item" href="{{ url_for('orders.orders_calendar') }}">
                                 <i class="bi bi-calendar3 me-2"></i>Calendrier Production
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Facturation B2B</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('b2b.new_order') }}">
+                                <i class="bi bi-building me-2"></i>Nouvelle Commande B2B
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('b2b.list_orders') }}">
+                                <i class="bi bi-list-ul me-2"></i>Commandes B2B
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('b2b.list_invoices') }}">
+                                <i class="bi bi-receipt me-2"></i>Factures B2B
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('b2b.list_clients') }}">
+                                <i class="bi bi-people me-2"></i>Clients B2B
                             </a></li>
                         </ul>
                     </li>
@@ -156,6 +181,20 @@
                             <li><a class="dropdown-item" href="{{ url_for('stock.transfers_list') }}">
                                 <i class="bi bi-arrow-left-right me-2"></i>Transferts
                             </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">Inventaires</h6></li>
+                <li><a class="dropdown-item" href="{{ url_for('inventory.index') }}">
+                    <i class="bi bi-clipboard-data me-2"></i>Inventaires Physiques
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('inventory.daily_waste_index') }}">
+                    <i class="bi bi-trash3 me-2"></i>Invendus Quotidiens
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('inventory.weekly_comptoir_index') }}">
+                    <i class="bi bi-calendar-week me-2"></i>Inventaire Hebdomadaire
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('consumables.index') }}">
+                    <i class="bi bi-box-seam me-2"></i>Gestion Consommables
+                </a></li>
                         </ul>
                     </li>
                     
@@ -214,6 +253,9 @@
                             <li><a class="dropdown-item" href="{{ url_for('employees.calculate_payroll') }}">
                                 <i class="bi bi-calculator me-2"></i>Calcul de Paie
                             </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('employees.salaries_dashboard') }}">
+                                <i class="bi bi-credit-card me-2"></i>Salaires
+                            </a></li>
                             <li><a class="dropdown-item" href="{{ url_for('employees.generate_payslips') }}">
                                 <i class="bi bi-file-earmark-text me-2"></i>Bulletins de Paie
                             </a></li>
@@ -221,6 +263,42 @@
                     </li>
                     
                     {% if current_user.is_admin %}
+                    <!-- Rapports -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-file-earmark-bar-graph me-1"></i>Rapports
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('reports.index') }}">
+                                <i class="bi bi-grid me-2"></i>Tous les Rapports
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Rapports Quotidiens</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('reports.daily_sales') }}">
+                                <i class="bi bi-cash-stack me-2"></i>Ventes Quotidiennes
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('reports.daily_prime_cost') }}">
+                                <i class="bi bi-calculator me-2"></i>Coût de Revient
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('reports.daily_production') }}">
+                                <i class="bi bi-gear-fill me-2"></i>Production
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Rapports Hebdomadaires</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('reports.weekly_product_performance') }}">
+                                <i class="bi bi-graph-up me-2"></i>Performance Produits
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('reports.weekly_labor_cost') }}">
+                                <i class="bi bi-people-fill me-2"></i>Coût Main d'Œuvre
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Rapports Mensuels</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('reports.monthly_profit_loss') }}">
+                                <i class="bi bi-file-earmark-spreadsheet me-2"></i>Compte de Résultat
+                            </a></li>
+                        </ul>
+                    </li>
+                    
                     <!-- Comptabilité -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
@@ -231,40 +309,30 @@
                             <li><a class="dropdown-item" href="{{ url_for('accounting.dashboard') }}">
                                 <i class="bi bi-speedometer2 me-2"></i>Dashboard Comptable
                             </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Plan Comptable</h6></li>
-                            <li><a class="dropdown-item" href="{{ url_for('accounting.list_accounts') }}">
-                                <i class="bi bi-list-ul me-2"></i>Comptes Comptables
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('accounting.new_account') }}">
-                                <i class="bi bi-plus-circle me-2"></i>Nouveau Compte
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.business_config') }}">
+                                <i class="bi bi-gear me-2"></i>Configuration Métier
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Journaux</h6></li>
-                            <li><a class="dropdown-item" href="{{ url_for('accounting.list_journals') }}">
-                                <i class="bi bi-journal-text me-2"></i>Journaux Comptables
+                            <li><h6 class="dropdown-header">Gestion des Charges</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.list_expenses') }}">
+                                <i class="bi bi-list-ul me-2"></i>Liste des Charges
                             </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('accounting.list_entries') }}">
-                                <i class="bi bi-journal-check me-2"></i>Écritures Comptables
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('accounting.new_entry') }}">
-                                <i class="bi bi-plus-square me-2"></i>Nouvelle Écriture
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.new_expense') }}">
+                                <i class="bi bi-plus-circle me-2"></i>Nouvelle Charge
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Rapports</h6></li>
-                            <li><a class="dropdown-item" href="{{ url_for('accounting.reports') }}">
-                                <i class="bi bi-bar-chart me-2"></i>Tous les Rapports
+                            <li><h6 class="dropdown-header">Caisse & Banque</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.set_initial_balances') }}">
+                                <i class="bi bi-gear me-2"></i>Soldes Initiaux
                             </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('accounting.trial_balance') }}">
-                                <i class="bi bi-table me-2"></i>Balance Générale
+                            <li><a class="dropdown-item" href="{{ url_for('accounting.bank_statement') }}">
+                                <i class="bi bi-bank me-2"></i>État de la Banque
                             </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('accounting.profit_loss') }}">
-                                <i class="bi bi-graph-up me-2"></i>Compte de Résultat
+                            <li><a class="dropdown-item" href="{{ url_for('sales.cash_status') }}">
+                                <i class="bi bi-info-circle me-2"></i>État de la Caisse
                             </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Exercices</h6></li>
-                            <li><a class="dropdown-item" href="{{ url_for('accounting.list_fiscal_years') }}">
-                                <i class="bi bi-calendar-range me-2"></i>Exercices Comptables
+                            <li><a class="dropdown-item" href="{{ url_for('sales.list_cash_movements') }}">
+                                <i class="bi bi-list-ul me-2"></i>Mouvements de Caisse
                             </a></li>
                         </ul>
                     </li>
@@ -291,6 +359,9 @@
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}">
                                 <i class="bi bi-shield-check me-2"></i>Admin Dashboard
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('printer_admin.printer_dashboard') }}">
+                                <i class="bi bi-printer me-2"></i>Gestion Imprimante
                             </a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>

@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Compter {{ item.product.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-calculator me-2"></i>Compter {{ item.product.name }}</h2>
+                <a href="{{ url_for('inventory.weekly_comptoir_view', id=item.inventory_id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Retour à l'inventaire
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Saisie du stock physique</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Stock théorique</h6>
+                                                <h4 class="text-primary mb-0">{{ item.product.format_quantity_display(item.theoretical_stock) }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Valeur théorique</h6>
+                                                <h4 class="text-primary mb-0">{{ "%.2f"|format(item.theoretical_value) }} DA</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.physical_stock.label(class="form-label") }}
+                                    <div class="input-group">
+                                        {{ form.physical_stock(class="form-control form-control-lg", id="physicalStockInput") }}
+                                        <span class="input-group-text">{{ item.product.unit }}</span>
+                                    </div>
+                                    {% if form.physical_stock.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.physical_stock.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.notes.label(class="form-label") }}
+                                    {{ form.notes(class="form-control", rows="3") }}
+                                    {% if form.notes.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.notes.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Aperçu de l'écart -->
+                                <div class="card bg-light mb-3" id="adjustmentPreview" style="display: none;">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">Aperçu de l'ajustement</h6>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <small class="text-muted">Stock physique</small>
+                                                <div id="physicalDisplay">-</div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small class="text-muted">Écart</small>
+                                                <div id="varianceDisplayFinal">-</div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small class="text-muted">Niveau</small>
+                                                <div id="varianceLevelFinal">-</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{{ url_for('inventory.weekly_comptoir_view', id=item.inventory_id) }}" class="btn btn-outline-secondary me-md-2">Annuler</a>
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Informations produit</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>{{ item.product.name }}</h6>
+                            <p class="text-muted">{{ item.product.description or 'Aucune description' }}</p>
+                            
+                            <hr>
+                            
+                            <h6 class="text-muted">Détails</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Unité:</strong> {{ item.product.unit }}</li>
+                                <li><strong>Prix de revient:</strong> {{ "%.2f"|format(item.unit_cost or 0) }} DA</li>
+                                <li><strong>Stock théorique:</strong> {{ item.product.format_quantity_display(item.theoretical_stock) }}</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">Calcul de l'écart</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center">
+                                <h6 class="text-muted">Écart</h6>
+                                <div id="varianceDisplay">
+                                    <span class="text-muted">Saisissez le stock physique</span>
+                                </div>
+                                
+                                <hr>
+                                
+                                <h6 class="text-muted">Niveau d'écart</h6>
+                                <div id="varianceLevel">
+                                    <span class="text-muted">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const physicalStockInput = document.getElementById('physicalStockInput');
+    const varianceDisplay = document.getElementById('varianceDisplay');
+    const varianceLevel = document.getElementById('varianceLevel');
+    const adjustmentPreview = document.getElementById('adjustmentPreview');
+    const physicalDisplay = document.getElementById('physicalDisplay');
+    const varianceDisplayFinal = document.getElementById('varianceDisplayFinal');
+    const varianceLevelFinal = document.getElementById('varianceLevelFinal');
+    
+    const theoreticalStock = {{ item.theoretical_stock }};
+    const unit = '{{ item.product.unit }}';
+    
+    // Fonction pour formater l'affichage des quantités
+    function formatStockDisplay(value, unit) {
+        if (value === 0) return `0 ${unit}`;
+        
+        // Conversion automatique pour l'affichage
+        if (unit === 'g' && value >= 1000) {
+            return `${(value / 1000).toFixed(3).replace('.', ',')} kg`;
+        } else if (unit === 'ml' && value >= 1000) {
+            return `${(value / 1000).toFixed(3).replace('.', ',')} L`;
+        } else if (unit === 'kg') { // Assuming stock is stored in grams, convert to kg for display
+            return `${(value / 1000).toFixed(3).replace('.', ',')} kg`;
+        } else if (unit === 'l') { // Assuming stock is stored in ml, convert to L for display
+            return `${(value / 1000).toFixed(3).replace('.', ',')} L`;
+        } else {
+            return `${value.toFixed(3).replace('.', ',')} ${unit}`;
+        }
+    }
+    
+    function calculateVariance() {
+        const physicalValue = parseFloat(physicalStockInput.value) || 0;
+        const variance = physicalValue - theoreticalStock;
+        const variancePercentage = theoreticalStock !== 0 ? (variance / theoreticalStock) * 100 : 0;
+        
+        // Mise à jour de l'affichage de l'écart
+        if (physicalStockInput.value) {
+            const varianceText = variance > 0 ? `+${formatStockDisplay(variance, unit)}` : formatStockDisplay(variance, unit);
+            const varianceClass = variance > 0 ? 'text-success' : (variance < 0 ? 'text-danger' : 'text-muted');
+            
+            varianceDisplay.innerHTML = `<span class="${varianceClass}">${varianceText}</span>`;
+            
+            // Détermination du niveau d'écart
+            const absPercentage = Math.abs(variancePercentage);
+            let levelClass, levelText;
+            
+            if (absPercentage < 5) {
+                levelClass = 'text-success';
+                levelText = 'OK';
+            } else if (absPercentage <= 10) {
+                levelClass = 'text-warning';
+                levelText = 'Normal';
+            } else {
+                levelClass = 'text-danger';
+                levelText = 'Critique';
+            }
+            
+            varianceLevel.innerHTML = `<span class="${levelClass}">${levelText} (${variancePercentage.toFixed(1)}%)</span>`;
+            
+            // Aperçu de l'ajustement
+            physicalDisplay.textContent = formatStockDisplay(physicalValue, unit);
+            varianceDisplayFinal.innerHTML = `<span class="${varianceClass}">${varianceText}</span>`;
+            varianceLevelFinal.innerHTML = `<span class="${levelClass}">${levelText}</span>`;
+            adjustmentPreview.style.display = 'block';
+        } else {
+            varianceDisplay.innerHTML = '<span class="text-muted">Saisissez le stock physique</span>';
+            varianceLevel.innerHTML = '<span class="text-muted">-</span>';
+            adjustmentPreview.style.display = 'none';
+        }
+    }
+    
+    physicalStockInput.addEventListener('input', calculateVariance);
+    
+    // Initialiser si déjà une valeur
+    if (physicalStockInput.value) {
+        calculateVariance();
+    }
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+

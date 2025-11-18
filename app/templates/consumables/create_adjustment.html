@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Nouvel Ajustement - Consommables{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-arrow-repeat me-2"></i>Nouvel Ajustement</h2>
+                <a href="{{ url_for('consumables.adjustments_index') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Retour
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Ajustement de stock</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        {{ form.product_id.label(class="form-label") }}
+                                        {{ form.product_id(class="form-select") }}
+                                        {% if form.product_id.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.product_id.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.adjustment_date.label(class="form-label") }}
+                                        {{ form.adjustment_date(class="form-control") }}
+                                        {% if form.adjustment_date.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.adjustment_date.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        {{ form.adjustment_type.label(class="form-label") }}
+                                        {{ form.adjustment_type(class="form-select") }}
+                                        {% if form.adjustment_type.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.adjustment_type.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.quantity_adjusted.label(class="form-label") }}
+                                        <div class="input-group">
+                                            {{ form.quantity_adjusted(class="form-control") }}
+                                            <span class="input-group-text" id="unit-display">unité</span>
+                                        </div>
+                                        {% if form.quantity_adjusted.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.quantity_adjusted.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.reason.label(class="form-label") }}
+                                    {{ form.reason(class="form-control") }}
+                                    {% if form.reason.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.reason.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.notes.label(class="form-label") }}
+                                    {{ form.notes(class="form-control", rows="3") }}
+                                    {% if form.notes.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.notes.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-grid">
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Types d'ajustement</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6><i class="bi bi-clipboard-check me-1"></i>Inventaire</h6>
+                                <p class="text-muted small">Remplace le stock actuel par la quantité saisie.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="bi bi-trash me-1"></i>Perte/Invendu</h6>
+                                <p class="text-muted small">Soustrait la quantité du stock (valeur négative).</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="bi bi-arrow-clockwise me-1"></i>Correction d'erreur</h6>
+                                <p class="text-muted small">Ajuste le stock (peut être positif ou négatif).</p>
+                            </div>
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                <strong>Attention :</strong> Les ajustements modifient directement le stock des consommables.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productSelect = document.getElementById('product_id');
+    const unitDisplay = document.getElementById('unit-display');
+    
+    // Données des produits (à remplacer par une API)
+    const products = {
+        {% for product in form.product_id.choices %}
+        {{ product[0] }}: {
+            unit: '{{ Product.query.get(product[0]).unit if Product.query.get(product[0]) else "unité" }}'
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    };
+    
+    productSelect.addEventListener('change', function() {
+        const productId = this.value;
+        if (productId && products[productId]) {
+            unitDisplay.textContent = products[productId].unit;
+        } else {
+            unitDisplay.textContent = 'unité';
+        }
+    });
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+

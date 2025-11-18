@@ -77,8 +77,37 @@
     color: #dc3545;
     background: none;
     border: none;
-    padding: 2px 6px;
-    border-radius: 4px;
+
+/* 🆕 STYLES AUTO-COMPLÉTION CLIENTS */
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ced4da;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.autocomplete-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.autocomplete-item:hover {
+    background-color: #f8f9fa;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
 }
 
 .btn-remove:hover {
@@ -133,6 +162,38 @@
                             </h5>
                         </div>
                         <div class="card-body">
+                            <!-- 🆕 SÉLECTEUR CLIENT OPTIONNEL -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <div class="alert alert-info d-flex align-items-center">
+                                        <i class="bi bi-lightbulb me-2"></i>
+                                        <div class="flex-grow-1">
+                                            <strong>Sélection rapide :</strong> Choisissez un client existant pour remplir automatiquement les champs
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label fw-bold">🔍 Rechercher un client existant</label>
+                                    <div class="input-group">
+                                        <input type="text" id="customerSearch" class="form-control" 
+                                               placeholder="Tapez le nom ou téléphone d'un client..." autocomplete="off">
+                                        <button type="button" class="btn btn-outline-secondary" id="clearCustomerBtn">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                    <div id="customerSuggestions" class="autocomplete-suggestions"></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">&nbsp;</label>
+                                    <div class="d-grid">
+                                        <a href="{{ url_for('customers.new_customer') }}" target="_blank" class="btn btn-outline-primary">
+                                            <i class="bi bi-plus-circle me-1"></i>Nouveau Client
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr class="my-3">
+                            
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     {{ form.customer_name.label(class="form-label fw-bold") }}
@@ -177,10 +238,11 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-12 mb-3" id="customer_address_wrapper" style="display: none;">
-                                    {{ form.customer_address.label(class="form-label fw-bold") }}
+                                    {{ form.delivery_zone.label(class="form-label fw-bold") }}
                                     <span class="field-required">*</span>
-                                    {{ form.customer_address(class="form-control" + (' is-invalid' if form.customer_address.errors else ""), placeholder="Adresse complète de livraison...") }}
-                                    {% for error in form.customer_address.errors %}
+                                    {{ form.delivery_zone(class="form-control mb-2" + (' is-invalid' if form.delivery_zone.errors else ""), id="delivery_zone_input", placeholder="Commune (saisie avec suggestions…)", autocomplete="off") }}
+                                    <small class="text-muted d-block">Tapez quelques lettres pour rechercher une commune configurée.</small>
+                                    {% for error in form.delivery_zone.errors %}
                                         <div class="invalid-feedback d-block">{{ error }}</div>
                                     {% endfor %}
                                 </div>
@@ -256,16 +318,19 @@
                         </div>
                         <div class="card-body">
                             <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    {{ form.payment_status.label(class="form-label fw-bold") }}
-                                    {{ form.payment_status(class="form-select form-control") }}
+                                <div class="col-md-6 mb-3 d-flex flex-column gap-2">
+                                    <label class="form-label fw-bold mb-0">Statut paiement</label>
+                                    <div id="payment-status-display" class="badge bg-secondary">En attente</div>
+                                    {{ form.payment_status(class="form-select form-control d-none", id="payment_status_select") }}
+                                    <input type="hidden" name="payment_status" id="payment_status_field" value="{{ form.payment_status.data or 'pending' }}">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     {{ form.advance_payment.label(class="form-label fw-bold") }}
                                     <div class="input-group">
-                                        {{ form.advance_payment(class="form-control", step="0.01") }}
+                                        {{ form.advance_payment(class="form-control", step="0.01", min="0") }}
                                         <span class="input-group-text">DA</span>
                                     </div>
+                                    <small class="text-muted">Solde restant : <span id="payment-balance-display">0.00 DA</span></small>
                                 </div>
                             </div>
                         </div>
@@ -292,16 +357,16 @@
                             <div class="col-md-6">
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Sous-total articles:</span>
-                                    <span class="fw-bold" id="items-total">0.00 DA</span>
+                                    <span class="fw-bold" id="items-total" data-value="0.00">0.00 DA</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2" id="delivery_total_line">
                                     <span>Frais de livraison:</span>
-                                    <span class="fw-bold" id="delivery-total">0.00 DA</span>
+                                    <span class="fw-bold" id="delivery-total" data-value="0.00">0.00 DA</span>
                                 </div>
                                 <hr>
                                 <div class="d-flex justify-content-between fs-5">
                                     <span><strong>Total Général:</strong></span>
-                                    <span class="fw-bold text-success" id="grand-total">0.00 DA</span>
+                                    <span class="fw-bold text-success" id="grand-total" data-value="0.00">0.00 DA</span>
                                 </div>
                             </div>
                         </div>
@@ -329,6 +394,12 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
+    const advancePaymentInput = document.getElementById('advance_payment');
+    const paymentStatusDisplay = document.getElementById('payment-status-display');
+    const paymentStatusHidden = document.getElementById('payment_status_field');
+    const paymentStatusSelect = document.getElementById('payment_status_select');
+    const paymentBalanceDisplay = document.getElementById('payment-balance-display');
+    const grandTotalElement = document.getElementById('grand-total');
     
     function initializeSelect2(element) {
         $(element).select2({
@@ -374,12 +445,19 @@ $(document).ready(function() {
             itemsTotal += subtotal;
         });
 
-        document.getElementById('items-total').textContent = itemsTotal.toFixed(2) + ' DA';
-        
+        const itemsTotalElement = document.getElementById('items-total');
+        itemsTotalElement.textContent = itemsTotal.toFixed(2) + ' DA';
+        itemsTotalElement.dataset.value = itemsTotal.toFixed(2);
+
         let deliveryCost = parseFloat(document.getElementById('delivery_cost').value) || 0;
-        document.getElementById('delivery-total').textContent = deliveryCost.toFixed(2) + ' DA';
+        const deliveryTotalElement = document.getElementById('delivery-total');
+        deliveryTotalElement.textContent = deliveryCost.toFixed(2) + ' DA';
+        deliveryTotalElement.dataset.value = deliveryCost.toFixed(2);
+
         let grandTotal = itemsTotal + deliveryCost;
-        document.getElementById('grand-total').textContent = grandTotal.toFixed(2) + ' DA';
+        grandTotalElement.textContent = grandTotal.toFixed(2) + ' DA';
+        grandTotalElement.dataset.value = grandTotal.toFixed(2);
+        updatePaymentIndicators();
     }
 
     function attachEventListeners(element) {
@@ -514,6 +592,254 @@ $(document).ready(function() {
 
     updateFormVisibility();
     updateSubtotals();
+    updatePaymentIndicators();
+    
+    if (advancePaymentInput) {
+        advancePaymentInput.addEventListener('input', updatePaymentIndicators);
+    }
+    
+    // 🆕 AUTO-COMPLÉTION CLIENTS
+    initializeCustomerSearch();
+
+    // 🆕 AUTOCOMPLÉTION COMMUNES DE LIVRAISON
+    const zoneInput = document.getElementById('delivery_zone_input');
+    if (zoneInput) {
+        // Assure que le parent sert de conteneur pour le positionnement absolu
+        if (zoneInput.parentNode && zoneInput.parentNode.style) {
+            zoneInput.parentNode.style.position = 'relative';
+        }
+        let timeoutId = null;
+        const deliveryCostInput = document.getElementById('delivery_cost');
+
+        function ensureZoneBox() {
+            let box = document.getElementById('deliveryZoneSuggestions');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'deliveryZoneSuggestions';
+                box.className = 'autocomplete-suggestions';
+                zoneInput.parentNode.appendChild(box);
+            }
+            return box;
+        }
+
+        function hideZoneBox() {
+            const box = document.getElementById('deliveryZoneSuggestions');
+            if (box) {
+                box.style.display = 'none';
+                box.innerHTML = '';
+            }
+        }
+
+        zoneInput.addEventListener('input', function () {
+            const value = this.value.trim();
+            clearTimeout(timeoutId);
+            if (!value) {
+                hideZoneBox();
+                return;
+            }
+            timeoutId = setTimeout(function () {
+                fetch(`/admin/delivery-zones/api/search?q=${encodeURIComponent(value)}`)
+                    .then(resp => resp.json())
+                    .then(data => {
+                        const list = data || [];
+                        const box = ensureZoneBox();
+                        box.innerHTML = '';
+                        if (!list.length) {
+                            hideZoneBox();
+                            return;
+                        }
+                        list.forEach(zone => {
+                            const item = document.createElement('div');
+                            item.className = 'autocomplete-item';
+                            item.textContent = `${zone.name} – ${zone.price.toFixed(2)} DA`;
+                            item.addEventListener('click', function () {
+                                zoneInput.value = zone.name;
+                                if (deliveryCostInput) {
+                                    deliveryCostInput.value = zone.price.toFixed(2);
+                                    updateSubtotals();
+                                }
+                                hideZoneBox();
+                            });
+                            box.appendChild(item);
+                        });
+                        box.style.display = 'block';
+                    })
+                    .catch(hideZoneBox);
+            }, 200);
+        });
+
+        document.addEventListener('click', function (e) {
+            const box = document.getElementById('deliveryZoneSuggestions');
+            if (!box) return;
+            if (!zoneInput.contains(e.target) && !box.contains(e.target)) {
+                hideZoneBox();
+            }
+        });
+    }
 });
+
+function updatePaymentIndicators() {
+    const totalElement = document.getElementById('grand-total');
+    const advanceInput = document.getElementById('advance_payment');
+    const statusDisplay = document.getElementById('payment-status-display');
+    const statusHidden = document.getElementById('payment_status_field');
+    const statusSelect = document.getElementById('payment_status_select');
+    const balanceDisplay = document.getElementById('payment-balance-display');
+
+    if (!totalElement || !advanceInput || !statusDisplay || !statusHidden || !balanceDisplay) {
+        return;
+    }
+
+    const total = parseFloat(totalElement.dataset.value || '0') || 0;
+    let advance = parseFloat(advanceInput.value || '0') || 0;
+    if (advance < 0) {
+        advance = 0;
+    }
+
+    let status = 'pending';
+    if (total > 0 && advance >= total) {
+        status = 'paid';
+    } else if (advance > 0) {
+        status = 'partial';
+    }
+
+    const balance = Math.max(total - advance, 0);
+    balanceDisplay.textContent = balance.toFixed(2) + ' DA';
+
+    statusDisplay.classList.remove('bg-secondary', 'bg-warning', 'bg-success', 'text-dark');
+    if (status === 'paid') {
+        statusDisplay.classList.add('bg-success');
+        statusDisplay.textContent = 'Payé intégralement';
+    } else if (status === 'partial') {
+        statusDisplay.classList.add('bg-warning', 'text-dark');
+        statusDisplay.textContent = 'Partiellement payé';
+    } else {
+        statusDisplay.classList.add('bg-secondary');
+        statusDisplay.textContent = 'En attente';
+    }
+
+    statusHidden.value = status;
+    if (statusSelect) {
+        statusSelect.value = status;
+    }
+}
+
+// 🆕 FONCTION AUTO-COMPLÉTION CLIENTS
+function initializeCustomerSearch() {
+    let customerSearchTimeout;
+    const customerSearchInput = document.getElementById('customerSearch');
+    const customerSuggestions = document.getElementById('customerSuggestions');
+    const clearCustomerBtn = document.getElementById('clearCustomerBtn');
+
+    if (customerSearchInput) {
+        customerSearchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(customerSearchTimeout);
+            
+            if (query.length < 2) {
+                customerSuggestions.style.display = 'none';
+                return;
+            }
+            
+            customerSearchTimeout = setTimeout(() => {
+                fetch(`/admin/customers/api/search?q=${encodeURIComponent(query)}&limit=5`)
+                    .then(response => response.json())
+                    .then(customers => {
+                        showCustomerSuggestions(customers);
+                    })
+                    .catch(error => {
+                        console.error('Erreur recherche client:', error);
+                    });
+            }, 300);
+        });
+        
+        // Cacher les suggestions quand on clique ailleurs
+        document.addEventListener('click', function(e) {
+            if (!customerSearchInput.contains(e.target) && !customerSuggestions.contains(e.target)) {
+                customerSuggestions.style.display = 'none';
+            }
+        });
+    }
+
+    if (clearCustomerBtn) {
+        clearCustomerBtn.addEventListener('click', function() {
+            customerSearchInput.value = '';
+            customerSuggestions.style.display = 'none';
+            clearCustomerFields();
+        });
+    }
+}
+
+function showCustomerSuggestions(customers) {
+    const customerSuggestions = document.getElementById('customerSuggestions');
+    customerSuggestions.innerHTML = '';
+    
+    if (customers.length === 0) {
+        customerSuggestions.innerHTML = '<div class="autocomplete-item">Aucun client trouvé</div>';
+    } else {
+        customers.forEach(customer => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.innerHTML = `
+                <strong>${customer.full_name}</strong>
+                <span class="badge bg-primary ms-2">${customer.display_phone}</span>
+                <br>
+                <small class="text-muted">
+                    ${customer.email || 'Pas d\'email'} • ${customer.total_orders} commandes
+                </small>
+            `;
+            
+            div.addEventListener('click', function() {
+                selectCustomer(customer);
+            });
+            
+            customerSuggestions.appendChild(div);
+        });
+    }
+    
+    customerSuggestions.style.display = 'block';
+}
+
+function selectCustomer(customer) {
+    // Remplir les champs du formulaire
+    document.querySelector('input[name="customer_name"]').value = customer.full_name;
+    document.querySelector('input[name="customer_phone"]').value = customer.phone;
+    
+    // Remplir l'adresse si elle existe
+    if (customer.address) {
+        document.querySelector('textarea[name="customer_address"]').value = customer.address;
+    }
+    
+    // Mettre à jour le champ de recherche
+    document.getElementById('customerSearch').value = customer.full_name;
+    
+    // Cacher les suggestions
+    document.getElementById('customerSuggestions').style.display = 'none';
+    
+    // Notification visuelle
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show mt-2';
+    alert.innerHTML = `
+        <i class="bi bi-check-circle me-2"></i>
+        Client <strong>${customer.full_name}</strong> sélectionné !
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.getElementById('customerSearch').parentNode.parentNode.appendChild(alert);
+    
+    // Supprimer l'alerte après 3 secondes
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 3000);
+}
+
+function clearCustomerFields() {
+    document.querySelector('input[name="customer_name"]').value = '';
+    document.querySelector('input[name="customer_phone"]').value = '';
+    document.querySelector('textarea[name="customer_address"]').value = '';
+}
 </script>
 {% endblock %}

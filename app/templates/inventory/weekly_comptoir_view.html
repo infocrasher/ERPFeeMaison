@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}{{ inventory.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-calendar-week me-2"></i>{{ inventory.title }}</h2>
+                <a href="{{ url_for('inventory.weekly_comptoir_index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Retour à la liste
+                </a>
+            </div>
+
+            <!-- Informations de l'inventaire -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Date de l'inventaire</h6>
+                                    <p class="mb-0">{{ inventory.inventory_date.strftime('%d/%m/%Y') }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Statut</h6>
+                                    <span class="badge bg-{% if inventory.status == 'EN_COURS' %}warning{% elif inventory.status == 'COMPLETE' %}info{% elif inventory.status == 'VALIDE' %}success{% else %}secondary{% endif %}">
+                                        {{ inventory.status.replace('_', ' ').title() }}
+                                    </span>
+                                </div>
+                            </div>
+                            {% if inventory.notes %}
+                            <hr>
+                            <h6 class="text-muted">Notes</h6>
+                            <p class="mb-0">{{ inventory.notes }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="text-muted">Statistiques</h6>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <h4 class="text-primary">{{ stats.total_items }}</h4>
+                                    <small class="text-muted">Produits</small>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-success">{{ stats.counted_items }}</h4>
+                                    <small class="text-muted">Comptés</small>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <h4 class="text-warning">{{ stats.items_with_variance }}</h4>
+                                    <small class="text-muted">Écarts</small>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-danger">{{ "%.2f"|format(stats.total_variance_value) }} DA</h4>
+                                    <small class="text-muted">Valeur écart</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des produits -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Produits à compter</h5>
+                </div>
+                <div class="card-body">
+                    {% if items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Produit</th>
+                                        <th class="text-end">Stock théorique</th>
+                                        <th class="text-end">Stock physique</th>
+                                        <th class="text-end">Écart</th>
+                                        <th class="text-end">%</th>
+                                        <th>Niveau</th>
+                                        <th>Statut</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in items %}
+                                    <tr class="{% if item.is_counted %}table-success{% endif %}">
+                                        <td>
+                                            <strong>{{ item.product.name }}</strong>
+                                            <br><small class="text-muted">{{ item.product.unit }}</small>
+                                        </td>
+                                        <td class="text-end">{{ item.product.format_quantity_display(item.theoretical_stock) }}</td>
+                                        <td class="text-end">
+                                            {% if item.physical_stock is not none %}
+                                                <strong>{{ item.product.format_quantity_display(item.physical_stock) }}</strong>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if item.variance is not none %}
+                                                <span class="{% if item.variance > 0 %}text-success{% elif item.variance < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                    {{ "+" if item.variance > 0 else "" }}{{ item.product.format_quantity_display(item.variance) }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if item.variance_percentage is not none %}
+                                                <span class="{% if item.variance_percentage > 0 %}text-success{% elif item.variance_percentage < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                    {{ "+" if item.variance_percentage > 0 else "" }}{{ "%.1f"|format(item.variance_percentage) }}%
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.variance_level %}
+                                                <span class="badge bg-{% if item.variance_level == 'ok' %}success{% elif item.variance_level == 'normal' %}warning{% else %}danger{% endif %}">
+                                                    {{ item.variance_level.title() }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.is_counted %}
+                                                <span class="badge bg-success">Compté</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">À compter</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if inventory.can_be_edited() %}
+                                                <a href="{{ url_for('inventory.count_weekly_comptoir_item', item_id=item.id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-pencil me-1"></i>Compter
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Verrouillé</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                            <h5 class="text-muted mt-3">Aucun produit</h5>
+                            <p class="text-muted">Aucun produit n'est configuré pour cet inventaire.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+

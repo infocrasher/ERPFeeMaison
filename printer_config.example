@@ -1,0 +1,34 @@
+# Configuration Imprimante et Tiroir-Caisse
+# Copier ce fichier vers .env et ajuster les valeurs
+
+# Activation du service d'impression
+PRINTER_ENABLED=true
+
+# Configuration USB de l'imprimante ZHU HAI SUNCSW Gprinter
+# Vendor ID et Product ID en hexadécimal (sans le préfixe 0x)
+PRINTER_VENDOR_ID=0471
+PRINTER_PRODUCT_ID=0055
+
+# Interface USB (généralement 0)
+PRINTER_INTERFACE=0
+
+# Timeout en millisecondes pour les communications USB
+PRINTER_TIMEOUT=5000
+
+# Configuration réseau pour déploiement VPS (optionnel)
+# PRINTER_NETWORK_ENABLED=false
+# PRINTER_AGENT_HOST=192.168.1.100
+# PRINTER_AGENT_PORT=8080
+# PRINTER_AGENT_TOKEN=your_secure_token_here
+
+# Logs
+PRINTER_LOG_LEVEL=INFO
+
+
+
+
+
+
+
+
+

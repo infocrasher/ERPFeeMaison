@@ -52,7 +52,8 @@ class AccountingIntegrationService:
                 description=description or f"Vente commande #{order_id}",
                 reference_document=f"CMD-{order_id}",
                 order_id=order_id if order_id and order_id != 999 else None,  # Éviter les IDs de test
-                created_by_id=current_user.id if current_user.is_authenticated else 1
+                created_by_id=current_user.id if current_user.is_authenticated else 1,
+                is_validated=True  # Valider automatiquement les écritures de vente
             )
             
             # Générer la référence
@@ -129,7 +130,8 @@ class AccountingIntegrationService:
                 description=description or f"Achat #{purchase_id}",
                 reference_document=f"ACH-{purchase_id}",
                 purchase_id=purchase_id if purchase_id and purchase_id != 999 else None,  # Éviter les IDs de test
-                created_by_id=current_user.id if current_user.is_authenticated else 1
+                created_by_id=current_user.id if current_user.is_authenticated else 1,
+                is_validated=True  # Valider automatiquement les écritures d'achat
             )
             
             # Générer la référence
@@ -206,7 +208,7 @@ class AccountingIntegrationService:
                     account_id=cash_account.id,
                     debit_amount=amount,
                     credit_amount=0,
-                    line_description=description,
+                    description=description,
                     line_number=1
                 )
                 
@@ -215,7 +217,7 @@ class AccountingIntegrationService:
                     account_id=products_account.id,
                     debit_amount=0,
                     credit_amount=amount,
-                    line_description=description,
+                    description=description,
                     line_number=2
                 )
                 
@@ -230,7 +232,7 @@ class AccountingIntegrationService:
                     account_id=charges_account.id,
                     debit_amount=amount,
                     credit_amount=0,
-                    line_description=description,
+                    description=description,
                     line_number=1
                 )
                 
@@ -239,7 +241,7 @@ class AccountingIntegrationService:
                     account_id=cash_account.id,
                     debit_amount=0,
                     credit_amount=amount,
-                    line_description=description,
+                    description=description,
                     line_number=2
                 )
             
@@ -291,7 +293,7 @@ class AccountingIntegrationService:
                 account_id=bank_account.id,
                 debit_amount=amount,
                 credit_amount=0,
-                line_description=description,
+                description=description,
                 line_number=1
             )
             
@@ -300,7 +302,7 @@ class AccountingIntegrationService:
                 account_id=cash_account.id,
                 debit_amount=0,
                 credit_amount=amount,
-                line_description=description,
+                description=description,
                 line_number=2
             )
             
@@ -390,6 +392,227 @@ class AccountingIntegrationService:
             db.session.commit()
             
             return entry
+            
+        except Exception as e:
+            db.session.rollback()
+            raise e
+    
+    @staticmethod
+    def create_payroll_entry(payroll_id, gross_salary, net_salary, description=None):
+        """
+        Créer une écriture de calcul de salaire (sans charges sociales automatiques)
+        
+        Args:
+            payroll_id: ID du calcul de paie
+            gross_salary: Salaire brut
+            net_salary: Salaire net
+            description: Description de l'écriture
+        """
+        try:
+            # Récupérer le journal des opérations diverses
+            journal = Journal.query.filter_by(journal_type=JournalType.OPERATIONS_DIVERSES).first()
+            if not journal:
+                raise ValueError("Journal des opérations diverses non trouvé")
+            
+            # Comptes comptables
+            salary_account = Account.query.filter_by(code='641').first()  # Rémunérations du personnel
+            payable_account = Account.query.filter_by(code='421').first()  # Personnel - Rémunérations dues
+            
+            if not all([salary_account, payable_account]):
+                raise ValueError("Comptes comptables pour les salaires non trouvés")
+            
+            # Créer l'écriture
+            entry = JournalEntry(
+                journal_id=journal.id,
+                entry_date=date.today(),
+                accounting_date=date.today(),
+                description=description or f"Calcul salaire #{payroll_id}",
+                reference_document=f"PAY-{payroll_id}",
+                created_by_id=current_user.id if current_user.is_authenticated else 1
+            )
+            
+            # Générer la référence
+            entry.generate_reference()
+            
+            db.session.add(entry)
+            db.session.flush()
+            
+            # Ligne 1: Débit Rémunérations du personnel (641)
+            salary_line = JournalEntryLine(
+                journal_entry_id=entry.id,
+                account_id=salary_account.id,
+                debit_amount=gross_salary,
+                credit_amount=0,
+                description=f"Salaire brut #{payroll_id}",
+                line_number=1
+            )
+            
+            # Ligne 2: Crédit Personnel - Rémunérations dues (421)
+            payable_line = JournalEntryLine(
+                journal_entry_id=entry.id,
+                account_id=payable_account.id,
+                debit_amount=0,
+                credit_amount=net_salary,
+                description=f"Salaire net à payer #{payroll_id}",
+                line_number=2
+            )
+            
+            db.session.add(salary_line)
+            db.session.add(payable_line)
+            
+            # Valider automatiquement l'écriture de calcul de salaire
+            entry.is_validated = True
+            entry.validated_at = datetime.utcnow()
+            entry.validated_by_id = current_user.id if current_user.is_authenticated else 1
+            
+            db.session.commit()
+            
+            return entry
+            
+        except Exception as e:
+            db.session.rollback()
+            raise e
+    
+    @staticmethod
+    def create_salary_payment_entry(payroll_id, employee_id, net_salary, payment_method, description=None):
+        """
+        Créer une écriture de paiement de salaire
+        
+        Args:
+            payroll_id: ID du calcul de paie
+            employee_id: ID de l'employé
+            net_salary: Salaire net à payer
+            payment_method: Mode de paiement ('cash' ou 'bank')
+            description: Description de l'écriture
+        """
+        try:
+            # Récupérer le journal approprié
+            if payment_method == 'cash':
+                journal = Journal.query.filter_by(journal_type=JournalType.CAISSE).first()
+                payment_account = Account.query.filter_by(code='530').first()  # Caisse
+            else:  # bank
+                journal = Journal.query.filter_by(journal_type=JournalType.BANQUE).first()
+                payment_account = Account.query.filter_by(code='512').first()  # Banque
+            
+            if not journal:
+                raise ValueError(f"Journal {payment_method} non trouvé")
+            
+            # Comptes comptables
+            payable_account = Account.query.filter_by(code='421').first()  # Personnel - Rémunérations dues
+            
+            if not payment_account or not payable_account:
+                raise ValueError("Comptes comptables pour le paiement non trouvés")
+            
+            # Créer l'écriture
+            entry = JournalEntry(
+                journal_id=journal.id,
+                entry_date=date.today(),
+                accounting_date=date.today(),
+                description=description or f"Paiement salaire #{payroll_id} - Employé #{employee_id}",
+                reference_document=f"PAY-{payroll_id}",
+                created_by_id=current_user.id if current_user.is_authenticated else 1
+            )
+            
+            # Générer la référence
+            entry.generate_reference()
+            
+            db.session.add(entry)
+            db.session.flush()
+            
+            # Ligne 1: Débit Personnel - Rémunérations dues (421)
+            payable_line = JournalEntryLine(
+                journal_entry_id=entry.id,
+                account_id=payable_account.id,
+                debit_amount=net_salary,
+                credit_amount=0,
+                description=f"Paiement salaire employé #{employee_id}",
+                line_number=1
+            )
+            
+            # Ligne 2: Crédit Caisse/Banque (530/512)
+            payment_line = JournalEntryLine(
+                journal_entry_id=entry.id,
+                account_id=payment_account.id,
+                debit_amount=0,
+                credit_amount=net_salary,
+                description=f"Paiement par {payment_method} - Employé #{employee_id}",
+                line_number=2
+            )
+            
+            db.session.add(payable_line)
+            db.session.add(payment_line)
+            
+            # Valider automatiquement l'écriture de paiement de salaire
+            entry.is_validated = True
+            entry.validated_at = datetime.utcnow()
+            entry.validated_by_id = current_user.id if current_user.is_authenticated else 1
+            
+            db.session.commit()
+            
+            return entry
+            
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    @staticmethod
+    def validate_payroll_entries():
+        """
+        Valider toutes les écritures de salaires en statut brouillon
+        et les lier aux PayrollCalculation correspondants
+        """
+        try:
+            from app.employees.models import PayrollCalculation
+            
+            # Rechercher toutes les écritures de salaires non validées
+            payroll_entries = JournalEntry.query.filter(
+                JournalEntry.description.like('%Calcul salaire%'),
+                JournalEntry.is_validated == False
+            ).all()
+            
+            payment_entries = JournalEntry.query.filter(
+                JournalEntry.description.like('%Paiement salaire%'),
+                JournalEntry.is_validated == False
+            ).all()
+            
+            validated_count = 0
+            
+            # Valider les écritures de calcul
+            for entry in payroll_entries:
+                entry.is_validated = True
+                entry.validated_at = datetime.utcnow()
+                entry.validated_by_id = current_user.id if current_user and current_user.is_authenticated else 1
+                validated_count += 1
+                
+                # Essayer de lier à un PayrollCalculation
+                if 'PAY-' in entry.reference_document:
+                    payroll_id = entry.reference_document.replace('PAY-', '')
+                    try:
+                        payroll = PayrollCalculation.query.get(int(payroll_id))
+                        if payroll and not payroll.payroll_entry_id:
+                            payroll.payroll_entry_id = entry.id
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Valider les écritures de paiement
+            for entry in payment_entries:
+                entry.is_validated = True
+                entry.validated_at = datetime.utcnow()
+                entry.validated_by_id = current_user.id if current_user and current_user.is_authenticated else 1
+                validated_count += 1
+                
+                # Essayer de lier à un PayrollCalculation
+                if 'PAY-' in entry.reference_document:
+                    payroll_id = entry.reference_document.replace('PAY-', '')
+                    try:
+                        payroll = PayrollCalculation.query.get(int(payroll_id))
+                        if payroll and not payroll.payment_entry_id:
+                            payroll.payment_entry_id = entry.id
+                    except (ValueError, TypeError):
+                        pass
+            
+            db.session.commit()
+            return validated_count
             
         except Exception as e:
             db.session.rollback()
@@ -487,27 +710,45 @@ class DashboardService:
     
     @staticmethod
     def get_cash_balance():
-        """Calculer le solde de caisse actuel"""
-        from .models import Account
+        """Calculer le solde de caisse actuel en temps réel"""
+        from app.sales.models import CashRegisterSession, CashMovement
         
-        # Compte 530 - Caisse
-        cash_account = Account.query.filter_by(code='530').first()
-        if not cash_account:
+        # Récupérer la session de caisse ouverte
+        session = CashRegisterSession.query.filter_by(is_open=True).first()
+        if not session:
             return 0
         
-        return float(cash_account.balance or 0)
+        # Calculer le solde : fond initial + entrées - sorties
+        total_entrees = sum(m.amount for m in session.movements if m.type == 'entrée')
+        total_sorties = sum(m.amount for m in session.movements if m.type == 'sortie')
+        
+        solde_caisse = session.initial_amount + total_entrees - total_sorties
+        return float(solde_caisse)
     
     @staticmethod
     def get_bank_balance():
-        """Calculer le solde bancaire actuel"""
-        from .models import Account
+        """Calculer le solde bancaire actuel en temps réel"""
+        from app.accounting.models import Account, JournalEntryLine, JournalEntry
         
-        # Compte 512 - Banque
+        # Récupérer le compte banque (512)
         bank_account = Account.query.filter_by(code='512').first()
         if not bank_account:
             return 0
         
-        return float(bank_account.balance or 0)
+        # Calculer le solde depuis les écritures comptables
+        # Débits (augmentations) - Crédits (diminutions)
+        total_debits = db.session.query(func.sum(JournalEntryLine.debit_amount))\
+            .join(JournalEntry)\
+            .filter(JournalEntryLine.account_id == bank_account.id)\
+            .scalar() or 0
+        
+        total_credits = db.session.query(func.sum(JournalEntryLine.credit_amount))\
+            .join(JournalEntry)\
+            .filter(JournalEntryLine.account_id == bank_account.id)\
+            .scalar() or 0
+        
+        solde_banque = float(total_debits) - float(total_credits)
+        return solde_banque
     
     @staticmethod
     def get_daily_revenue_trend(days=30):

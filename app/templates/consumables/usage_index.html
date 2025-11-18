@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Historique des Utilisations - Consommables{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-clock-history me-2"></i>Historique des Utilisations</h2>
+                <a href="{{ url_for('consumables.create_usage') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Nouvelle utilisation
+                </a>
+            </div>
+
+            <!-- Formulaire de recherche -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Date de début</label>
+                            {{ form.start_date(class="form-control") }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date de fin</label>
+                            {{ form.end_date(class="form-control") }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Consommable</label>
+                            {{ form.product_id(class="form-select") }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                {{ form.submit(class="btn btn-primary") }}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Liste des utilisations -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Utilisations enregistrées</h5>
+                </div>
+                <div class="card-body">
+                    {% if usages %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Consommable</th>
+                                    <th class="text-end">Estimation</th>
+                                    <th class="text-end">Réel</th>
+                                    <th class="text-end">Écart</th>
+                                    <th class="text-end">Valeur</th>
+                                    <th>Méthode</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usage in usages %}
+                                <tr>
+                                    <td>{{ usage.usage_date.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        <strong>{{ usage.product.name }}</strong>
+                                        <br><small class="text-muted">{{ usage.product.unit }}</small>
+                                    </td>
+                                    <td class="text-end">{{ usage.product.format_quantity_display(usage.estimated_quantity_used) }}</td>
+                                    <td class="text-end">
+                                        {% if usage.actual_quantity_used %}
+                                            {{ usage.product.format_quantity_display(usage.actual_quantity_used) }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if usage.variance is not none %}
+                                            <span class="{% if usage.variance > 0 %}text-success{% elif usage.variance < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                {{ "+" if usage.variance > 0 else "" }}{{ usage.product.format_quantity_display(usage.variance) }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">{{ "%.2f"|format(usage.actual_value or usage.estimated_value) }} DA</td>
+                                    <td>
+                                        <span class="badge bg-{% if usage.calculation_method == 'manual' %}primary{% else %}info{% endif %}">
+                                            {{ usage.calculation_method.replace('_', ' ').title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="showNotes('{{ usage.notes or '' }}')">
+                                            <i class="bi bi-eye me-1"></i>Notes
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox fs-1 text-muted"></i>
+                        <p class="text-muted mt-2">Aucune utilisation enregistrée pour cette période.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour afficher les notes -->
+<div class="modal fade" id="notesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Notes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="notesContent"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showNotes(notes) {
+    document.getElementById('notesContent').textContent = notes || 'Aucune note';
+    new bootstrap.Modal(document.getElementById('notesModal')).show();
+}
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+

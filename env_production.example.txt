@@ -38,4 +38,9 @@ MAIL_PASSWORD=your_app_password_here
 # CONFIGURATION NGINX (OPTIONNEL)
 NGINX_SERVER_NAME=your_domain.com
 NGINX_SSL_CERT_PATH=/path/to/ssl/cert.pem
-NGINX_SSL_KEY_PATH=/path/to/ssl/key.pem 
+NGINX_SSL_KEY_PATH=/path/to/ssl/key.pem
+
+# CONFIGURATION IA (OpenAI/Groq)
+# ⚠️  ATTENTION: Ne jamais commiter de vraies clés API !
+OPENAI_API_KEY=your_openai_api_key_here
+GROQ_API_KEY=your_groq_api_key_here

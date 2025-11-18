@@ -1,0 +1,274 @@
+{% extends "reports/_report_base.html" %}
+
+{% set report_type = 'daily_sales' %}
+{% set export_params = '?date=' + (data.date.strftime('%Y-%m-%d') if data.date else '') %}
+
+{% block report_icon %}bi-cash-stack{% endblock %}
+{% block report_title %}Rapport de Ventes Quotidien{% endblock %}
+{% block report_description %}
+    Analyse complète des ventes du {{ data.date.strftime('%d/%m/%Y') }}
+{% endblock %}
+
+{% block filter_fields %}
+<div class="col-md-3">
+    <label class="form-label">Date du rapport</label>
+    <input type="date" name="date" class="form-control" value="{{ data.date.strftime('%Y-%m-%d') }}">
+</div>
+{% endblock %}
+
+{% block kpis %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card kpi-card border-primary">
+            <div class="card-body">
+                <div class="kpi-label">Chiffre d'Affaires</div>
+                <div class="kpi-value text-primary">{{ "{:,.2f}".format(data.total_revenue) }} DA</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-success">
+            <div class="card-body">
+                <div class="kpi-label">Transactions</div>
+                <div class="kpi-value text-success">{{ data.total_transactions }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-info">
+            <div class="card-body">
+                <div class="kpi-label">Panier Moyen</div>
+                <div class="kpi-value text-info">{{ "{:,.2f}".format(data.average_basket) }} DA</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-warning">
+            <div class="card-body">
+                <div class="kpi-label">Top Produit</div>
+                <div class="kpi-value text-warning" style="font-size: 1.2rem;">
+                    {% if data.top_products %}
+                        {{ data.top_products[0].name }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block charts %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Ventes par Heure</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Ventes par Catégorie</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block data_tables %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>Top 5 Produits</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Produit</th>
+                                <th class="text-end">Quantité</th>
+                                <th class="text-end">Revenu</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in data.top_products %}
+                            <tr>
+                                <td><strong>{{ product.name }}</strong></td>
+                                <td class="text-end">{{ product.quantity }}</td>
+                                <td class="text-end">{{ "{:,.2f}".format(product.revenue) }} DA</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-list-ul me-2"></i>Ventes par Catégorie</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Catégorie</th>
+                                <th class="text-end">Revenu</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in data.sales_by_category %}
+                            <tr>
+                                <td><strong>{{ category.name }}</strong></td>
+                                <td class="text-end">{{ "{:,.2f}".format(category.revenue) }} DA</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block chart_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Données pour le graphique horaire
+    const hourlyData = {{ data.hourly_sales_json | tojson }};
+    const hourlyLabels = hourlyData.map(h => h.hour + 'h');
+    const hourlyRevenues = hourlyData.map(h => h.revenue || 0);
+    
+    // Graphique des ventes par heure
+    new Chart(document.getElementById('hourlyChart'), {
+        type: 'line',
+        data: {
+            labels: hourlyLabels,
+            datasets: [{
+                label: 'Chiffre d\'Affaires (DA)',
+                data: hourlyRevenues,
+                borderColor: 'rgb(13, 110, 253)',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' DA';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Données pour le graphique par catégorie
+    const categoryData = {{ data.sales_by_category_json | tojson }};
+    const categoryLabels = categoryData.map(c => c.name);
+    const categoryRevenues = categoryData.map(c => c.revenue || 0);
+    
+    // Graphique des ventes par catégorie
+    new Chart(document.getElementById('categoryChart'), {
+        type: 'doughnut',
+        data: {
+            labels: categoryLabels,
+            datasets: [{
+                data: categoryRevenues,
+                backgroundColor: [
+                    'rgb(13, 110, 253)',
+                    'rgb(25, 135, 84)',
+                    'rgb(255, 193, 7)',
+                    'rgb(220, 53, 69)',
+                    'rgb(13, 202, 240)',
+                    'rgb(108, 117, 125)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed.toLocaleString() + ' DA';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block ai_section %}
+<!-- PHASE 3 - Intégration IA -->
+{% include 'components/ai_summary_block.html' %}
+
+<script src="{{ url_for('static', filename='js/ai_forecast.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Attendre que le composant soit chargé
+    setTimeout(function() {
+        // Extraire les métadonnées IA du rapport
+        const metadata = {
+            growth_rate: {{ data.growth_rate | default(0) | tojson }},
+            variance: {{ data.variance | default(0) | tojson }},
+            trend_direction: {{ data.trend_direction | default('stable') | tojson }},
+            benchmark: {{ data.benchmark | default({}) | tojson }}
+        };
+        
+        // Initialiser le module IA
+        if (typeof initAIModule === 'function') {
+            initAIModule({
+                type: "daily",
+                reportName: "sales",
+                endpoints: {
+                    forecast: "/dashboards/api/daily/sales-forecast",
+                    insights: "/dashboards/api/daily/ai-insights",
+                    anomalies: "/dashboards/api/daily/anomalies"
+                },
+                metadata: metadata
+            });
+        } else {
+            console.error('[AI] ai_forecast.js non chargé - Vérifiez que le fichier est accessible');
+        }
+    }, 100);
+});
+</script>
+{% endblock %}
+

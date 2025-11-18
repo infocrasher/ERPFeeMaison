@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Consommables{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-box-seam me-2"></i>Gestion des Consommables</h2>
+            </div>
+
+            <!-- Statistiques générales -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="card-title">{{ total_consumables }}</h4>
+                                    <p class="card-text">Consommables</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-box-seam fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="card-title">{{ low_stock_consumables }}</h4>
+                                    <p class="card-text">Stock faible</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-exclamation-triangle fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="card-title">{{ "%.2f"|format(total_usage_value) }} DA</h4>
+                                    <p class="card-text">Utilisation 30j</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-graph-up fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="card-title">Auto</h4>
+                                    <p class="card-text">Calcul intelligent</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-cpu fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Actions rapides</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <a href="{{ url_for('consumables.create_usage') }}" class="btn btn-primary w-100 mb-2">
+                                        <i class="bi bi-plus-circle me-1"></i>Enregistrer utilisation
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="{{ url_for('consumables.create_adjustment') }}" class="btn btn-warning w-100 mb-2">
+                                        <i class="bi bi-arrow-repeat me-1"></i>Ajuster stock
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="{{ url_for('consumables.categories_index') }}" class="btn btn-info w-100 mb-2">
+                                        <i class="bi bi-tags me-1"></i>Catégories
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="{{ url_for('consumables.create_recipe') }}" class="btn btn-secondary w-100 mb-2">
+                                        <i class="bi bi-book me-1"></i>Créer recette
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alertes stock faible -->
+            {% if low_stock_products %}
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Alertes - Stock faible</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Consommable</th>
+                                            <th class="text-end">Stock actuel</th>
+                                            <th class="text-end">Seuil minimum</th>
+                                            <th class="text-end">Déficit</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for product in low_stock_products %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ product.name }}</strong>
+                                                <br><small class="text-muted">{{ product.unit }}</small>
+                                            </td>
+                                            <td class="text-end">{{ product.format_quantity_display(product.stock_consommables) }}</td>
+                                            <td class="text-end">{{ product.format_quantity_display(product.seuil_min_consommables) }}</td>
+                                            <td class="text-end text-danger">
+                                                <strong>{{ product.format_quantity_display(product.seuil_min_consommables - product.stock_consommables) }}</strong>
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('consumables.create_adjustment', product_id=product.id) }}" class="btn btn-sm btn-warning">
+                                                    <i class="bi bi-plus-circle me-1"></i>Approvisionner
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Informations sur le système -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Comment ça marche ?</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6><i class="bi bi-1-circle me-1"></i>Recettes de consommables</h6>
+                                    <p class="text-muted">Définissez combien de consommables sont utilisés par produit fini vendu.</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6><i class="bi bi-2-circle me-1"></i>Calcul automatique</h6>
+                                    <p class="text-muted">Le système calcule l'utilisation estimée basée sur vos ventes récentes.</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6><i class="bi bi-3-circle me-1"></i>Validation manuelle</h6>
+                                    <p class="text-muted">Vous validez ou ajustez les quantités réellement utilisées.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

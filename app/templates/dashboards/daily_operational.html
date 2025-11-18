@@ -500,6 +500,197 @@
         }
     }
 
+    /* ========================================
+       PHASE 2 - Sections IA
+       ======================================== */
+    
+    /* Bannière anomalies IA */
+    .anomaly-banner {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(245, 158, 11, 0.2));
+        backdrop-filter: blur(20px);
+        border: 2px solid rgba(239, 68, 68, 0.5);
+        border-radius: 20px;
+        padding: 20px 30px;
+        margin-bottom: 30px;
+        display: none; /* Caché par défaut, affiché si anomalie */
+        align-items: center;
+        gap: 20px;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    .anomaly-banner.show {
+        display: flex;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+    }
+
+    .anomaly-icon {
+        font-size: 2.5rem;
+        color: #ef4444;
+        min-width: 50px;
+        text-align: center;
+    }
+
+    .anomaly-content {
+        flex: 1;
+    }
+
+    .anomaly-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 5px;
+    }
+
+    .anomaly-message {
+        font-size: 1rem;
+        color: rgba(255,255,255,0.9);
+        line-height: 1.5;
+    }
+
+    .anomaly-close {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        border-radius: 50%;
+        width: 35px;
+        height: 35px;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .anomaly-close:hover {
+        background: rgba(255,255,255,0.3);
+        transform: rotate(90deg);
+    }
+
+    /* Section Analyse IA */
+    .ai-insights-section {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 30px;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .ai-insights-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+        animation: shimmer 4s infinite;
+    }
+
+    .ai-section-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 25px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .ai-badge {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .ai-section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+        flex: 1;
+    }
+
+    .ai-insights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .ai-insight-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .ai-insight-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .ai-insight-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .ai-insight-icon {
+        font-size: 1.5rem;
+    }
+
+    .ai-insight-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    .ai-insight-content {
+        color: rgba(255, 255, 255, 0.85);
+        line-height: 1.6;
+        font-size: 0.95rem;
+    }
+
+    .ai-loading {
+        text-align: center;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 40px;
+        font-size: 1.1rem;
+    }
+
+    .ai-loading i {
+        animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .ai-fallback {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        border-radius: 12px;
+        padding: 15px;
+        color: rgba(255, 255, 255, 0.85);
+        text-align: center;
+        margin: 20px 0;
+    }
+
     /* Animations d'entrée */
     .fade-in {
         opacity: 0;
@@ -591,6 +782,22 @@
                     Alerter Équipe
                 </button>
             </div>
+        </div>
+
+        <!-- PHASE 2 - Bannière Anomalies IA -->
+        <div class="anomaly-banner" id="anomalyBanner">
+            <div class="anomaly-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="anomaly-content">
+                <div class="anomaly-title">⚠️ Anomalie Détectée par l'IA</div>
+                <div class="anomaly-message" id="anomalyMessage">
+                    Chargement des analyses...
+                </div>
+            </div>
+            <button class="anomaly-close" onclick="document.getElementById('anomalyBanner').classList.remove('show')">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
 
         <!-- Métriques principales -->
@@ -714,6 +921,23 @@
                 </div>
                 <div class="chart-container">
                     <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 2 - Section Analyse IA -->
+        <div class="ai-insights-section slide-in-left" style="animation-delay: 0.7s;">
+            <div class="ai-section-header">
+                <span class="ai-badge">
+                    <i class="fas fa-robot"></i>
+                    Intelligence Artificielle
+                </span>
+                <h2 class="ai-section-title">Insights IA - Analyses en Temps Réel</h2>
+            </div>
+            
+            <div id="aiInsightsContent" class="ai-insights-grid">
+                <div class="ai-loading">
+                    <i class="fas fa-spinner"></i> Chargement des analyses IA...
                 </div>
             </div>
         </div>
@@ -842,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Graphique évolution commandes
+    // Graphique évolution commandes avec prévisions Prophet (PHASE 2)
     fetch('/dashboards/api/daily/sales').then(r=>r.json()).then(data => {
         if(data.success) {
             const orders = Object.values(data.data.orders_by_status).reduce((acc, v) => acc + v.count, 0);
@@ -850,16 +1074,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const values = [2, 5, 8, 12, 15, 18, orders];
             const ctx = document.getElementById('ordersChart').getContext('2d');
             
-            if (window.ordersChartInstance) {
-                window.ordersChartInstance.destroy();
-            }
-            
-            window.ordersChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Commandes',
+            // Charger les prévisions Prophet (PHASE 2)
+            fetch('/dashboards/api/daily/sales-forecast?days=7')
+                .then(r => r.json())
+                .then(forecastData => {
+                    console.info('[AI] Prévisions Prophet chargées');
+                    
+                    // Préparer les datasets
+                    const datasets = [{
+                        label: 'Commandes Réelles',
                         data: values,
                         borderColor: '#6366f1',
                         backgroundColor: 'rgba(99, 102, 241, 0.1)',
@@ -871,28 +1094,254 @@ document.addEventListener('DOMContentLoaded', function() {
                         pointBorderWidth: 3,
                         pointRadius: 6,
                         pointHoverRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 1500 },
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: 'white' }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: 'white' }
+                    }];
+                    
+                    // Ajouter les prévisions si disponibles
+                    if (forecastData.success && forecastData.data && forecastData.data.forecast) {
+                        const forecast = forecastData.data.forecast.slice(0, 7);
+                        const forecastLabels = forecast.map(f => {
+                            const d = new Date(f.ds);
+                            return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+                        });
+                        const forecastValues = forecast.map(f => f.yhat);
+                        
+                        // Fusionner les labels
+                        const allLabels = [...labels, ...forecastLabels];
+                        
+                        // Compléter les valeurs réelles avec null pour aligner
+                        const realValues = [...values, ...Array(forecast.length).fill(null)];
+                        
+                        // Prévisions avec null au début pour aligner
+                        const prophetValues = [...Array(values.length - 1).fill(null), values[values.length - 1], ...forecastValues];
+                        
+                        datasets[0].data = realValues;
+                        
+                        datasets.push({
+                            label: 'Prévision IA (7j)',
+                            data: prophetValues,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.05)',
+                            borderWidth: 3,
+                            borderDash: [10, 5],
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: '#f59e0b',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        });
+                        
+                        if (window.ordersChartInstance) {
+                            window.ordersChartInstance.destroy();
                         }
+                        
+                        window.ordersChartInstance = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: allLabels,
+                                datasets: datasets
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                animation: { duration: 1500 },
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'bottom',
+                                        labels: {
+                                            color: 'white',
+                                            padding: 15,
+                                            usePointStyle: true,
+                                            font: { size: 11 }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: { color: 'rgba(255,255,255,0.1)' },
+                                        ticks: { color: 'white' }
+                                    },
+                                    x: {
+                                        grid: { display: false },
+                                        ticks: { color: 'white', maxRotation: 45, minRotation: 45 }
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        // Si pas de prévisions, afficher graphique normal
+                        if (window.ordersChartInstance) {
+                            window.ordersChartInstance.destroy();
+                        }
+                        
+                        window.ordersChartInstance = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: datasets
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                animation: { duration: 1500 },
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: { color: 'rgba(255,255,255,0.1)' },
+                                        ticks: { color: 'white' }
+                                    },
+                                    x: {
+                                        grid: { display: false },
+                                        ticks: { color: 'white' }
+                                    }
+                                }
+                            }
+                        });
                     }
-                }
-            });
+                })
+                .catch(err => {
+                    console.warn('[AI] Prévisions non disponibles:', err);
+                    // Afficher graphique sans prévisions
+                    if (window.ordersChartInstance) {
+                        window.ordersChartInstance.destroy();
+                    }
+                    
+                    window.ordersChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Commandes',
+                                data: values,
+                                borderColor: '#6366f1',
+                                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                                borderWidth: 4,
+                                fill: true,
+                                tension: 0.4,
+                                pointBackgroundColor: '#6366f1',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 3,
+                                pointRadius: 6,
+                                pointHoverRadius: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: { duration: 1500 },
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(255,255,255,0.1)' },
+                                    ticks: { color: 'white' }
+                                },
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { color: 'white' }
+                                }
+                            }
+                        }
+                    });
+                });
         }
     });
+    
+    // PHASE 2 - Chargement des anomalies IA
+    fetch('/dashboards/api/daily/anomalies')
+        .then(r => r.json())
+        .then(data => {
+            console.info('[AI] Anomalies chargées');
+            if (data.success && data.data && data.data.anomalies && data.data.anomalies.length > 0) {
+                const anomalies = data.data.anomalies;
+                const highSeverity = anomalies.filter(a => a.severity === 'high');
+                
+                if (highSeverity.length > 0) {
+                    const anomaly = highSeverity[0];
+                    document.getElementById('anomalyMessage').textContent = anomaly.message || 'Anomalie détectée sur les indicateurs clés.';
+                    document.getElementById('anomalyBanner').classList.add('show');
+                }
+            }
+        })
+        .catch(err => {
+            console.warn('[AI] Anomalies non disponibles:', err);
+        });
+    
+    // PHASE 2 - Chargement des insights IA
+    fetch('/dashboards/api/daily/ai-insights')
+        .then(r => r.json())
+        .then(data => {
+            console.info('[AI] Insights chargés');
+            const container = document.getElementById('aiInsightsContent');
+            
+            if (data.success && data.data) {
+                const insights = data.data;
+                let html = '';
+                
+                // Insight Ventes
+                if (insights.sales) {
+                    const salesText = insights.sales.status === 'fallback' 
+                        ? insights.sales.analysis 
+                        : (insights.sales.analysis || 'Analyse en cours...');
+                    
+                    html += `
+                        <div class="ai-insight-card">
+                            <div class="ai-insight-header">
+                                <div class="ai-insight-icon">📊</div>
+                                <div class="ai-insight-title">Ventes</div>
+                            </div>
+                            <div class="ai-insight-content">${salesText.substring(0, 200)}${salesText.length > 200 ? '...' : ''}</div>
+                        </div>
+                    `;
+                }
+                
+                // Insight Stock
+                if (insights.stock) {
+                    const stockText = insights.stock.status === 'fallback' 
+                        ? insights.stock.analysis 
+                        : (insights.stock.analysis || 'Analyse en cours...');
+                    
+                    html += `
+                        <div class="ai-insight-card">
+                            <div class="ai-insight-header">
+                                <div class="ai-insight-icon">📦</div>
+                                <div class="ai-insight-title">Stock</div>
+                            </div>
+                            <div class="ai-insight-content">${stockText.substring(0, 200)}${stockText.length > 200 ? '...' : ''}</div>
+                        </div>
+                    `;
+                }
+                
+                // Insight Production
+                if (insights.production) {
+                    const prodText = insights.production.status === 'fallback' 
+                        ? insights.production.analysis 
+                        : (insights.production.analysis || 'Analyse en cours...');
+                    
+                    html += `
+                        <div class="ai-insight-card">
+                            <div class="ai-insight-header">
+                                <div class="ai-insight-icon">🏭</div>
+                                <div class="ai-insight-title">Production</div>
+                            </div>
+                            <div class="ai-insight-content">${prodText.substring(0, 200)}${prodText.length > 200 ? '...' : ''}</div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html || '<div class="ai-fallback">Aucune analyse IA disponible pour le moment.</div>';
+            } else {
+                container.innerHTML = '<div class="ai-fallback">⚠️ Mode IA indisponible - Consultez les rapports standards.</div>';
+            }
+        })
+        .catch(err => {
+            console.warn('[AI] Insights non disponibles:', err);
+            document.getElementById('aiInsightsContent').innerHTML = '<div class="ai-fallback">⚠️ Analyses IA temporairement indisponibles - Mode hors ligne.</div>';
+        });
     
     // Auto-refresh toutes les 2 minutes
     setInterval(() => {

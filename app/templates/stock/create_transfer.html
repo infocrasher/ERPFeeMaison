@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Fée Maison{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3">🔄 Nouveau Transfert de Stock</h1>
+                <a href="{{ url_for('stock.transfers_list') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Retour
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Informations du transfert</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="transfer-form">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Stock Source -->
+                        <div class="mb-3">
+                            {{ form.source_location.label(class="form-label") }}
+                            {{ form.source_location(class="form-select") }}
+                            {% if form.source_location.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.source_location.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Stock Destination -->
+                        <div class="mb-3">
+                            {{ form.destination_location.label(class="form-label") }}
+                            {{ form.destination_location(class="form-select") }}
+                            {% if form.destination_location.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.destination_location.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Motif -->
+                        <div class="mb-3">
+                            {{ form.reason.label(class="form-label") }}
+                            {{ form.reason(class="form-control") }}
+                            {% if form.reason.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.reason.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Priorité -->
+                        <div class="mb-3">
+                            {{ form.priority.label(class="form-label") }}
+                            {{ form.priority(class="form-select") }}
+                            {% if form.priority.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.priority.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows="3") }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.notes.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <!-- Lignes de transfert -->
+                        <h6 class="mb-3">Articles à transférer</h6>
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle"></i> <small>Seulement les <strong>ingrédients</strong> peuvent être transférés. Les produits finis ne se transfèrent pas.</small>
+                        </div>
+                        
+                        <div id="transfer-lines">
+                            {% for line_form in form.transfer_lines %}
+                            <div class="transfer-line row mb-3 border p-3 rounded">
+                                {{ line_form.hidden_tag() }}
+                                
+                                <div class="col-md-6">
+                                    {{ line_form.product.label(class="form-label") }}
+                                    {{ line_form.product(class="form-select") }}
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    {{ line_form.quantity_requested.label(class="form-label") }}
+                                    {{ line_form.quantity_requested(class="form-control", type="number", step="0.01") }}
+                                </div>
+                                
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.transfer-line').remove(); checkLines();">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-outline-primary" onclick="addTransferLine()">
+                                <i class="bi bi-plus-circle"></i> Ajouter un produit
+                            </button>
+                        </div>
+
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Guide de transfert</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6><i class="bi bi-1-circle me-1"></i>Sélectionnez les locations</h6>
+                        <p class="text-muted small">Choisissez l'origine et la destination du transfert.</p>
+                    </div>
+                    
+                <div class="mb-3">
+                    <h6><i class="bi bi-2-circle me-1"></i>Ajoutez les ingrédients</h6>
+                    <p class="text-muted small">Listez les ingrédients et quantités à transférer.</p>
+                    <small class="text-warning">⚠️ Seulement les ingrédients peuvent être transférés</small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="bi bi-3-circle me-1"></i>Indiquez le motif</h6>
+                    <p class="text-muted small">Expliquez pourquoi le transfert est nécessaire.</p>
+                </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-1"></i>
+                        <strong>Types de transferts :</strong>
+                        <ul class="mb-0 small">
+                            <li>Magasin → Local (Production)</li>
+                            <li>Local → Magasin (Retour stock)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <small><strong>Important :</strong> Seulement les ingrédients peuvent être transférés. Les produits finis ne se transfèrent pas.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let lineCounter = {{ form.transfer_lines|length }};
+
+function addTransferLine() {
+    const container = document.getElementById('transfer-lines');
+    const newLine = document.createElement('div');
+    newLine.className = 'transfer-line row mb-3 border p-3 rounded';
+    
+    newLine.innerHTML = `
+        <div class="col-md-6">
+            <label class="form-label" for="transfer_lines-${lineCounter}-product">Produit</label>
+            <select name="transfer_lines-${lineCounter}-product" id="transfer_lines-${lineCounter}-product" class="form-select">
+                <option value="">Sélectionner...</option>
+                <!-- Options seront ajoutées dynamiquement -->
+            </select>
+        </div>
+        
+        <div class="col-md-4">
+            <label class="form-label" for="transfer_lines-${lineCounter}-quantity_requested">Quantité</label>
+            <input name="transfer_lines-${lineCounter}-quantity_requested" 
+                   id="transfer_lines-${lineCounter}-quantity_requested"
+                   class="form-control" 
+                   type="number" 
+                   step="0.01"
+                   min="0.01">
+        </div>
+        
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="button" 
+                    class="btn btn-danger btn-sm" 
+                    onclick="this.closest('.transfer-line').remove(); checkLines();">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(newLine);
+    lineCounter++;
+    checkLines();
+}
+
+function checkLines() {
+    const lines = document.querySelectorAll('.transfer-line');
+    if (lines.length === 0) {
+        addTransferLine();
+    }
+}
+
+// Validation avant soumission
+document.getElementById('transfer-form').addEventListener('submit', function(e) {
+    const lines = document.querySelectorAll('.transfer-line');
+    let hasError = false;
+    
+    lines.forEach((line, index) => {
+        const product = line.querySelector('select[name*="product"]');
+        const quantity = line.querySelector('input[name*="quantity_requested"]');
+        
+        if (product && !product.value) {
+            hasError = true;
+            product.classList.add('is-invalid');
+        } else if (product) {
+            product.classList.remove('is-invalid');
+        }
+        
+        if (quantity && !quantity.value) {
+            hasError = true;
+            quantity.classList.add('is-invalid');
+        } else if (quantity) {
+            quantity.classList.remove('is-invalid');
+        }
+    });
+    
+    if (hasError) {
+        e.preventDefault();
+        alert('Veuillez remplir tous les champs des lignes de transfert.');
+    }
+});
+
+// Initialiser
+checkLines();
+</script>
+
+<style>
+.transfer-line {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}

@@ -215,6 +215,39 @@
             <div class="col-md-8">
                 <div class="card form-card">
                     <h5 class="mb-3"><i class="bi bi-building me-2"></i>Informations Fournisseur</h5>
+                    
+                    <!-- 🆕 SÉLECTEUR FOURNISSEUR OPTIONNEL -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="alert alert-info d-flex align-items-center">
+                                <i class="bi bi-lightbulb me-2"></i>
+                                <div class="flex-grow-1">
+                                    <strong>Sélection rapide :</strong> Choisissez un fournisseur existant pour remplir automatiquement les champs
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">🔍 Rechercher un fournisseur existant</label>
+                            <div class="input-group">
+                                <input type="text" id="supplierSearch" class="form-control" 
+                                       placeholder="Tapez le nom d'un fournisseur..." autocomplete="off">
+                                <button type="button" class="btn btn-outline-light" id="clearSupplierBtn">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div id="supplierSuggestions" class="autocomplete-suggestions"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <a href="{{ url_for('suppliers.new_supplier') }}" target="_blank" class="btn btn-outline-light">
+                                    <i class="bi bi-plus-circle me-1"></i>Nouveau Fournisseur
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-3" style="border-color: rgba(255,255,255,0.3);">
+                    
                     <div class="row">
                         <!-- ### DEBUT DE LA CORRECTION ### -->
                         <!-- Ajout du champ de date WTForms correct, à la place du champ manuel. -->
@@ -744,5 +777,120 @@ document.getElementById('purchaseForm').addEventListener('submit', function(e) {
         return false;
     }
 });
+
+// 🆕 AUTO-COMPLÉTION FOURNISSEURS
+let supplierSearchTimeout;
+const supplierSearchInput = document.getElementById('supplierSearch');
+const supplierSuggestions = document.getElementById('supplierSuggestions');
+const clearSupplierBtn = document.getElementById('clearSupplierBtn');
+
+if (supplierSearchInput) {
+    supplierSearchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        clearTimeout(supplierSearchTimeout);
+        
+        if (query.length < 2) {
+            supplierSuggestions.style.display = 'none';
+            return;
+        }
+        
+        supplierSearchTimeout = setTimeout(() => {
+            fetch(`/admin/suppliers/api/search?q=${encodeURIComponent(query)}&limit=5`)
+                .then(response => response.json())
+                .then(suppliers => {
+                    showSupplierSuggestions(suppliers);
+                })
+                .catch(error => {
+                    console.error('Erreur recherche fournisseur:', error);
+                });
+        }, 300);
+    });
+    
+    // Cacher les suggestions quand on clique ailleurs
+    document.addEventListener('click', function(e) {
+        if (!supplierSearchInput.contains(e.target) && !supplierSuggestions.contains(e.target)) {
+            supplierSuggestions.style.display = 'none';
+        }
+    });
+}
+
+if (clearSupplierBtn) {
+    clearSupplierBtn.addEventListener('click', function() {
+        supplierSearchInput.value = '';
+        supplierSuggestions.style.display = 'none';
+        clearSupplierFields();
+    });
+}
+
+function showSupplierSuggestions(suppliers) {
+    supplierSuggestions.innerHTML = '';
+    
+    if (suppliers.length === 0) {
+        supplierSuggestions.innerHTML = '<div class="autocomplete-item">Aucun fournisseur trouvé</div>';
+    } else {
+        suppliers.forEach(supplier => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.innerHTML = `
+                <strong>${supplier.company_name}</strong>
+                ${supplier.contact_person ? `<span class="badge bg-secondary ms-2">${supplier.contact_person}</span>` : ''}
+                <br>
+                <small class="text-muted">
+                    ${supplier.phone || 'Pas de téléphone'} • ${supplier.email || 'Pas d\'email'}
+                </small>
+            `;
+            
+            div.addEventListener('click', function() {
+                selectSupplier(supplier);
+            });
+            
+            supplierSuggestions.appendChild(div);
+        });
+    }
+    
+    supplierSuggestions.style.display = 'block';
+}
+
+function selectSupplier(supplier) {
+    // Remplir les champs du formulaire
+    document.querySelector('input[name="supplier_name"]').value = supplier.company_name;
+    document.querySelector('input[name="supplier_contact"]').value = supplier.contact_person || '';
+    document.querySelector('input[name="supplier_phone"]').value = supplier.phone || '';
+    document.querySelector('input[name="supplier_email"]').value = supplier.email || '';
+    document.querySelector('textarea[name="supplier_address"]').value = supplier.address || '';
+    
+    // Mettre à jour le champ de recherche
+    supplierSearchInput.value = supplier.company_name;
+    
+    // Cacher les suggestions
+    supplierSuggestions.style.display = 'none';
+    
+    // Notification visuelle
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show mt-2';
+    alert.innerHTML = `
+        <i class="bi bi-check-circle me-2"></i>
+        Fournisseur <strong>${supplier.company_name}</strong> sélectionné !
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    supplierSearchInput.parentNode.parentNode.appendChild(alert);
+    
+    // Supprimer l'alerte après 3 secondes
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 3000);
+}
+
+function clearSupplierFields() {
+    document.querySelector('input[name="supplier_name"]').value = '';
+    document.querySelector('input[name="supplier_contact"]').value = '';
+    document.querySelector('input[name="supplier_phone"]').value = '';
+    document.querySelector('input[name="supplier_email"]').value = '';
+    document.querySelector('textarea[name="supplier_address"]').value = '';
+}
 </script>
 {% endblock %}

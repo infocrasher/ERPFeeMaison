@@ -37,8 +37,11 @@ class Purchase(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     reference = db.Column(db.String(50), unique=True, nullable=False)
     
-    # Informations fournisseur
-    supplier_name = db.Column(db.String(200), nullable=False)
+    # Fournisseur (nouvelle approche centralisée)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)  # Nullable pour migration progressive
+    
+    # Informations fournisseur (ancien système - gardé pour compatibilité)
+    supplier_name = db.Column(db.String(200), nullable=True)  # Rendu nullable
     supplier_contact = db.Column(db.String(100))
     supplier_phone = db.Column(db.String(20))
     supplier_email = db.Column(db.String(120))
@@ -62,6 +65,7 @@ class Purchase(db.Model):
     # ✅ NOUVEAUX CHAMPS : Gestion paiement simplifiée
     is_paid = db.Column(db.Boolean, default=False, nullable=True)  # Nullable pour éviter l'erreur
     payment_date = db.Column(db.Date, nullable=True)  # Date paiement si payé
+    payment_method = db.Column(db.String(20), nullable=True)  # Mode de paiement (cash, bank, credit)
 
     # Montants
     subtotal_amount = db.Column(db.Numeric(10, 2), default=0.0)

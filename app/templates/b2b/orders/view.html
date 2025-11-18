@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}{{ order.order_number }} - Fée Maison{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-building me-2"></i>Commande B2B {{ order.order_number }}</h1>
+        <div class="btn-group">
+            {% if order.status == 'pending' %}
+            <a href="{{ url_for('b2b.edit_order', order_id=order.id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil me-2"></i>Modifier
+            </a>
+            {% endif %}
+            <a href="{{ url_for('b2b.list_orders') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Informations de la commande -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Informations de la commande</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Numéro :</strong> {{ order.order_number }}</p>
+                            <p><strong>Client :</strong> {{ order.b2b_client.company_name }}</p>
+                            <p><strong>Date de commande :</strong> {{ order.order_date.strftime('%d/%m/%Y') }}</p>
+                            <p><strong>Date de livraison :</strong> {{ order.delivery_date.strftime('%d/%m/%Y') }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Statut :</strong> 
+                                <span class="badge bg-{{ 
+                                    'success' if order.status == 'completed' 
+                                    else 'warning' if order.status in ['in_production', 'ready_at_shop'] 
+                                    else 'info' if order.status == 'delivered'
+                                    else 'danger' if order.status == 'cancelled'
+                                    else 'secondary' 
+                                }}">
+                                    {{ order.get_status_display() }}
+                                </span>
+                            </p>
+                            <p><strong>Multi-jours :</strong> 
+                                {% if order.is_multi_day %}
+                                <span class="badge bg-info">Oui</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Non</span>
+                                {% endif %}
+                            </p>
+                            {% if order.is_multi_day and order.period_start and order.period_end %}
+                            <p><strong>Période :</strong> {{ order.period_start.strftime('%d/%m/%Y') }} - {{ order.period_end.strftime('%d/%m/%Y') }}</p>
+                            {% endif %}
+                            <p><strong>Montant total :</strong> <span class="fw-bold">{{ "{:,.0f}".format(order.total_amount) }} DA</span></p>
+                        </div>
+                    </div>
+                    {% if order.notes %}
+                    <div class="mt-3">
+                        <p><strong>Notes :</strong></p>
+                        <p class="text-muted">{{ order.notes | nl2br }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Articles de la commande -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Articles commandés</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Description</th>
+                                    <th>Quantité</th>
+                                    <th>Prix unitaire</th>
+                                    <th>Sous-total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items %}
+                                <tr>
+                                    <td>{{ item.product.name }}</td>
+                                    <td>{{ item.description or '-' }}</td>
+                                    <td>{{ item.quantity }} {{ item.product.unit }}</td>
+                                    <td>{{ "{:,.2f}".format(item.unit_price) }} DA</td>
+                                    <td>{{ "{:,.2f}".format(item.subtotal) }} DA</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-info">
+                                    <td colspan="4" class="text-end"><strong>Total :</strong></td>
+                                    <td><strong>{{ "{:,.2f}".format(order.total_amount) }} DA</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Changement de statut -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Changer le statut</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('b2b.change_order_status', order_id=order.id) }}">
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Nouveau statut</label>
+                            <select name="status" id="status" class="form-select">
+                                <option value="pending" {{ 'selected' if order.status == 'pending' }}>En attente</option>
+                                <option value="in_production" {{ 'selected' if order.status == 'in_production' }}>En production</option>
+                                <option value="ready_at_shop" {{ 'selected' if order.status == 'ready_at_shop' }}>Reçue au magasin</option>
+                                <option value="delivered" {{ 'selected' if order.status == 'delivered' }}>Livrée</option>
+                                <option value="completed" {{ 'selected' if order.status == 'completed' }}>Terminée</option>
+                                <option value="cancelled" {{ 'selected' if order.status == 'cancelled' }}>Annulée</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-check-circle me-2"></i>Mettre à jour le statut
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Actions rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {# ✅ CORRECTION : Lier automatiquement la commande à la facture #}
+                        <a href="{{ url_for('b2b.new_invoice') }}?client={{ order.b2b_client_id }}&order={{ order.id }}" class="btn btn-outline-success">
+                            <i class="bi bi-receipt me-2"></i>Créer une facture pour cette commande
+                        </a>
+                        <a href="{{ url_for('b2b.view_client', client_id=order.b2b_client_id) }}" class="btn btn-outline-info">
+                            <i class="bi bi-building me-2"></i>Voir le client
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

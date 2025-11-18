@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Enregistrer une Utilisation - Consommables{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-plus-circle me-2"></i>Enregistrer une Utilisation</h2>
+                <a href="{{ url_for('consumables.usage_index') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Retour
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Nouvelle utilisation</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" id="usage-form">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Consommable *</label>
+                                        <div class="position-relative">
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="product-search" 
+                                                   placeholder="Tapez pour rechercher un consommable..."
+                                                   autocomplete="off">
+                                            <input type="hidden" name="product_id" id="product_id">
+                                            <div id="product-dropdown" class="dropdown-menu w-100" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                                        </div>
+                                        <div class="form-text">Commencez à taper le nom du consommable</div>
+                                        {% if form.product_id.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.product_id.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.usage_date.label(class="form-label") }}
+                                        {{ form.usage_date(class="form-control") }}
+                                        {% if form.usage_date.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.usage_date.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        {{ form.actual_quantity_used.label(class="form-label") }}
+                                        <div class="input-group">
+                                            {{ form.actual_quantity_used(class="form-control") }}
+                                            <span class="input-group-text" id="unit-display">unité</span>
+                                        </div>
+                                        {% if form.actual_quantity_used.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.actual_quantity_used.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Estimation automatique</label>
+                                        <div class="form-control-plaintext" id="estimated-quantity">
+                                            <span class="text-muted">Sélectionnez un consommable</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.notes.label(class="form-label") }}
+                                    {{ form.notes(class="form-control", rows="3") }}
+                                    {% if form.notes.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.notes.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-grid">
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Comment ça marche ?</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6><i class="bi bi-1-circle me-1"></i>Sélection du consommable</h6>
+                                <p class="text-muted small">Choisissez le consommable que vous avez utilisé.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="bi bi-2-circle me-1"></i>Calcul automatique</h6>
+                                <p class="text-muted small">Le système calcule une estimation basée sur vos ventes récentes.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="bi bi-3-circle me-1"></i>Validation manuelle</h6>
+                                <p class="text-muted small">Ajustez la quantité si nécessaire selon la réalité.</p>
+                            </div>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Astuce :</strong> L'estimation est basée sur les ventes des 7 derniers jours et les recettes configurées.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productSearch = document.getElementById('product-search');
+    const productId = document.getElementById('product_id');
+    const productDropdown = document.getElementById('product-dropdown');
+    const unitDisplay = document.getElementById('unit-display');
+    const estimatedQuantity = document.getElementById('estimated-quantity');
+    
+    let selectedProduct = null;
+    
+    // Fonction de recherche pour les consommables
+    function searchProducts(query) {
+        if (query.length < 2) {
+            productDropdown.style.display = 'none';
+            return;
+        }
+        
+        fetch(`{{ url_for('consumables.search_products') }}?q=${encodeURIComponent(query)}&category=consumable`)
+            .then(response => response.json())
+            .then(products => {
+                displaySearchResults(products, productDropdown);
+            })
+            .catch(error => {
+                console.error('Erreur lors de la recherche:', error);
+            });
+    }
+    
+    // Afficher les résultats de recherche
+    function displaySearchResults(products, dropdown) {
+        if (products.length === 0) {
+            dropdown.innerHTML = '<div class="dropdown-item text-muted">Aucun consommable trouvé</div>';
+        } else {
+            dropdown.innerHTML = products.map(product => `
+                <div class="dropdown-item search-result" 
+                     data-id="${product.id}" 
+                     data-name="${product.name}" 
+                     data-stock="${product.stock}">
+                    <div class="fw-bold">${product.name}</div>
+                    <small class="text-muted">Stock: ${product.stock}</small>
+                </div>
+            `).join('');
+        }
+        dropdown.style.display = 'block';
+    }
+    
+    // Gérer la sélection d'un consommable
+    productDropdown.addEventListener('click', function(e) {
+        if (e.target.classList.contains('search-result')) {
+            const productIdValue = e.target.dataset.id;
+            const productName = e.target.dataset.name;
+            const productStock = e.target.dataset.stock;
+            
+            productId.value = productIdValue;
+            productSearch.value = productName;
+            productDropdown.style.display = 'none';
+            
+            selectedProduct = {
+                id: productIdValue,
+                name: productName,
+                stock: productStock
+            };
+            
+            // Mettre à jour l'unité
+            const unit = productStock.split(' ').pop();
+            unitDisplay.textContent = unit || 'unité';
+            
+            // Afficher l'estimation
+            estimatedQuantity.innerHTML = `
+                <span class="text-info">Calcul en cours...</span>
+                <br><small class="text-muted">Stock actuel: ${productStock}</small>
+            `;
+            
+            // Simuler le calcul d'estimation
+            setTimeout(() => {
+                estimatedQuantity.innerHTML = `
+                    <span class="text-muted">Estimation basée sur les ventes récentes</span>
+                    <br><small class="text-muted">Stock actuel: ${productStock}</small>
+                `;
+            }, 1000);
+        }
+    });
+    
+    // Événement de recherche
+    productSearch.addEventListener('input', function() {
+        searchProducts(this.value);
+    });
+    
+    // Masquer le dropdown quand on clique ailleurs
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.position-relative')) {
+            productDropdown.style.display = 'none';
+        }
+    });
+    
+    // Validation du formulaire
+    document.getElementById('usage-form').addEventListener('submit', function(e) {
+        if (!productId.value) {
+            e.preventDefault();
+            alert('Veuillez sélectionner un consommable.');
+        }
+    });
+});
+</script>
+
+<style>
+.search-result {
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+}
+
+.search-result:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-menu {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.position-relative {
+    position: relative;
+}
+</style>
+{% endblock %}

@@ -31,9 +31,10 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th scope="col" class="text-center" style="width: 5%;">#ID</th>
-                                        <th scope="col" style="width: 25%;">Nom</th>
-                                        <th scope="col" style="width: 40%;">Description</th>
+                                        <th scope="col" style="width: 20%;">Nom</th>
+                                        <th scope="col" style="width: 35%;">Description</th>
                                         <th scope="col" class="text-center" style="width: 10%;">Produits</th>
+                                        <th scope="col" class="text-center" style="width: 10%;">POV</th>
                                         <th scope="col" class="text-end" style="width: 20%;">Actions</th>
                                     </tr>
                                 </thead>
@@ -55,6 +56,17 @@
                                         </td>
                                         <td class="text-center align-middle">
                                             <span class="badge bg-info rounded-pill">{{ category.products.count() }}</span>
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            {% if category.show_in_pos %}
+                                                <span class="badge bg-success rounded-pill" title="Visible au Point de Vente">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Oui
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary rounded-pill" title="Non visible au Point de Vente">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>Non
+                                                </span>
+                                            {% endif %}
                                         </td>
                                         <td class="text-end align-middle">
                                             <div class="btn-group btn-group-sm" role="group" aria-label="Actions catégorie">

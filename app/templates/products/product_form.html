@@ -114,6 +114,47 @@
                                 <div class="form-text">Référence unique du produit / UGS (optionnel).</div>
                             </div>
                         </div>
+                        
+                        <!-- Seuils d'alerte de stock -->
+                        <hr class="my-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-bell-fill me-2"></i>Seuils d'Alerte de Stock
+                        </h6>
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <small>Définissez les seuils minimaux pour recevoir des alertes. Mettez 0 pour les produits sur commande.</small>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                {{ form.seuil_min_comptoir.label(class="form-label fw-semibold") }}
+                                {{ form.seuil_min_comptoir(class="form-control" + (" is-invalid" if form.seuil_min_comptoir.errors else ""), step="0.01", placeholder="0") }}
+                                {% if form.seuil_min_comptoir.errors %}
+                                    <div class="invalid-feedback">{% for error in form.seuil_min_comptoir.errors %}{{ error }}{% endfor %}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                {{ form.seuil_min_ingredients_local.label(class="form-label fw-semibold") }}
+                                {{ form.seuil_min_ingredients_local(class="form-control" + (" is-invalid" if form.seuil_min_ingredients_local.errors else ""), step="0.01", placeholder="0") }}
+                                {% if form.seuil_min_ingredients_local.errors %}
+                                    <div class="invalid-feedback">{% for error in form.seuil_min_ingredients_local.errors %}{{ error }}{% endfor %}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                {{ form.seuil_min_ingredients_magasin.label(class="form-label fw-semibold") }}
+                                {{ form.seuil_min_ingredients_magasin(class="form-control" + (" is-invalid" if form.seuil_min_ingredients_magasin.errors else ""), step="0.01", placeholder="0") }}
+                                {% if form.seuil_min_ingredients_magasin.errors %}
+                                    <div class="invalid-feedback">{% for error in form.seuil_min_ingredients_magasin.errors %}{{ error }}{% endfor %}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                {{ form.seuil_min_consommables.label(class="form-label fw-semibold") }}
+                                {{ form.seuil_min_consommables(class="form-control" + (" is-invalid" if form.seuil_min_consommables.errors else ""), step="0.01", placeholder="0") }}
+                                {% if form.seuil_min_consommables.errors %}
+                                    <div class="invalid-feedback">{% for error in form.seuil_min_consommables.errors %}{{ error }}{% endfor %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
 
                         <div class="mb-3">
                             {{ form.image.label(class="form-label fw-semibold") }}

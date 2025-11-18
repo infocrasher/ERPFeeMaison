@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Créer un Inventaire{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">📋 Nouvel Inventaire</h2>
+                <a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Retour
+                </a>
+            </div>
+
+            <!-- Informations importantes -->
+            <div class="alert alert-info mb-4">
+                <h5 class="alert-heading">
+                    <i class="bi bi-info-circle me-2"></i>Informations importantes
+                </h5>
+                <ul class="mb-0">
+                    <li>L'inventaire se fait <strong>par emplacement</strong> (Magasin, Local, Consommables)</li>
+                    <li>Le <strong>comptoir n'est pas inclus</strong> dans l'inventaire selon vos spécifications</li>
+                    <li>Choisissez la <strong>date de fin de mois</strong> pour l'inventaire</li>
+                    <li>Une fois créé, vous pourrez saisir les stocks par emplacement</li>
+                </ul>
+            </div>
+
+            <!-- Formulaire -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Configuration de l'inventaire</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Date d'inventaire -->
+                        <div class="mb-4">
+                            {{ form.inventory_date.label(class="form-label fw-bold") }}
+                            {{ form.inventory_date(class="form-control") }}
+                            <div class="form-text">{{ form.inventory_date.description }}</div>
+                            {% if form.inventory_date.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.inventory_date.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Emplacements à inclure -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Emplacements à inventorier</label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="card h-100 {% if form.include_ingredients_magasin.data %}border-success{% endif %}">
+                                        <div class="card-body text-center">
+                                            <i class="bi bi-building fs-1 text-primary mb-3"></i>
+                                            <h6>Magasin (Labo A)</h6>
+                                            <div class="form-check d-flex justify-content-center">
+                                                {{ form.include_ingredients_magasin(class="form-check-input") }}
+                                                {{ form.include_ingredients_magasin.label(class="form-check-label ms-2") }}
+                                            </div>
+                                            <small class="text-muted">{{ form.include_ingredients_magasin.description }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="card h-100 {% if form.include_ingredients_local.data %}border-success{% endif %}">
+                                        <div class="card-body text-center">
+                                            <i class="bi bi-house fs-1 text-warning mb-3"></i>
+                                            <h6>Local (Labo B)</h6>
+                                            <div class="form-check d-flex justify-content-center">
+                                                {{ form.include_ingredients_local(class="form-check-input") }}
+                                                {{ form.include_ingredients_local.label(class="form-check-label ms-2") }}
+                                            </div>
+                                            <small class="text-muted">{{ form.include_ingredients_local.description }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="card h-100 {% if form.include_consommables.data %}border-success{% endif %}">
+                                        <div class="card-body text-center">
+                                            <i class="bi bi-box fs-1 text-info mb-3"></i>
+                                            <h6>Consommables</h6>
+                                            <div class="form-check d-flex justify-content-center">
+                                                {{ form.include_consommables(class="form-check-input") }}
+                                                {{ form.include_consommables.label(class="form-check-label ms-2") }}
+                                            </div>
+                                            <small class="text-muted">{{ form.include_consommables.description }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if form.include_ingredients_magasin.errors %}
+                                <div class="text-danger mt-2">
+                                    {% for error in form.include_ingredients_magasin.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4">
+                            {{ form.notes.label(class="form-label fw-bold") }}
+                            {{ form.notes(class="form-control", rows="3", placeholder="Notes ou commentaires sur cet inventaire...") }}
+                            <div class="form-text">{{ form.notes.description }}</div>
+                        </div>
+
+                        <!-- Aperçu -->
+                        <div class="alert alert-light">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-eye me-2"></i>Aperçu de l'inventaire
+                            </h6>
+                            <div id="inventory-preview">
+                                <p class="mb-1"><strong>Date :</strong> <span id="preview-date">-</span></p>
+                                <p class="mb-1"><strong>Emplacements :</strong> <span id="preview-locations">-</span></p>
+                                <p class="mb-0"><strong>Produits estimés :</strong> <span class="badge bg-primary">~{{ total_products or 0 }}</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Boutons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Annuler
+                            </a>
+                            {{ form.submit(class="btn btn-success") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mise à jour de l'aperçu en temps réel
+    function updatePreview() {
+        // Date
+        const dateInput = document.getElementById('inventory_date');
+        const previewDate = document.getElementById('preview-date');
+        if (dateInput.value) {
+            const date = new Date(dateInput.value);
+            previewDate.textContent = date.toLocaleDateString('fr-FR');
+        } else {
+            previewDate.textContent = '-';
+        }
+        
+        // Emplacements
+        const locations = [];
+        if (document.getElementById('include_ingredients_magasin').checked) {
+            locations.push('Magasin');
+        }
+        if (document.getElementById('include_ingredients_local').checked) {
+            locations.push('Local');
+        }
+        if (document.getElementById('include_consommables').checked) {
+            locations.push('Consommables');
+        }
+        
+        const previewLocations = document.getElementById('preview-locations');
+        previewLocations.textContent = locations.length > 0 ? locations.join(', ') : 'Aucun';
+        
+        // Mise à jour des bordures des cartes
+        updateCardBorders();
+    }
+    
+    function updateCardBorders() {
+        const checkboxes = ['include_ingredients_magasin', 'include_ingredients_local', 'include_consommables'];
+        checkboxes.forEach(id => {
+            const checkbox = document.getElementById(id);
+            const card = checkbox.closest('.card');
+            if (checkbox.checked) {
+                card.classList.add('border-success');
+                card.classList.remove('border');
+            } else {
+                card.classList.remove('border-success');
+                card.classList.add('border');
+            }
+        });
+    }
+    
+    // Écouter les changements
+    document.getElementById('inventory_date').addEventListener('change', updatePreview);
+    document.getElementById('include_ingredients_magasin').addEventListener('change', updatePreview);
+    document.getElementById('include_ingredients_local').addEventListener('change', updatePreview);
+    document.getElementById('include_consommables').addEventListener('change', updatePreview);
+    
+    // Initialiser l'aperçu
+    updatePreview();
+});
+</script>
+
+<style>
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.alert-light {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.fs-1 {
+    font-size: 2rem !important;
+}
+
+#inventory-preview p {
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+
+

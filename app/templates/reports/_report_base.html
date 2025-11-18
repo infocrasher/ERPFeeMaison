@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .kpi-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .kpi-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    .ia-analysis-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+    .export-buttons .btn {
+        margin-right: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec filtres et exports -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="bi {% block report_icon %}bi-file-earmark-bar-graph{% endblock %} me-2"></i>
+                {% block report_title %}Rapport{% endblock %}
+            </h2>
+            <p class="text-muted">{% block report_description %}Description du rapport{% endblock %}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="export-buttons">
+                {% block export_buttons %}
+                <a href="#" class="btn btn-sm btn-outline-success" onclick="window.print(); return false;">
+                    <i class="bi bi-printer me-1"></i>Imprimer
+                </a>
+                <a href="{{ url_for('reports.export_csv', report_type=report_type) }}{{ export_params }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>CSV
+                </a>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres de période -->
+    {% block filters %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                {% block filter_fields %}
+                <div class="col-md-3">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="date" class="form-control" value="{{ data.date or '' }}">
+                </div>
+                {% endblock %}
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-funnel me-1"></i>Filtrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endblock %}
+
+    <!-- KPIs principaux -->
+    {% block kpis %}
+    <div class="row mb-4">
+        <!-- Les KPIs seront définis dans chaque rapport -->
+    </div>
+    {% endblock %}
+
+    <!-- Graphiques -->
+    {% block charts %}
+    <div class="row mb-4">
+        <!-- Les graphiques seront définis dans chaque rapport -->
+    </div>
+    {% endblock %}
+
+    <!-- Tableaux de données -->
+    {% block data_tables %}
+    <div class="row mb-4">
+        <!-- Les tableaux seront définis dans chaque rapport -->
+    </div>
+    {% endblock %}
+
+    <!-- Analyse IA - PHASE 3 -->
+    {% block ai_section %}
+    <!-- Section IA intégrée via composant réutilisable -->
+    {% endblock %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% block chart_scripts %}
+<!-- Les scripts Chart.js seront définis dans chaque rapport -->
+{% endblock %}
+{% endblock %}
+

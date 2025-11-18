@@ -1,0 +1,70 @@
+{% macro format_metric_value(value, unit) -%}
+    {% if unit == 'DA' %}
+        {{ "{:,.0f}".format(value).replace(",", " ") }} {{ unit }}
+    {% elif unit == '%' %}
+        {{ value|round(1) }}{{ unit }}
+    {% else %}
+        {{ value|round(1) }} {{ unit }}
+    {% endif %}
+{%- endmacro %}
+
+<section class="hero-card hero-dashboard">
+    <div class="hero-meta">
+        <div>
+            <p class="hero-eyebrow">Tableau de bord global</p>
+            <h1>{{ data.location }}</h1>
+            <p>Données synchronisées le {{ data.generated_at.strftime('%d/%m/%Y à %H:%M') }}</p>
+            <span class="session-pill {{ 'open' if data.cash.session_open else 'closed' }}">
+                <i class="bi {{ 'bi-unlock' if data.cash.session_open else 'bi-lock' }}"></i>
+                {{ 'Caisse ouverte' if data.cash.session_open else 'Caisse fermée' }}
+            </span>
+        </div>
+        <div class="hero-controls">
+            <form class="hero-filter" method="get" action="{{ url_for('dashboard.unified_dashboard') }}">
+                <label>
+                    <span>Période</span>
+                    <select name="period">
+                        <option value="day" {% if data.period == 'day' %}selected{% endif %}>Jour</option>
+                        <option value="week" {% if data.period == 'week' %}selected{% endif %}>Semaine</option>
+                        <option value="month" {% if data.period == 'month' %}selected{% endif %}>Mois</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Date</span>
+                    <input type="date" name="date" value="{{ data.selected_date.strftime('%Y-%m-%d') }}">
+                </label>
+                <button type="submit" class="btn-primary">
+                    <i class="bi bi-funnel"></i> Appliquer
+                </button>
+            </form>
+            <div class="hero-actions">
+                <div class="clock" id="dashboard-clock">--:--</div>
+                <button type="button" class="btn-secondary" id="refresh-dashboard">
+                    <i class="bi bi-arrow-clockwise"></i> Rafraîchir
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="metric-grid">
+    {% for card in data.metric_cards %}
+    <div class="metric-card tone-{{ card.tone }}">
+        <div class="metric-icon"><i class="bi {{ card.icon }}"></i></div>
+        <div class="metric-content">
+            <p>{{ card.label }}</p>
+            <h3>{{ format_metric_value(card.value, card.unit) }}</h3>
+            {% if card.delta is not none %}
+                <small>{{ card.trend_label }} :
+                    {% if card.unit == 'DA' %}
+                        {{ "{:,.0f}".format(card.delta).replace(",", " ") }}
+                    {% else %}
+                        {{ card.delta }}
+                    {% endif %}
+                </small>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</section>
+

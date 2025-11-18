@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier la facture {{ invoice.invoice_number }} - Fée Maison{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Modifier la facture {{ invoice.invoice_number }}</h3>
+        <a href="{{ url_for('b2b.view_invoice', invoice_id=invoice.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour à la facture
+        </a>
+    </div>
+
+    <!-- Informations de la facture -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Informations de la facture</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Client :</strong> {{ invoice.b2b_client.company_name }}</p>
+                    <p><strong>Type :</strong> 
+                        {% if invoice.invoice_type == 'proforma' %}
+                            <span class="badge bg-info">Facture Proforma</span>
+                        {% else %}
+                            <span class="badge bg-success">Facture Définitive</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Date facture :</strong> {{ invoice.invoice_date.strftime('%d/%m/%Y') }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Statut :</strong> 
+                        <span class="badge bg-{{ 
+                            'success' if invoice.status == 'paid' 
+                            else 'warning' if invoice.status == 'sent' 
+                            else 'danger' if invoice.status == 'overdue'
+                            else 'secondary' 
+                        }}">
+                            {{ invoice.get_status_display() }}
+                        </span>
+                    </p>
+                    <p><strong>Date d'échéance :</strong> {{ invoice.due_date.strftime('%d/%m/%Y') }}</p>
+                    <p><strong>Montant actuel :</strong> {{ "{:,.2f}".format(invoice.total_amount) }} DA</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commandes disponibles -->
+    {% if available_orders %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Ajouter des commandes à la facture</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('b2b.edit_invoice', invoice_id=invoice.id) }}">
+                <p class="text-muted mb-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Sélectionnez les commandes à ajouter à cette facture. Seules les commandes terminées ou livrées qui n'ont pas encore été facturées sont affichées.
+                </p>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th width="50">
+                                    <input type="checkbox" id="select-all" class="form-check-input">
+                                </th>
+                                <th>Numéro</th>
+                                <th>Date</th>
+                                <th>Statut</th>
+                                <th>Montant</th>
+                                <th>Articles</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in available_orders %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="order_ids" value="{{ order.id }}" class="form-check-input order-checkbox">
+                                </td>
+                                <td>
+                                    <strong>{{ order.order_number }}</strong>
+                                </td>
+                                <td>{{ order.order_date.strftime('%d/%m/%Y') if order.order_date else '—' }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 
+                                        'success' if order.status == 'completed' 
+                                        else 'info' if order.status == 'delivered'
+                                        else 'secondary' 
+                                    }}">
+                                        {{ order.get_status_display() }}
+                                    </span>
+                                </td>
+                                <td>{{ "{:,.2f}".format(order.total_amount) }} DA</td>
+                                <td>
+                                    <small class="text-muted">{{ order.items.count() }} article(s)</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Ajouter les commandes sélectionnées
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        Aucune commande disponible pour ce client. Toutes les commandes ont déjà été facturées ou sont en attente de finalisation.
+    </div>
+    {% endif %}
+
+    <!-- Lignes de facture actuelles -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Lignes de facture actuelles</h5>
+        </div>
+        <div class="card-body">
+            {% if invoice.invoice_items.count() > 0 %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="text-end">Quantité</th>
+                            <th class="text-end">Prix unitaire</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in invoice.invoice_items %}
+                        <tr>
+                            <td>
+                                {{ item.description }}
+                                {% if item.product %}
+                                    <br><small class="text-muted">Produit: {{ item.product.name }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ item.quantity }}</td>
+                            <td class="text-end">{{ "{:,.2f}".format(item.unit_price) }} DA</td>
+                            <td class="text-end">{{ "{:,.2f}".format(item.total_price) }} DA</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-end"><strong>Sous-total :</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(invoice.subtotal) }} DA</strong></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="text-end"><strong>TVA (19%) :</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(invoice.tax_amount) }} DA</strong></td>
+                        </tr>
+                        <tr class="table-primary">
+                            <td colspan="3" class="text-end"><strong>Total TTC :</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(invoice.total_amount) }} DA</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Cette facture ne contient aucune ligne pour le moment. Ajoutez des commandes pour générer les lignes de facture.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du "Tout sélectionner"
+    const selectAll = document.getElementById('select-all');
+    const orderCheckboxes = document.querySelectorAll('.order-checkbox');
+    
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            orderCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        });
+    }
+    
+    // Décocher "Tout sélectionner" si une case est décochée
+    orderCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (!checkbox.checked) {
+                selectAll.checked = false;
+            } else {
+                // Vérifier si toutes les cases sont cochées
+                const allChecked = Array.from(orderCheckboxes).every(cb => cb.checked);
+                selectAll.checked = allChecked;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+

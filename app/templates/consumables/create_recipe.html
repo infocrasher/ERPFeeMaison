@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Nouvelle Recette - Consommables{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-book me-2"></i>Nouvelle Recette</h2>
+                <a href="{{ url_for('consumables.recipes_index') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Retour
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Configuration de la recette</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" id="recipe-form">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Produit fini *</label>
+                                        <div class="position-relative">
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="finished-product-search" 
+                                                   placeholder="Tapez pour rechercher un produit fini..."
+                                                   autocomplete="off"
+                                                   spellcheck="false">
+                                            <input type="hidden" name="finished_product_id" id="finished_product_id">
+                                            <div id="finished-product-dropdown" class="dropdown-menu w-100" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                                        </div>
+                                        <div class="form-text">Commencez à taper le nom du produit</div>
+                                        {% if form.finished_product_id.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.finished_product_id.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Consommable *</label>
+                                        <div class="position-relative">
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="consumable-product-search" 
+                                                   placeholder="Tapez pour rechercher un consommable..."
+                                                   autocomplete="off"
+                                                   spellcheck="false">
+                                            <input type="hidden" name="consumable_product_id" id="consumable_product_id">
+                                            <div id="consumable-product-dropdown" class="dropdown-menu w-100" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                                        </div>
+                                        <div class="form-text">Commencez à taper le nom du consommable</div>
+                                        {% if form.consumable_product_id.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.consumable_product_id.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        {{ form.quantity_per_unit.label(class="form-label") }}
+                                        <div class="input-group">
+                                            {{ form.quantity_per_unit(class="form-control") }}
+                                            <span class="input-group-text" id="consumable-unit">unité</span>
+                                        </div>
+                                        {% if form.quantity_per_unit.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.quantity_per_unit.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Exemple de calcul</label>
+                                        <div class="form-control-plaintext" id="calculation-example">
+                                            <span class="text-muted">Sélectionnez les produits</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.notes.label(class="form-label") }}
+                                    {{ form.notes(class="form-control", rows="3") }}
+                                    {% if form.notes.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.notes.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-grid">
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Comment configurer une recette ?</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6><i class="bi bi-1-circle me-1"></i>Produit fini</h6>
+                                <p class="text-muted small">Sélectionnez le produit que vous vendez (ex: Gâteau au chocolat).</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="bi bi-2-circle me-1"></i>Consommable</h6>
+                                <p class="text-muted small">Choisissez le consommable utilisé (ex: Boîte en carton).</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="bi bi-3-circle me-1"></i>Quantité par unité</h6>
+                                <p class="text-muted small">Définissez combien de consommables sont utilisés par unité de produit fini.</p>
+                            </div>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Exemple :</strong> Si vous vendez 1 gâteau dans 1 boîte, saisissez "1".
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const finishedProductSearch = document.getElementById('finished-product-search');
+    const consumableProductSearch = document.getElementById('consumable-product-search');
+    const finishedProductId = document.getElementById('finished_product_id');
+    const consumableProductId = document.getElementById('consumable_product_id');
+    const finishedProductDropdown = document.getElementById('finished-product-dropdown');
+    const consumableProductDropdown = document.getElementById('consumable-product-dropdown');
+    const consumableUnit = document.getElementById('consumable-unit');
+    const calculationExample = document.getElementById('calculation-example');
+    
+    let selectedFinishedProduct = null;
+    let selectedConsumableProduct = null;
+    
+    // Fonction de recherche pour les produits finis
+    function searchFinishedProducts(query) {
+        if (query.length < 2) {
+            finishedProductDropdown.style.display = 'none';
+            return;
+        }
+        
+        fetch(`{{ url_for('consumables.search_products') }}?q=${encodeURIComponent(query)}&category=finished`)
+            .then(response => response.json())
+            .then(products => {
+                displaySearchResults(products, finishedProductDropdown, 'finished');
+            })
+            .catch(error => {
+                console.error('Erreur lors de la recherche:', error);
+            });
+    }
+    
+    // Fonction de recherche pour les consommables
+    function searchConsumableProducts(query) {
+        if (query.length < 2) {
+            consumableProductDropdown.style.display = 'none';
+            return;
+        }
+        
+        fetch(`{{ url_for('consumables.search_products') }}?q=${encodeURIComponent(query)}&category=consumable`)
+            .then(response => response.json())
+            .then(products => {
+                displaySearchResults(products, consumableProductDropdown, 'consumable');
+            })
+            .catch(error => {
+                console.error('Erreur lors de la recherche:', error);
+            });
+    }
+    
+    // Afficher les résultats de recherche
+    function displaySearchResults(products, dropdown, type) {
+        if (products.length === 0) {
+            dropdown.innerHTML = '<div class="dropdown-item text-muted">Aucun produit trouvé</div>';
+        } else {
+            dropdown.innerHTML = products.map(product => `
+                <div class="dropdown-item search-result" 
+                     data-id="${product.id}" 
+                     data-name="${product.name}" 
+                     data-stock="${product.stock}">
+                    <div class="fw-bold">${product.name}</div>
+                    <small class="text-muted">Stock: ${product.stock}</small>
+                </div>
+            `).join('');
+        }
+        dropdown.style.display = 'block';
+    }
+    
+    // Gérer la sélection d'un produit fini
+    finishedProductDropdown.addEventListener('click', function(e) {
+        if (e.target.classList.contains('search-result')) {
+            const productId = e.target.dataset.id;
+            const productName = e.target.dataset.name;
+            
+            finishedProductId.value = productId;
+            finishedProductSearch.value = productName;
+            finishedProductDropdown.style.display = 'none';
+            
+            selectedFinishedProduct = {
+                id: productId,
+                name: productName
+            };
+            
+            updateCalculation();
+        }
+    });
+    
+    // Gérer la sélection d'un consommable
+    consumableProductDropdown.addEventListener('click', function(e) {
+        if (e.target.classList.contains('search-result')) {
+            const productId = e.target.dataset.id;
+            const productName = e.target.dataset.name;
+            const productStock = e.target.dataset.stock;
+            
+            consumableProductId.value = productId;
+            consumableProductSearch.value = productName;
+            consumableProductDropdown.style.display = 'none';
+            
+            selectedConsumableProduct = {
+                id: productId,
+                name: productName,
+                stock: productStock
+            };
+            
+            // Mettre à jour l'unité du consommable
+            const unit = productStock.split(' ').pop();
+            consumableUnit.textContent = unit || 'unité';
+            
+            updateCalculation();
+        }
+    });
+    
+    // Événements de recherche
+    finishedProductSearch.addEventListener('input', function() {
+        searchFinishedProducts(this.value);
+    });
+    
+    consumableProductSearch.addEventListener('input', function() {
+        searchConsumableProducts(this.value);
+    });
+    
+    // Masquer les dropdowns quand on clique ailleurs
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.position-relative')) {
+            finishedProductDropdown.style.display = 'none';
+            consumableProductDropdown.style.display = 'none';
+        }
+    });
+    
+    // Mettre à jour l'exemple de calcul
+    function updateCalculation() {
+        const quantity = document.getElementById('quantity_per_unit').value;
+        
+        if (selectedFinishedProduct && selectedConsumableProduct && quantity) {
+            const unit = consumableUnit.textContent;
+            calculationExample.innerHTML = `
+                <strong>Exemple :</strong><br>
+                Si vous vendez <strong>10 unités</strong> de ${selectedFinishedProduct.name},<br>
+                vous utiliserez <strong>${quantity * 10} ${unit}</strong> de ${selectedConsumableProduct.name}.
+            `;
+        } else {
+            calculationExample.innerHTML = '<span class="text-muted">Sélectionnez les produits et saisissez la quantité</span>';
+        }
+    }
+    
+    // Événement pour la quantité
+    document.getElementById('quantity_per_unit').addEventListener('input', updateCalculation);
+    
+    // Validation du formulaire
+    document.getElementById('recipe-form').addEventListener('submit', function(e) {
+        if (!finishedProductId.value || !consumableProductId.value) {
+            e.preventDefault();
+            alert('Veuillez sélectionner un produit fini et un consommable.');
+        }
+    });
+});
+</script>
+
+<style>
+.search-result {
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+}
+
+.search-result:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-menu {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.position-relative {
+    position: relative;
+}
+</style>
+{% endblock %}

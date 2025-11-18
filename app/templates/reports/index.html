@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Rapports{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-file-earmark-bar-graph me-2"></i>Rapports et Analyses</h2>
+            </div>
+
+            <!-- Analyses IA - Section spéciale -->
+            <div class="card mb-4 border-primary" style="border-width: 3px !important;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-robot me-2"></i>Analyses IA & Recommandations
+                        <span class="badge bg-light text-primary ms-2">Prophet + LLM</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="mb-2">Prévisions intelligentes et recommandations pour optimiser votre activité</h6>
+                            <p class="text-muted mb-0 small">
+                                <i class="bi bi-check-circle me-1"></i>Prévisions Prophet sur 7 jours<br>
+                                <i class="bi bi-check-circle me-1"></i>Analyses LLM avec recommandations personnalisées<br>
+                                <i class="bi bi-check-circle me-1"></i>Graphiques interactifs et insights actionnables
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{{ url_for('reports.ai_insights') }}" class="btn btn-primary btn-lg">
+                                <i class="bi bi-robot me-2"></i>Voir les Analyses IA
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rapports Quotidiens -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-calendar-day me-2"></i>Rapports Quotidiens</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-cash-stack me-2"></i>Ventes Quotidiennes</h6>
+                                    <p class="card-text small">Chiffre d'affaires, transactions, panier moyen, top produits</p>
+                                    <a href="{{ url_for('reports.daily_sales') }}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-warning">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-calculator me-2"></i>Coût de Revient (Prime Cost)</h6>
+                                    <p class="card-text small">COGS, main d'œuvre, marge brute</p>
+                                    <a href="{{ url_for('reports.daily_prime_cost') }}" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-gear-fill me-2"></i>Production Quotidienne</h6>
+                                    <p class="card-text small">Unités produites, efficacité, incidents</p>
+                                    <a href="{{ url_for('reports.daily_production') }}" class="btn btn-sm btn-success">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-danger">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-exclamation-triangle me-2"></i>Alertes de Stock</h6>
+                                    <p class="card-text small">Produits sous seuil, ruptures, surstock</p>
+                                    <a href="{{ url_for('reports.daily_stock_alerts') }}" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-secondary">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-trash3 me-2"></i>Pertes et Gaspillage</h6>
+                                    <p class="card-text small">Valeur perdue, causes, % coût alimentaire</p>
+                                    <a href="{{ url_for('reports.daily_waste_loss') }}" class="btn btn-sm btn-secondary">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rapports Hebdomadaires -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-calendar-week me-2"></i>Rapports Hebdomadaires</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-info">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-graph-up me-2"></i>Performance Produits</h6>
+                                    <p class="card-text small">Ventes par produit, taux d'écoulement, croissance</p>
+                                    <a href="{{ url_for('reports.weekly_product_performance') }}" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-arrow-repeat me-2"></i>Rotation des Stocks</h6>
+                                    <p class="card-text small">Ratio de rotation, jours de couverture</p>
+                                    <a href="{{ url_for('reports.weekly_stock_rotation') }}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-warning">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-people-fill me-2"></i>Coût Main d'Œuvre</h6>
+                                    <p class="card-text small">Coût personnel, heures, productivité</p>
+                                    <a href="{{ url_for('reports.weekly_labor_cost') }}" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-cash-coin me-2"></i>Prévision Trésorerie</h6>
+                                    <p class="card-text small">Encaissements, décaissements, solde prévisionnel</p>
+                                    <a href="{{ url_for('reports.weekly_cash_flow_forecast') }}" class="btn btn-sm btn-success">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rapports Mensuels -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-calendar-month me-2"></i>Rapports Mensuels</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-pie-chart-fill me-2"></i>Marge Brute par Catégorie</h6>
+                                    <p class="card-text small">CA, COGS, marge brute %, évolution 12 mois</p>
+                                    <a href="{{ url_for('reports.monthly_gross_margin') }}" class="btn btn-sm btn-success">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Compte de Résultat (P&L)</h6>
+                                    <p class="card-text small">CA, COGS, charges, EBITDA, résultat net</p>
+                                    <a href="{{ url_for('reports.monthly_profit_loss') }}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations -->
+            <div class="alert alert-info">
+                <h6><i class="bi bi-info-circle me-2"></i>À propos des rapports</h6>
+                <p class="mb-0 small">
+                    Tous les rapports incluent des graphiques interactifs, des filtres par période, et la possibilité d'export en CSV.
+                    Une section "Analyse IA" est disponible sur chaque rapport (en attente de connexion API).
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

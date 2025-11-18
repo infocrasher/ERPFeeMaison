@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Inventaires{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">📋 Gestion des Inventaires</h2>
+                <a href="{{ url_for('inventory.create') }}" class="btn btn-success">
+                    <i class="bi bi-plus-circle me-2"></i>Nouvel Inventaire
+                </a>
+            </div>
+
+            <!-- Statistiques rapides -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ stats.total_inventories }}</h4>
+                                    <p class="mb-0">Total inventaires</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-clipboard-data fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ stats.pending_inventories }}</h4>
+                                    <p class="mb-0">En cours</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-clock-history fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card {% if stats.current_month_inventory %}bg-success{% else %}bg-secondary{% endif %} text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">
+                                        {% if stats.current_month_inventory %}
+                                            ✅ Fait
+                                        {% else %}
+                                            ❌ À faire
+                                        {% endif %}
+                                    </h4>
+                                    <p class="mb-0">Mois courant</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-calendar-check fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtres de recherche -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">🔍 Filtres</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="row g-3">
+                        {{ search_form.hidden_tag() }}
+                        
+                        <div class="col-md-3">
+                            {{ search_form.year.label(class="form-label") }}
+                            {{ search_form.year(class="form-select") }}
+                        </div>
+                        
+                        <div class="col-md-3">
+                            {{ search_form.month.label(class="form-label") }}
+                            {{ search_form.month(class="form-select") }}
+                        </div>
+                        
+                        <div class="col-md-3">
+                            {{ search_form.status.label(class="form-label") }}
+                            {{ search_form.status(class="form-select") }}
+                        </div>
+                        
+                        <div class="col-md-3 d-flex align-items-end">
+                            {{ search_form.submit(class="btn btn-primary me-2") }}
+                            <a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary">Réinitialiser</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Liste des inventaires -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📋 Inventaires</h5>
+                </div>
+                <div class="card-body">
+                    {% if inventories %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Période</th>
+                                        <th>Date</th>
+                                        <th>Statut</th>
+                                        <th>Emplacements</th>
+                                        <th>Produits</th>
+                                        <th>Écarts</th>
+                                        <th>Valeur écarts</th>
+                                        <th>Créé par</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for inv in inventories %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ inv.title }}</strong>
+                                        </td>
+                                        <td>{{ inv.inventory_date.strftime('%d/%m/%Y') }}</td>
+                                        <td>
+                                            {% if inv.status.value == 'en_cours' %}
+                                                <span class="badge bg-warning">En cours</span>
+                                            {% elif inv.status.value == 'complete' %}
+                                                <span class="badge bg-info">Terminé</span>
+                                            {% elif inv.status.value == 'valide' %}
+                                                <span class="badge bg-success">Validé</span>
+                                            {% elif inv.status.value == 'cloture' %}
+                                                <span class="badge bg-secondary">Clôturé</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small>
+                                                {% if inv.include_ingredients_magasin %}
+                                                    <span class="badge bg-light text-dark me-1">Magasin</span>
+                                                {% endif %}
+                                                {% if inv.include_ingredients_local %}
+                                                    <span class="badge bg-light text-dark me-1">Local</span>
+                                                {% endif %}
+                                                {% if inv.include_consommables %}
+                                                    <span class="badge bg-light text-dark me-1">Consommables</span>
+                                                {% endif %}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ inv.total_products }}</span>
+                                        </td>
+                                        <td>
+                                            {% if inv.products_with_variance > 0 %}
+                                                <span class="badge bg-warning">{{ inv.products_with_variance }}</span>
+                                            {% else %}
+                                                <span class="badge bg-success">0</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if inv.total_variance_value %}
+                                                <span class="{% if inv.total_variance_value < 0 %}text-danger{% else %}text-success{% endif %}">
+                                                    {{ "%.2f"|format(inv.total_variance_value) }} DA
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">0.00 DA</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small>{{ inv.created_by.username if inv.created_by else 'N/A' }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('inventory.view', id=inv.id) }}" 
+                                                   class="btn btn-outline-primary" title="Voir">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                
+                                                {% if inv.can_be_edited() %}
+                                                    <div class="btn-group">
+                                                        <button type="button" class="btn btn-outline-success dropdown-toggle" 
+                                                                data-bs-toggle="dropdown" title="Saisir">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            {% for location in inv.locations_list %}
+                                                                <li>
+                                                                    <a class="dropdown-item" 
+                                                                       href="{{ url_for('inventory.count_location', id=inv.id, location=location) }}">
+                                                                        {% if location == 'ingredients_magasin' %}
+                                                                            📦 Magasin
+                                                                        {% elif location == 'ingredients_local' %}
+                                                                            🏭 Local
+                                                                        {% elif location == 'consommables' %}
+                                                                            📋 Consommables
+                                                                        {% endif %}
+                                                                    </a>
+                                                                </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                {% if inv.status.value in ['complete', 'valide'] %}
+                                                    <a href="{{ url_for('inventory.report', id=inv.id) }}" 
+                                                       class="btn btn-outline-info" title="Rapport">
+                                                        <i class="bi bi-file-text"></i>
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-clipboard-x fs-1 text-muted"></i>
+                            <h5 class="text-muted mt-3">Aucun inventaire trouvé</h5>
+                            <p class="text-muted">Créez votre premier inventaire pour commencer</p>
+                            <a href="{{ url_for('inventory.create') }}" class="btn btn-success">
+                                <i class="bi bi-plus-circle me-2"></i>Créer un inventaire
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.fs-1 {
+    font-size: 2rem !important;
+}
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+
+

@@ -15,25 +15,30 @@
                         Ordre de Production #{{ order.id }}
                     {% endif %}
                 </h1>
-                <div>
+                <div class="d-flex gap-2 flex-wrap">
                     <a href="{{ url_for('orders.edit_order_status', order_id=order.id) }}" class="btn btn-outline-primary">
                         <i class="bi bi-pencil me-1"></i>Modifier Statut
                     </a>
                     {% if order.order_type == 'customer_order' %}
-                        {% set deja_encaissee = false %}
-                        {% if order.delivery_debts and order.delivery_debts|length > 0 and order.delivery_debts[0].session %}
-                            {% for mvt in order.delivery_debts[0].session.cash_movements %}
-                                {% if mvt.reason and (('commande #' ~ order.id) in mvt.reason) and mvt.amount == order.total_amount %}
-                                    {% set deja_encaissee = true %}
-                                {% endif %}
-                            {% endfor %}
-                        {% endif %}
-                        {% if not deja_encaissee %}
-                        <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" style="display:inline;">
-                            <button type="submit" class="btn btn-success ms-2" onclick="return confirm('Confirmer l\'encaissement de cette commande ?');">
-                                <i class="bi bi-cash-coin"></i> Encaisser
-                            </button>
-                        </form>
+                        {% set balance_due = order.balance_due_value %}
+                        {% if balance_due > 0 %}
+                            {% if order.amount_paid_value > 0 %}
+                                <button type="button"
+                                        class="btn btn-success"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#paymentModal"
+                                        {% if not cash_session_open %}disabled title="Aucune session de caisse ouverte"{% endif %}>
+                                    <i class="bi bi-cash-coin"></i> Encaisser un paiement
+                                </button>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="amount_received" value="">
+                                    <button type="submit" class="btn btn-success" {% if not cash_session_open %}disabled title="Aucune session de caisse ouverte"{% endif %}>
+                                        <i class="bi bi-cash-coin"></i> Encaisser la totalité
+                                    </button>
+                                </form>
+                            {% endif %}
                         {% endif %}
                     {% endif %}
                     <a href="{{ url_for('orders.list_orders') }}" class="btn btn-outline-secondary">
@@ -117,6 +122,52 @@
                     </div>
                 </div>
             </div>
+
+            {% if order.order_type == 'customer_order' %}
+            <!-- Paiements -->
+            <div class="card mb-4" id="paiements">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-credit-card me-2 text-primary"></i>Suivi des paiements
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% set payment_status = order.payment_status or 'pending' %}
+                    {% set payment_badge = 'bg-secondary' %}
+                    {% set payment_label = 'En attente' %}
+                    {% if payment_status == 'paid' %}
+                        {% set payment_badge = 'bg-success' %}
+                        {% set payment_label = 'Payé intégralement' %}
+                    {% elif payment_status == 'partial' %}
+                        {% set payment_badge = 'bg-warning text-dark' %}
+                        {% set payment_label = 'Partiellement payé' %}
+                    {% endif %}
+                    <div class="row gy-3">
+                        <div class="col-md-3">
+                            <small class="text-muted text-uppercase">Montant total</small>
+                            <div class="fs-5 fw-semibold text-success">{{ "%.2f"|format(order.total_amount|float) }} DA</div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted text-uppercase">Montant versé</small>
+                            <div class="fs-5 fw-semibold">{{ "%.2f"|format(order.amount_paid_value) }} DA</div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted text-uppercase">Solde restant</small>
+                            <div class="fs-5 fw-semibold {% if order.balance_due_value > 0 %}text-danger{% else %}text-success{% endif %}">
+                                {{ "%.2f"|format(order.balance_due_value) }} DA
+                            </div>
+                        </div>
+                        <div class="col-md-3 d-flex flex-column">
+                            <small class="text-muted text-uppercase">Statut paiement</small>
+                            <span class="badge {{ payment_badge }} align-self-start">{{ payment_label }}</span>
+                            {% if order.payment_paid_at %}
+                                <small class="text-muted mt-1">Payé le {{ order.payment_paid_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Articles commandés -->
             <div class="card mb-4">
@@ -304,4 +355,96 @@
     </div>
 </div>
 
+{% if order.order_type == 'customer_order' %}
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentModalLabel">
+                    <i class="bi bi-cash-stack me-2 text-success"></i>Encaisser un paiement
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label for="modal-amount-input" class="form-label fw-semibold">Montant reçu</label>
+                    <input type="number"
+                           class="form-control"
+                           id="modal-amount-input"
+                           name="amount_received"
+                           step="0.01"
+                           min="0"
+                           placeholder="0.00"
+                           required>
+                </div>
+                <div class="alert alert-secondary">
+                    <div>Total commande : <strong>{{ "%.2f"|format(order.total_amount|float) }} DA</strong></div>
+                    <div>Déjà encaissé : <strong>{{ "%.2f"|format(order.amount_paid_value) }} DA</strong></div>
+                    <div>Solde actuel : <strong id="modal-balance-value" data-balance="{{ "%.2f"|format(order.balance_due_value) }}">{{ "%.2f"|format(order.balance_due_value) }} DA</strong></div>
+                    <hr class="my-2">
+                    <div>Solde après paiement : <strong id="modal-balance-after">{{ "%.2f"|format(order.balance_due_value) }} DA</strong></div>
+                    <div>Monnaie à rendre : <strong id="modal-change-display">0.00 DA</strong></div>
+                </div>
+                {% if not cash_session_open %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Aucune session de caisse ouverte. Ouvrez une caisse pour enregistrer le paiement.
+                    </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="submit" class="btn btn-success" {% if not cash_session_open %}disabled{% endif %}>
+                    Confirmer le paiement
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if order.order_type == 'customer_order' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modalElement = document.getElementById('paymentModal');
+    if (!modalElement) {
+        return;
+    }
+    const amountInput = document.getElementById('modal-amount-input');
+    const balanceElement = document.getElementById('modal-balance-value');
+    const balanceAfterElement = document.getElementById('modal-balance-after');
+    const changeDisplay = document.getElementById('modal-change-display');
+    const outstanding = parseFloat(balanceElement.dataset.balance || '0') || 0;
+
+    function refreshPaymentDisplays(amount) {
+        const numericAmount = parseFloat(amount || '0') || 0;
+        const balanceAfter = Math.max(outstanding - numericAmount, 0);
+        const change = numericAmount > outstanding ? numericAmount - outstanding : 0;
+        balanceAfterElement.textContent = balanceAfter.toFixed(2) + ' DA';
+        changeDisplay.textContent = change.toFixed(2) + ' DA';
+    }
+
+    modalElement.addEventListener('shown.bs.modal', function() {
+        amountInput.value = outstanding.toFixed(2);
+        refreshPaymentDisplays(amountInput.value);
+        amountInput.select();
+    });
+
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        amountInput.value = outstanding.toFixed(2);
+        refreshPaymentDisplays(amountInput.value);
+    });
+
+    amountInput.addEventListener('input', function() {
+        refreshPaymentDisplays(this.value);
+    });
+    refreshPaymentDisplays(amountInput.value);
+});
+</script>
+{% endif %}
 {% endblock %}

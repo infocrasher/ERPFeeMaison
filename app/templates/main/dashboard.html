@@ -494,7 +494,7 @@
 
     .concept-1 { background: linear-gradient(135deg, #667eea, #764ba2); }
     .concept-2 { background: linear-gradient(135deg, #f093fb, #f5576c); }
-    .concept-3 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+    .concept-main-icon { background: linear-gradient(135deg, #4facfe, #00f2fe); }
 
     .concept-title {
         color: white;
@@ -675,7 +675,7 @@
             <div class="stat-card success slide-in-left" style="animation-delay: 0.1s;">
                 <div class="stat-header">
                     <div>
-                        <div class="stat-value" id="caJour">284 700 DA</div>
+                        <div class="stat-value" id="caJour">{{ "{:,.0f}".format(daily_revenue|default(0)) }} DA</div>
                         <div class="stat-label">Chiffre d'Affaires</div>
                         <div class="stat-trend trend-up" id="caTrend">+12.5% vs hier</div>
                     </div>
@@ -701,7 +701,7 @@
             <div class="stat-card danger slide-in-right" style="animation-delay: 0.3s;">
                 <div class="stat-header">
                     <div>
-                        <div class="stat-value" id="alertesStock">7</div>
+                        <div class="stat-value" id="alertesStock">{{ stock_alerts|default(0) }}</div>
                         <div class="stat-label">Alertes stock</div>
                         <div class="stat-trend" id="alertesTrend">Farine, Beurre, Œufs...</div>
                     </div>
@@ -857,18 +857,17 @@
                     </a>
                 </div>
 
-                <div class="concept-card" onclick="window.location.href='{{ url_for('main.dashboard_concept3') }}'">
-                    <div class="concept-icon concept-3">
+                <div class="concept-card concept-main" onclick="window.location.href='{{ url_for('dashboard.unified_dashboard') }}'">
+                    <div class="concept-icon concept-main-icon">
                         <i class="fas fa-tachometer-alt"></i>
                     </div>
-                    <h3 class="concept-title">Concept 3 - Vue d'Ensemble</h3>
+                    <h3 class="concept-title">Dashboard Central</h3>
                     <p class="concept-desc">
-                        Dashboard de synthèse avec KPI globaux, navigation rapide 
-                        et accès direct aux modules principaux de l'ERP.
+                        Vue unifiée : ventes, production, stock, achats et KPI analytiques dans une seule interface Tailwind.
                     </p>
-                    <a href="{{ url_for('main.dashboard_concept3') }}" class="btn-concept">
+                    <a href="{{ url_for('dashboard.unified_dashboard') }}" class="btn-concept">
                         <i class="fas fa-arrow-right"></i>
-                        Explorer
+                        Ouvrir
                     </a>
                 </div>
             </div>

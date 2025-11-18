@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, current_app
 from flask_login import login_required, current_user
 from extensions import db
-from models import Product, Order, OrderItem, DeliveryDebt
-from datetime import datetime
+from models import Product, Order, OrderItem, DeliveryDebt, Category
+from datetime import datetime, timedelta
 from decimal import Decimal
+from sqlalchemy import func
 from app.sales.models import CashRegisterSession, CashMovement
 from app.employees.models import Employee
 from decorators import require_open_cash_session, require_closed_cash_session
@@ -19,71 +20,119 @@ def get_open_cash_session():
 @require_open_cash_session
 def pos_interface():
     """Interface POS (Point of Sale) pour vente directe"""
-    # Récupérer tous les produits finis disponibles en stock comptoir
+    # Récupérer les catégories visibles au POV
+    pos_categories = Category.query.filter(Category.show_in_pos == True).order_by(Category.name).all()
+    
+    # Récupérer tous les produits finis (pas consommables) avec stock comptoir > 0
+    # et appartenant à une catégorie visible au POV
+    category_ids = [c.id for c in pos_categories]
     products = Product.query.filter(
-        Product.product_type == 'finished',
-        Product.stock_comptoir > 0
+        Product.product_type == 'finished',  # Exclusion automatique des consommables
+        Product.stock_comptoir > 0,
+        Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
     
     # Préparer les données pour le JavaScript
     products_js = []
     for product in products:
-        # Déterminer la catégorie
-        category = 'autres'
+        # Utiliser le nom réel de la catégorie (slugifié pour le frontend)
+        category_slug = 'autres'
         if product.category:
-            category_name = product.category.name.lower()
-            if 'gateau' in category_name or 'gâteau' in category_name:
-                category = 'gateaux'
-            elif 'msamen' in category_name:
-                category = 'msamen'
-            elif 'boisson' in category_name or 'thé' in category_name or 'café' in category_name:
-                category = 'boissons'
+            # Créer un slug à partir du nom de la catégorie
+            category_slug = product.category.name.lower().replace(' ', '-').replace('é', 'e').replace('è', 'e')
         
         products_js.append({
             'id': product.id,
             'name': product.name,
             'price': float(product.price or 0),
-            'category': category,
+            'category': category_slug,
+            'category_id': product.category_id,
             'stock': int(product.stock_comptoir or 0)
         })
     
+    # Préparer les catégories pour le frontend
+    categories_js = [{'id': c.id, 'name': c.name, 'slug': c.name.lower().replace(' ', '-').replace('é', 'e').replace('è', 'e')} 
+                     for c in pos_categories]
+    
     return render_template('sales/pos_interface.html', 
                          products_js=products_js,
+                         categories_js=categories_js,
                          now=datetime.now())
 
 @sales.route('/api/products')
 @login_required
 def get_products():
-    """API pour récupérer les produits disponibles"""
+    """API pour récupérer les produits disponibles avec leurs catégories"""
+    # Récupérer les catégories visibles au POV
+    pos_categories = Category.query.filter(Category.show_in_pos == True).order_by(Category.name).all()
+    category_ids = [c.id for c in pos_categories]
+    
+    # Récupérer les produits finis (pas consommables) avec stock > 0
     products = Product.query.filter(
-        Product.product_type == 'finished',
-        Product.stock_comptoir > 0
+        Product.product_type == 'finished',  # Exclusion automatique des consommables
+        Product.stock_comptoir > 0,
+        Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
     
     products_data = []
     for product in products:
-        # Déterminer la catégorie
-        category = 'autres'
+        # Utiliser le slug de la catégorie réelle
+        category_slug = 'autres'
         if product.category:
-            category_name = product.category.name.lower()
-            if 'gateau' in category_name or 'gâteau' in category_name:
-                category = 'gateaux'
-            elif 'msamen' in category_name:
-                category = 'msamen'
-            elif 'boisson' in category_name or 'thé' in category_name or 'café' in category_name:
-                category = 'boissons'
+            category_slug = product.category.name.lower().replace(' ', '-').replace('é', 'e').replace('è', 'e')
         
         products_data.append({
             'id': product.id,
             'name': product.name,
             'price': float(product.price or 0),
             'stock': int(product.stock_comptoir or 0),
-            'category': category,
+            'category': category_slug,
+            'category_id': product.category_id,
             'unit': product.unit,
             'image_filename': product.image_filename
         })
     
-    return jsonify(products_data)
+    # Inclure aussi les catégories dans la réponse
+    categories_data = [{'id': c.id, 'name': c.name, 'slug': c.name.lower().replace(' ', '-').replace('é', 'e').replace('è', 'e')} 
+                       for c in pos_categories]
+    
+    return jsonify({
+        'products': products_data,
+        'categories': categories_data
+    })
+
+@sales.route('/api/favorites')
+@login_required
+def get_favorite_products():
+    """API pour récupérer les produits favoris (les plus vendus sur 30 jours)"""
+    # Date limite : 30 jours en arrière
+    date_limit = datetime.utcnow() - timedelta(days=30)
+    
+    # Récupérer les catégories visibles au POV
+    pos_categories = Category.query.filter(Category.show_in_pos == True).all()
+    category_ids = [c.id for c in pos_categories]
+    
+    # Requête pour obtenir les produits les plus vendus (top 20)
+    top_products = db.session.query(
+        OrderItem.product_id,
+        func.sum(OrderItem.quantity).label('total_sold')
+    ).join(Order).filter(
+        Order.order_type == 'in_store',
+        Order.created_at >= date_limit,
+        OrderItem.product_id.in_(
+            db.session.query(Product.id).filter(
+                Product.product_type == 'finished',
+                Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
+            )
+        )
+    ).group_by(OrderItem.product_id).order_by(func.sum(OrderItem.quantity).desc()).limit(20).all()
+    
+    # Extraire les IDs des produits favoris
+    favorite_product_ids = [row[0] for row in top_products]
+    
+    return jsonify({
+        'favorite_product_ids': favorite_product_ids
+    })
 
 @sales.route('/api/complete-sale', methods=['POST'])
 @login_required
@@ -97,11 +146,18 @@ def complete_sale():
         if not items:
             return jsonify({'success': False, 'message': 'Aucun article dans la vente'}), 400
         
+        # Récupérer les informations client si disponibles
+        customer_name = data.get('customer_name', 'Vente directe')
+        customer_phone = data.get('customer_phone')
+        customer_id = data.get('customer_id')
+        
         # Créer la commande de type 'in_store'
         order = Order(
             user_id=current_user.id,
             order_type='in_store',
-            customer_name='Vente directe',
+            customer_name=customer_name,
+            customer_phone=customer_phone,
+            customer_id=customer_id,
             due_date=datetime.utcnow(),
             status='completed',
             total_amount=0.0
@@ -143,21 +199,48 @@ def complete_sale():
             value_decrement = quantity * pmp
             product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_decrement
             
+            # DÉCRÉMENTER LES CONSOMMABLES selon la catégorie
+            if product.category:
+                from app.consumables.models import ConsumableCategory
+                consumable_category = ConsumableCategory.query.filter(
+                    ConsumableCategory.product_category_id == product.category.id,
+                    ConsumableCategory.is_active == True
+                ).first()
+                
+                if consumable_category:
+                    # Calculer les consommables nécessaires
+                    consumables_needed = consumable_category.calculate_consumables_needed(int(quantity))
+                    
+                    for consumable_product, qty in consumables_needed:
+                        if consumable_product:
+                            # Décrémenter le stock consommables
+                            consumable_product.update_stock_by_location('stock_consommables', -float(qty))
+                            print(f"Décrémentation consommable (PDV): {consumable_product.name} - {qty} {consumable_product.unit}")
+            
             total_amount += quantity * unit_price
             
             db.session.add(order_item)
             db.session.add(product)
         
         order.total_amount = total_amount
+        amount_received = Decimal(str(data.get('amount_received') or total_amount)).quantize(Decimal('0.01'))
+        if amount_received < 0:
+            amount_received = Decimal('0.00')
+        if amount_received < total_amount:
+            order.amount_paid = amount_received.quantize(Decimal('0.01'))
+        else:
+            order.amount_paid = total_amount
+        order.update_payment_status()
         
         # Créer le mouvement de caisse pour la vente
         cash_session = get_open_cash_session()
         if cash_session:
+            amount_for_cash = amount_received if amount_received <= total_amount else total_amount
             cash_movement = CashMovement(
                 session_id=cash_session.id,
                 created_at=datetime.utcnow(),
                 type='entrée',
-                amount=total_amount,
+                amount=float(amount_for_cash),
                 reason=f'Vente commande #{order.id}',
                 notes=f'Commande client: {", ".join([f"{item.quantity}x {item.product.name}" for item in order.items])}',
                 employee_id=current_user.id
@@ -165,6 +248,20 @@ def complete_sale():
             db.session.add(cash_movement)
         
         db.session.commit()
+        
+        # Intégration POS : Impression ticket + ouverture tiroir pour vente complète
+        try:
+            from app.services.printer_service import get_printer_service
+            printer_service = get_printer_service()
+            
+            # Imprimer le ticket et ouvrir le tiroir
+            printer_service.print_ticket(order.id, priority=1)
+            printer_service.open_cash_drawer(priority=1)
+            
+            print(f"🖨️ Impression ticket et ouverture tiroir déclenchées pour vente #{order.id}")
+        except Exception as e:
+            print(f"⚠️ Erreur intégration POS: {e}")
+            # Ne pas faire échouer la vente si l'impression échoue
         
         return jsonify({
             'success': True, 
@@ -280,7 +377,44 @@ def process_sale():
             print(f"Erreur intégration comptable: {e}")
             # On continue même si l'intégration comptable échoue
         
+        # Créer une commande temporaire pour l'impression du ticket
+        temp_order = Order(
+            user_id=current_user.id,
+            order_type='pos_direct',
+            customer_name='Vente POS',
+            due_date=datetime.utcnow(),
+            status='completed',
+            total_amount=total_amount
+        )
+        db.session.add(temp_order)
+        db.session.flush()  # Pour obtenir l'ID
+        
+        # Ajouter les articles à la commande temporaire
+        for item in items:
+            product = Product.query.get(item['id'])
+            order_item = OrderItem(
+                order_id=temp_order.id,
+                product_id=item['id'],
+                quantity=item['quantity'],
+                unit_price=item['price']
+            )
+            db.session.add(order_item)
+        
         db.session.commit()
+        
+        # Intégration POS : Impression ticket + ouverture tiroir pour vente POS
+        try:
+            from app.services.printer_service import get_printer_service
+            printer_service = get_printer_service()
+            
+            # Imprimer le ticket et ouvrir le tiroir
+            printer_service.print_ticket(temp_order.id, priority=1)
+            printer_service.open_cash_drawer(priority=1)
+            
+            print(f"🖨️ Impression ticket et ouverture tiroir déclenchées pour vente POS #{temp_order.id}")
+        except Exception as e:
+            print(f"⚠️ Erreur intégration POS: {e}")
+            # Ne pas faire échouer la vente si l'impression échoue
         
         # Calculer le total
         total = sum(item['price'] * item['quantity'] for item in items)
@@ -303,8 +437,27 @@ def process_sale():
 @login_required
 @require_closed_cash_session
 def open_cash_register():
+    last_closed_session = (
+        CashRegisterSession.query
+        .filter(CashRegisterSession.is_open == False)
+        .order_by(CashRegisterSession.closed_at.desc())
+        .first()
+    )
+
+    default_initial_amount = 0.0
+    if last_closed_session:
+        if last_closed_session.closing_amount is not None:
+            default_initial_amount = float(last_closed_session.closing_amount)
+        elif last_closed_session.initial_amount is not None:
+            default_initial_amount = float(last_closed_session.initial_amount)
+
     if request.method == 'POST':
-        initial_amount = float(request.form.get('initial_amount', 0))
+        raw_amount = request.form.get('initial_amount', '').strip()
+        try:
+            initial_amount = float(raw_amount) if raw_amount else default_initial_amount
+        except ValueError:
+            initial_amount = default_initial_amount
+
         session = CashRegisterSession(
             opened_at=datetime.utcnow(),
             initial_amount=initial_amount,
@@ -315,7 +468,8 @@ def open_cash_register():
         db.session.commit()
         flash('Caisse ouverte avec succès.', 'success')
         return redirect(url_for('sales.list_cash_sessions'))
-    return render_template('sales/cash_open.html')
+
+    return render_template('sales/cash_open.html', default_initial_amount=default_initial_amount)
 
 @sales.route('/cash/close', methods=['GET', 'POST'])
 @login_required
@@ -522,6 +676,25 @@ def cashout():
             # On continue même si l'intégration comptable échoue
         
         db.session.commit()
+        
+        # Intégration POS : Impression reçu + ouverture tiroir pour cashout
+        try:
+            from app.services.printer_service import get_printer_service
+            printer_service = get_printer_service()
+            
+            # Imprimer le reçu de cashout et ouvrir le tiroir
+            printer_service.print_cashout_receipt(
+                amount=amount,
+                notes=notes,
+                employee_name=current_user.username,
+                priority=1
+            )
+            printer_service.open_cash_drawer(priority=1)
+            
+            print(f"🖨️ Impression reçu et ouverture tiroir déclenchées pour cashout de {amount:.2f} DA")
+        except Exception as e:
+            print(f"⚠️ Erreur intégration POS: {e}")
+            # Ne pas faire échouer le cashout si l'impression échoue
         
         flash(f'Dépôt de {amount:.2f} DZD effectué avec succès vers la banque.', 'success')
         return redirect(url_for('sales.cash_status'))

@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Fée Maison{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="bi bi-credit-card me-2"></i>{{ title }}
+                </h2>
+                <div class="btn-group">
+                    <a href="{{ url_for('employees.calculate_payroll') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-calculator me-1"></i>Calculer Paie
+                    </a>
+                    <a href="{{ url_for('employees.payroll_dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-list-ul me-1"></i>Dashboard Paie
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Sélecteur de période -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-calendar3 me-2"></i>Sélection de la période
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">Mois</label>
+                            <select name="month" class="form-select">
+                                <option value="1" {% if selected_month == 1 %}selected{% endif %}>Janvier</option>
+                                <option value="2" {% if selected_month == 2 %}selected{% endif %}>Février</option>
+                                <option value="3" {% if selected_month == 3 %}selected{% endif %}>Mars</option>
+                                <option value="4" {% if selected_month == 4 %}selected{% endif %}>Avril</option>
+                                <option value="5" {% if selected_month == 5 %}selected{% endif %}>Mai</option>
+                                <option value="6" {% if selected_month == 6 %}selected{% endif %}>Juin</option>
+                                <option value="7" {% if selected_month == 7 %}selected{% endif %}>Juillet</option>
+                                <option value="8" {% if selected_month == 8 %}selected{% endif %}>Août</option>
+                                <option value="9" {% if selected_month == 9 %}selected{% endif %}>Septembre</option>
+                                <option value="10" {% if selected_month == 10 %}selected{% endif %}>Octobre</option>
+                                <option value="11" {% if selected_month == 11 %}selected{% endif %}>Novembre</option>
+                                <option value="12" {% if selected_month == 12 %}selected{% endif %}>Décembre</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Année</label>
+                            <select name="year" class="form-select">
+                                {% for year_option in range(2023, 2030) %}
+                                    <option value="{{ year_option }}" {% if selected_year == year_option %}selected{% endif %}>{{ year_option }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>Afficher
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted">
+                                <small>
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Période sélectionnée : <strong>{{ '%02d' % selected_month }}/{{ selected_year }}</strong>
+                                </small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if payrolls %}
+                <!-- Résumé des totaux -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-primary">
+                            <div class="card-body text-center">
+                                <h5 class="card-title text-primary">Total Brut</h5>
+                                <h3 class="text-primary">{{ "{:,.2f}".format(total_gross) }} DZD</h3>
+                                <small class="text-muted">{{ payrolls|length }} employé(s)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-success">
+                            <div class="card-body text-center">
+                                <h5 class="card-title text-success">Déjà Payés</h5>
+                                <h3 class="text-success">{{ "{:,.2f}".format(total_paid) }} DZD</h3>
+                                <small class="text-muted">{{ paid_payrolls|length }} employé(s)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-warning">
+                            <div class="card-body text-center">
+                                <h5 class="card-title text-warning">À Payer</h5>
+                                <h3 class="text-warning">{{ "{:,.2f}".format(total_unpaid) }} DZD</h3>
+                                <small class="text-muted">{{ unpaid_payrolls|length }} employé(s)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-info">
+                            <div class="card-body text-center">
+                                <h5 class="card-title text-info">Total Net</h5>
+                                <h3 class="text-info">{{ "{:,.2f}".format(total_net) }} DZD</h3>
+                                <small class="text-muted">Période complète</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tableau des salaires -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people me-2"></i>Salaires à Payer
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Employé</th>
+                                        <th class="text-center">Période</th>
+                                        <th class="text-center">Jours Travaillés</th>
+                                        <th class="text-end">Salaire Brut</th>
+                                        <th class="text-end">Avance</th>
+                                        <th class="text-end">Prime</th>
+                                        <th class="text-end">Salaire Net</th>
+                                        <th class="text-center">Statut</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payroll in payrolls %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                    <span class="text-white fw-bold">{{ payroll.employee.name[0].upper() }}</span>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0">{{ payroll.employee.name }}</h6>
+                                                    <small class="text-muted">{{ payroll.employee.get_role_display() }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary">{{ '%02d' % payroll.period_month }}/{{ payroll.period_year }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info">{{ payroll.work_hours.regular_hours + payroll.work_hours.overtime_hours if payroll.work_hours else 0 }}h</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <strong>{{ "{:,.2f}".format(payroll.gross_salary) }} DZD</strong>
+                                        </td>
+                                        <td class="text-end">
+                                            {% if payroll.work_hours %}
+                                                <span class="text-warning">{{ "{:,.2f}".format(payroll.work_hours.get_total_deductions()) }} DZD</span>
+                                            {% else %}
+                                                <span class="text-muted">0,00 DZD</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if payroll.work_hours %}
+                                                <span class="text-success">+{{ "{:,.2f}".format(payroll.work_hours.get_total_bonuses()) }} DZD</span>
+                                            {% else %}
+                                                <span class="text-muted">0,00 DZD</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <strong class="text-success">{{ "{:,.2f}".format(payroll.net_salary) }} DZD</strong>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if payroll.is_paid %}
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-check-circle me-1"></i>Payé
+                                                    {% if payroll.paid_at %}
+                                                        <br><small>{{ payroll.paid_at.strftime('%d/%m/%Y') }}</small>
+                                                    {% endif %}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning">
+                                                    <i class="bi bi-clock me-1"></i>À payer
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if not payroll.is_paid %}
+                                                <form method="POST" class="d-inline">
+                                                    <input type="hidden" name="payroll_id" value="{{ payroll.id }}">
+                                                    <button type="submit" class="btn btn-success btn-sm" 
+                                                            onclick="return confirm('Confirmer le paiement par virement bancaire de {{ '%.2f' % payroll.net_salary }} DZD pour {{ payroll.employee.name }} ?')">
+                                                        <i class="bi bi-bank me-1"></i>Payer par Virement
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <span class="text-muted">
+                                                    <i class="bi bi-check-circle me-1"></i>Payé par virement
+                                                    {% if payroll.paid_at %}
+                                                        <br><small>le {{ payroll.paid_at.strftime('%d/%m/%Y à %H:%M') }}</small>
+                                                    {% endif %}
+                                                    {% if payroll.paid_by_user %}
+                                                        <br><small>par {{ payroll.paid_by_user.username }}</small>
+                                                    {% endif %}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Informations complémentaires -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>Informations
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li><i class="bi bi-check-circle text-success me-2"></i>Tous les salaires validés de la période sélectionnée</li>
+                                    <li><i class="bi bi-calendar text-secondary me-2"></i>Filtrage par mois et année</li>
+                                    <li><i class="bi bi-bank text-primary me-2"></i>Paiement uniquement par virement bancaire</li>
+                                    <li><i class="bi bi-journal-text text-info me-2"></i>Écritures comptables automatiques</li>
+                                    <li><i class="bi bi-calculator text-warning me-2"></i>Calcul basé sur le pointage</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-graph-up me-2"></i>Répartition des Coûts
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                         <div class="row text-center">
+                                             <div class="col-6">
+                                                 <div class="border-end">
+                                                     <h5 class="text-success mb-1">{{ "{:,.0f}".format(total_net) }}</h5>
+                                                     <small class="text-muted">Salaire Net</small>
+                                                 </div>
+                                             </div>
+                                             <div class="col-6">
+                                                 <h5 class="text-primary mb-1">{{ payrolls|length }}</h5>
+                                                 <small class="text-muted">Employés</small>
+                                             </div>
+                                         </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            {% else %}
+                <!-- Aucun salaire pour la période -->
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <h4 class="mt-3 text-muted">Aucun salaire pour {{ '%02d' % selected_month }}/{{ selected_year }}</h4>
+                    <p class="text-muted">Aucun calcul de paie validé trouvé pour cette période.</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <a href="{{ url_for('employees.calculate_payroll') }}" class="btn btn-primary">
+                            <i class="bi bi-calculator me-2"></i>Calculer une Paie
+                        </a>
+                        <a href="{{ url_for('employees.salaries_dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Période Courante
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.form-select-sm {
+    min-width: 120px;
+}
+</style>
+{% endblock %}

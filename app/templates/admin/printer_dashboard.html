@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-printer me-2"></i>{{ title }}</h2>
+                <button class="btn btn-outline-primary" onclick="refreshStatus()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Actualiser
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statut du Service -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Statut du Service</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 mb-1">
+                                    <span id="status-enabled" class="badge {% if status.enabled %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {% if status.enabled %}Activé{% else %}Désactivé{% endif %}
+                                    </span>
+                                </div>
+                                <small class="text-muted">Service</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 mb-1">
+                                    <span id="status-running" class="badge {% if status.running %}bg-success{% else %}bg-danger{% endif %}">
+                                        {% if status.running %}En cours{% else %}Arrêté{% endif %}
+                                    </span>
+                                </div>
+                                <small class="text-muted">Thread Worker</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 mb-1">
+                                    <span id="status-connected" class="badge {% if status.connected %}bg-success{% else %}bg-warning{% endif %}">
+                                        {% if status.connected %}Connectée{% else %}Déconnectée{% endif %}
+                                    </span>
+                                </div>
+                                <small class="text-muted">Imprimante</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 mb-1" id="queue-size">{{ status.queue_size }}</div>
+                                <small class="text-muted">Jobs en attente</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Vendor ID:</strong> {{ status.config.vendor_id }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Product ID:</strong> {{ status.config.product_id }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Timeout:</strong> {{ status.config.timeout }}ms
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tests et Actions -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-play-circle me-2"></i>Tests</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="testPrint()">
+                            <i class="bi bi-printer me-2"></i>Test d'Impression
+                        </button>
+                        <button class="btn btn-warning" onclick="testDrawer()">
+                            <i class="bi bi-cash-coin me-2"></i>Test Tiroir-Caisse
+                        </button>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="order-id-test" placeholder="ID Commande" min="1">
+                            <button class="btn btn-info" onclick="testTicket()">
+                                <i class="bi bi-receipt me-2"></i>Test Ticket
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="restartService()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Redémarrer Service
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="viewLogs()">
+                            <i class="bi bi-journal-text me-2"></i>Voir les Logs
+                        </button>
+                        <a href="{{ url_for('orders.list_orders') }}" class="btn btn-outline-info">
+                            <i class="bi bi-list me-2"></i>Liste des Commandes
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs en temps réel -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-terminal me-2"></i>Messages</h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearMessages()">
+                        <i class="bi bi-trash me-1"></i>Effacer
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="messages" class="bg-light p-3 rounded" style="height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em;">
+                        <div class="text-muted">Prêt pour les tests...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+let messageCount = 0;
+
+function addMessage(message, type = 'info') {
+    const messagesDiv = document.getElementById('messages');
+    const timestamp = new Date().toLocaleTimeString();
+    const colors = {
+        'success': 'text-success',
+        'error': 'text-danger',
+        'warning': 'text-warning',
+        'info': 'text-info'
+    };
+    
+    const messageElement = document.createElement('div');
+    messageElement.className = colors[type] || 'text-dark';
+    messageElement.innerHTML = `[${timestamp}] ${message}`;
+    
+    messagesDiv.appendChild(messageElement);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    messageCount++;
+    if (messageCount > 50) {
+        messagesDiv.removeChild(messagesDiv.firstChild);
+        messageCount--;
+    }
+}
+
+function clearMessages() {
+    document.getElementById('messages').innerHTML = '<div class="text-muted">Messages effacés...</div>';
+    messageCount = 0;
+}
+
+function refreshStatus() {
+    addMessage('🔄 Actualisation du statut...', 'info');
+    
+    fetch('/admin/printer/status')
+        .then(response => response.json())
+        .then(data => {
+            // Mettre à jour les badges de statut
+            updateStatusBadge('status-enabled', data.enabled, 'Activé', 'Désactivé');
+            updateStatusBadge('status-running', data.running, 'En cours', 'Arrêté');
+            updateStatusBadge('status-connected', data.connected, 'Connectée', 'Déconnectée');
+            
+            // Mettre à jour la taille de la queue
+            document.getElementById('queue-size').textContent = data.queue_size;
+            
+            addMessage('✅ Statut actualisé', 'success');
+        })
+        .catch(error => {
+            addMessage('❌ Erreur actualisation: ' + error.message, 'error');
+        });
+}
+
+function updateStatusBadge(elementId, condition, trueText, falseText) {
+    const element = document.getElementById(elementId);
+    element.textContent = condition ? trueText : falseText;
+    element.className = condition ? 'badge bg-success' : 'badge bg-danger';
+}
+
+function testPrint() {
+    addMessage('🖨️ Envoi test d\'impression...', 'info');
+    
+    fetch('/admin/printer/test/print', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                addMessage('✅ ' + data.message, 'success');
+            } else {
+                addMessage('❌ ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            addMessage('❌ Erreur test impression: ' + error.message, 'error');
+        });
+}
+
+function testDrawer() {
+    addMessage('💰 Envoi commande ouverture tiroir...', 'info');
+    
+    fetch('/admin/printer/test/drawer', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                addMessage('✅ ' + data.message, 'success');
+            } else {
+                addMessage('❌ ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            addMessage('❌ Erreur test tiroir: ' + error.message, 'error');
+        });
+}
+
+function testTicket() {
+    const orderId = document.getElementById('order-id-test').value;
+    
+    if (!orderId || orderId < 1) {
+        addMessage('⚠️ Veuillez saisir un ID de commande valide', 'warning');
+        return;
+    }
+    
+    addMessage(`🎫 Envoi impression ticket commande #${orderId}...`, 'info');
+    
+    fetch(`/admin/printer/test/ticket/${orderId}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                addMessage('✅ ' + data.message, 'success');
+            } else {
+                addMessage('❌ ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            addMessage('❌ Erreur test ticket: ' + error.message, 'error');
+        });
+}
+
+function restartService() {
+    if (!confirm('Êtes-vous sûr de vouloir redémarrer le service d\'impression ?')) {
+        return;
+    }
+    
+    addMessage('🔄 Redémarrage du service...', 'info');
+    
+    fetch('/admin/printer/restart', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                addMessage('✅ ' + data.message, 'success');
+                setTimeout(refreshStatus, 1000);
+            } else {
+                addMessage('❌ ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            addMessage('❌ Erreur redémarrage: ' + error.message, 'error');
+        });
+}
+
+function viewLogs() {
+    addMessage('📋 Consultation des logs système...', 'info');
+    // Ici on pourrait ouvrir une modal ou rediriger vers une page de logs
+}
+
+// Auto-refresh du statut toutes les 30 secondes
+setInterval(refreshStatus, 30000);
+
+// Message de bienvenue
+document.addEventListener('DOMContentLoaded', function() {
+    addMessage('🖨️ Dashboard imprimante chargé', 'success');
+    {% if not status.enabled %}
+    addMessage('⚠️ Service d\'impression désactivé dans la configuration', 'warning');
+    {% endif %}
+    {% if not status.connected %}
+    addMessage('⚠️ Imprimante non connectée - Vérifiez le câble USB', 'warning');
+    {% endif %}
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+

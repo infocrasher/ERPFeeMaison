@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Nouvelle Catégorie de Consommables{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-tag me-2"></i>Nouvelle Catégorie</h2>
+                <a href="{{ url_for('consumables.categories_index') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Retour
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Informations de la catégorie</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="mb-3">
+                                    {{ form.name.label(class="form-label") }}
+                                    {{ form.name(class="form-control") }}
+                                    {% if form.name.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.name.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.description.label(class="form-label") }}
+                                    {{ form.description(class="form-control", rows="3") }}
+                                    {% if form.description.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.description.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.product_category_id.label(class="form-label") }}
+                                    {{ form.product_category_id(class="form-select") }}
+                                    <div class="form-text">La catégorie de produits concernée par cette règle de consommables</div>
+                                    {% if form.product_category_id.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.product_category_id.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.is_active.label(class="form-label") }}
+                                    {{ form.is_active(class="form-select") }}
+                                    {% if form.is_active.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.is_active.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-grid">
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Comment ça fonctionne ?</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6><i class="bi bi-1-circle me-1"></i>Créer la catégorie</h6>
+                                <p class="text-muted small mb-2">Définissez un nom et associez-là à une catégorie de produits.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="bi bi-2-circle me-1"></i>Configurer les plages</h6>
+                                <p class="text-muted small mb-2">Après création, vous pourrez définir les plages de quantités (ex: 1-8, 9-12, etc.) et les consommables associés.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="bi bi-3-circle me-1"></i>Testez le système</h6>
+                                <p class="text-muted small mb-2">Le système calculera automatiquement les consommables à décrémenter selon les quantités vendues.</p>
+                            </div>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Exemple :</strong> Pour la catégorie "Gâteaux individuels", créez des plages comme :
+                                <ul class="mb-0 mt-2">
+                                    <li>1-8 pièces → Boîte 18</li>
+                                    <li>9-12 pièces → Boîte 36</li>
+                                    <li>21+ pièces → Plateau</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -10,6 +10,7 @@
 7. [Prompts Utiles](#7-prompts-utiles)
 8. [État Actuel du Projet](#8-état-actuel-du-projet)
 9. [Résolution Problème Connexion VPS](#9-résolution-problème-connexion-vps)
+10. [Documentation Organisée](#10-documentation-organisée)
 
 ---
 
@@ -32,6 +33,14 @@ Le stock est géré sur 4 emplacements distincts :
 - **Local (Labo B)** : Stock de production
 - **Consommables** : Matériel et emballages
 
+### 👥 Rôles Utilisateurs
+| Rôle | Utilisateur | Accès | Permissions |
+|------|-------------|-------|-------------|
+| **Admin** | Sofiane | Accès total | Tous les modules, configuration système |
+| **Gérante** | Amel | Gestion complète | Tous les modules + caisse, prix, recettes |
+| **Vendeuse** | Yasmine | Opérationnel | Commandes, caisse, dashboards shop/prod |
+| **Production** | Rayan | Lecture seule | Dashboard production uniquement |
+
 ---
 
 ## 2. Modules Principaux
@@ -41,6 +50,7 @@ Le stock est géré sur 4 emplacements distincts :
 - **Fichiers** : `app/stock/`, `models.py` (Product)
 - **Logique** : Stock séparé par emplacement, valeur calculée, PMP mis à jour à chaque achat
 - **Dashboards** : Vue par emplacement, alertes, mouvements
+- **Transferts** : Magasin ↔ Local (formulaire dédié, à vérifier fonctionnement)
 
 ### ✅ **ACHATS** (Terminé)
 - **Fonctionnalités** : Incrémentation stock, calcul PMP, gestion fournisseurs
@@ -64,6 +74,7 @@ Le stock est géré sur 4 emplacements distincts :
 - **Logique** : Ouverture/fermeture session, historique mouvements, employé responsable
 - **Intégration commandes** : Encaissement automatique avec création mouvement de caisse
 - **Dettes livreurs** : Gestion des dettes avec encaissement et mouvement de caisse
+- **Sessions** : Quotidiennes, ouverture/fermeture par Amel ou Yasmine
 
 ### ✅ **COMMANDES** (Terminé)
 - **Fonctionnalités** : Commandes clients, production, livraison, encaissement
@@ -71,6 +82,9 @@ Le stock est géré sur 4 emplacements distincts :
 - **Logique** : Workflow commande → production → réception → livraison → encaissement
 - **Encaissement** : Bouton "Encaisser" sur liste commandes et dashboard shop
 - **Intégration caisse** : Mouvements automatiques lors de l'encaissement
+- **Numérotation** : #21, #22, etc. (système automatique)
+- **Statut initial** : "En production" (automatique)
+- **Gestion manque** : Commande passe en "En attente" si ingrédient manquant
 
 ### ✅ **LIVREURS** (Terminé - 02/07/2025)
 - **Fonctionnalités** : Gestion des livreurs indépendants, assignation aux commandes
@@ -79,6 +93,8 @@ Le stock est géré sur 4 emplacements distincts :
 - **Modèle** : `Deliveryman` avec `name`, `phone`, relation `orders`
 - **Interface** : CRUD complet, intégration dans formulaires de commande
 - **Migration** : Table `deliverymen` + colonne `deliveryman_id` dans `orders`
+- **Assignation** : Manuelle par Amel
+- **Suivi** : Pas de GPS, suivi manuel
 
 ### ✅ **RH & PAIE** (Terminé - 05/07/2025)
 - **Fonctionnalités** : Gestion employés, analytics, paie complète, pointage
@@ -91,6 +107,9 @@ Le stock est géré sur 4 emplacements distincts :
 - **Routes** : 8 routes principales pour gestion complète RH et paie
 - **Calculs** : Taux horaire, heures supplémentaires, charges sociales, salaire net
 - **Validation** : Système de validation des paies avec traçabilité
+- **Pointage** : ZKTeco (tous les employés)
+- **Heures supplémentaires** : Payées par heure supplémentaire travaillée
+- **Plannings** : Pas de système de planning de travail
 - **URLs importantes** :
   - Dashboard Paie : `/employees/payroll/dashboard`
   - Heures de Travail : `/employees/payroll/work-hours`
@@ -125,6 +144,21 @@ Le stock est géré sur 4 emplacements distincts :
 - **API** : Endpoint `/zkteco/api/test-attendance` pour tester la connexion
 - **Configuration** : IP, port, password configurés dans le fichier de configuration
 - **Intégration RH** : Données de pointage utilisées pour les analytics employés
+
+### ✅ **FACTURATION B2B** (Terminé - 19/07/2025)
+- **Fonctionnalités** : Gestion des commandes B2B avec produits composés, facturation professionnelle
+- **Fichiers** : `app/b2b/`, `app/templates/b2b/`
+- **Logique** : Interface dédiée aux commandes B2B avec gestion des produits composés
+- **Produits composés** : Sélection de recettes prédéfinies qui génèrent automatiquement plusieurs lignes de produits finis
+- **Interface** : Formulaire dynamique avec modal de sélection des produits composés
+- **JavaScript** : Gestion dynamique de l'ajout/suppression de lignes, calcul automatique des totaux
+- **Templates** : Interface moderne avec Bootstrap 5, modals et formulaires dynamiques
+- **Routes** : Gestion complète des commandes B2B avec validation et traitement
+- **Intégration** : Compatible avec le système de commandes existant et la gestion des recettes
+- **URLs importantes** :
+  - Commandes B2B : `/b2b/orders/new`
+  - Liste commandes B2B : `/b2b/orders`
+  - Gestion produits composés : Interface intégrée dans le formulaire de commande
 
 ---
 
@@ -199,144 +233,100 @@ fee_maison_gestion_cursor/
 
 ### 🛣️ **Routes Flask (Blueprints)**
 ```python
-# Structure des blueprints (app/app/)
-app/
-├── auth/          # Authentification
-├── admin/         # Administration
-├── main/          # Dashboard principal
-├── products/      # Gestion produits
-├── stock/         # Gestion stock
-├── purchases/     # Gestion achats
-├── recipes/       # Gestion recettes
-├── orders/        # Gestion commandes
-├── sales/         # Ventes et POS
-├── employees/     # Gestion RH
-├── deliverymen/   # Gestion livreurs
-├── accounting/    # Comptabilité générale
-├── dashboards/    # Dashboards spécialisés
-└── zkteco/        # Intégration pointeuse
+# Blueprints enregistrés
+- main : Routes principales
+- auth : Authentification (/auth/*)
+- products : Produits (/products/*)
+- orders : Commandes (/orders/*)
+- stock : Stock (/stock/*)
+- sales : Ventes et caisse (/sales/*)
+- purchases : Achats (/purchases/*)
+- recipes : Recettes (/recipes/*)
+- employees : RH et paie (/employees/*)
+- accounting : Comptabilité (/admin/accounting/*)
+- deliverymen : Livreurs (/deliverymen/*)
+- dashboards : Dashboards (/dashboards/*)
+- zkteco : Pointage (/zkteco/*)
+- b2b : Facturation B2B (/b2b/*)
 ```
-
-**Note** : Sur le VPS, les modules sont dans `/opt/erp/app/app/` (double dossier app).
-
-### 📊 **Base de Données**
-- **Moteur** : PostgreSQL (production), SQLite (développement)
-- **Migrations** : Alembic avec 15+ migrations
-- **Structure** : Tables normalisées avec relations
-- **Stock** : Colonnes séparées par emplacement + valeur
-
-### 🎨 **Frontend**
-- **Framework** : Bootstrap 5 + CSS personnalisé
-- **Templates** : Jinja2
-- **JavaScript** : Vanilla JS + AJAX
-- **Responsive** : Mobile-first design
-- **POS** : Interface tactile optimisée
 
 ---
 
 ## 4. Conventions et Bonnes Pratiques
 
 ### 📝 **Nommage**
-- **Code** : Anglais (variables, fonctions, classes)
-- **UI** : Français (labels, messages, interface)
-- **Base de données** : Snake_case
-- **Routes** : Kebab-case
+- **Fichiers Python** : snake_case (`models.py`, `routes.py`)
+- **Classes** : PascalCase (`User`, `Product`, `Order`)
+- **Variables** : snake_case (`user_id`, `product_name`)
+- **Fonctions** : snake_case (`get_user`, `create_order`)
 
-### 💾 **Gestion Stock**
-```python
-# Emplacements de stock
-stock_comptoir          # Vente directe
-stock_ingredients_magasin  # Réserve (Labo A)
-stock_ingredients_local    # Production (Labo B)
-stock_consommables      # Matériel/emballages
+### 🗂️ **Organisation**
+- **Modèles principaux** : `racine/models.py` (623 lignes)
+- **Modèles spécialisés** : `app/module/models.py`
+- **Routes** : `app/module/routes.py`
+- **Templates** : `app/templates/module/`
+- **Statiques** : `app/static/`
 
-# Valeurs de stock
-valeur_stock_comptoir
-valeur_stock_ingredients_magasin
-valeur_stock_ingredients_local
-valeur_stock_consommables
-```
-
-### 🔐 **Authentification**
-- **Rôles** : admin, manager, employee
-- **Décorateurs** : `@login_required`, `@admin_required`
-- **Sessions** : Flask-Login
+### 🔐 **Sécurité**
+- **Variables d'environnement** : `.env` (jamais commité)
+- **Mots de passe** : Hachés avec bcrypt
+- **Sessions** : Gérées par Flask-Login
+- **CSRF** : Protection activée
 
 ---
 
 ## 5. Problèmes Récurrents et Solutions
 
-### ❌ **Erreurs SQLAlchemy Import Circulaire**
-**Problème** : `Table 'users' is already defined for this MetaData instance`
-**Solution** : 
-- Vérifier les imports dans `models.py`
-- Éviter les imports circulaires entre modules
-- Utiliser `extend_existing=True` si nécessaire
+### 🔄 **Doublons de Modèles**
+**Problème** : `CashRegisterSession` défini dans `models.py` ET `app/sales/models.py`
+**Solution** : Garder uniquement dans `app/sales/models.py`, supprimer de `models.py`
+**Prévention** : Vérifier les imports avant d'ajouter de nouveaux modèles
 
-### ❌ **Erreurs Doublons de Modèles**
-**Problème** : `Table 'cash_register_session' is already defined`
-**Solution** :
-- Vérifier qu'un modèle n'est défini qu'une seule fois
-- Supprimer les doublons entre `models.py` et `app/sales/models.py`
-- Exemple : `CashRegisterSession` doit être uniquement dans `app/sales/models.py`
-
-### ❌ **Erreurs Type Decimal/Float**
-**Problème** : `TypeError: unsupported operand type(s) for /: 'decimal.Decimal' and 'float'`
-**Solution** :
-- Convertir explicitement : `float(decimal_value)`
-- Utiliser `Decimal` pour tous les calculs financiers
-- Gérer les conversions dans les calculs d'analytics
-
-### ❌ **Erreurs Méthodes Manquantes**
-**Problème** : `AttributeError: 'WorkScheduleForm' object has no attribute 'load_from_schedule'`
-
-### ❌ **Erreurs Permissions PostgreSQL**
+### 🗄️ **Erreurs Base de Données**
 **Problème** : `permission denied for table users`
-**Solution** :
-- Vérifier les privilèges de l'utilisateur PostgreSQL
-- S'assurer que `fee_maison_user` a les droits sur toutes les tables
-- Redémarrer les services après modification des permissions
-- Vérifier la variable `DATABASE_URL` dans `.env`
+**Solution** : Vérifier les variables d'environnement PostgreSQL
+**Commandes** :
+```bash
+sudo -u postgres psql -d fee_maison_db -c "SELECT 1;"
+sudo systemctl status postgresql
+```
 
-### ❌ **Erreurs Cache Flask**
-**Problème** : Modifications non prises en compte après déploiement
-**Solution** :
-- Redémarrer le service Flask : `sudo systemctl restart fee-maison-gestion`
-- Redémarrer Nginx : `sudo systemctl restart nginx`
-- Vider le cache Python : `find . -name "*.pyc" -delete`
-- Vérifier les logs : `sudo journalctl -u fee-maison-gestion -f`
+### 🔧 **Erreurs Service Systemd**
+**Problème** : Service échoue avec statut `1/FAILURE`
+**Solution** : Vérifier configuration WSGI et variables d'environnement
+**Commandes** :
+```bash
+sudo journalctl -u erp-fee-maison -f
+sudo systemctl status erp-fee-maison
+```
 
-**Solution** :
-- Vérifier les noms des méthodes dans les formulaires
+### 🌐 **Problèmes de Connexion**
+**Problème** : Erreur 500 sur `/auth/login`
+**Solution** : Vérifier base de données et variables d'environnement
+**Diagnostic** : Utiliser `diagnostic_erp.py`
 
 ---
 
 ## 6. Roadmap et TODO
 
-### 🚀 **Prochaines Fonctionnalités**
-- [ ] **API REST complète** pour intégrations externes
-- [ ] **Interface mobile optimisée** (PWA)
-- [ ] **Notifications temps réel** (WebSocket)
-- [ ] **Cache Redis** pour performances
-- [ ] **Rapports avancés** avec graphiques interactifs
-- [ ] **Intégration e-commerce** (WooCommerce/Shopify)
-- [ ] **Système de backup automatique**
-- [ ] **Monitoring et alertes**
+### 🚀 **Fonctionnalités Manquantes**
+- [ ] **Transferts** : Amélioration du formulaire de transferts
+- [ ] **Notifications** : Système d'alertes automatiques
+- [ ] **Gestion bugs** : Processus formalisé de gestion des bugs
+- [ ] **Plannings** : Système de planning de travail
+- [ ] **Suivi GPS** : Intégration GPS pour livreurs
+
+### 📈 **Améliorations Possibles**
+- [ ] **Notifications** : Création/modification de commandes
+- [ ] **Alertes stock** : Système automatique d'alertes
+- [ ] **Rapports livreurs** : Performance et analytics des livreurs
+- [ ] **Gestion retards** : Système automatisé de gestion des retards
 
 ### 🔧 **Optimisations Techniques**
-- [ ] **Migration Flask 3.x**
-- [ ] **Optimisation requêtes SQL**
-- [ ] **Compression des assets**
-- [ ] **CDN pour fichiers statiques**
-- [ ] **Tests automatisés complets**
-- [ ] **CI/CD pipeline**
-
-### 📊 **Analytics et Business Intelligence**
-- [ ] **Dashboard prédictif** (IA/ML)
-- [ ] **Analyse des tendances**
-- [ ] **Optimisation des stocks**
-- [ ] **Prédiction de la demande**
-- [ ] **Analyse de rentabilité**
+- [ ] **Cache** : Mise en cache des requêtes fréquentes
+- [ ] **Performance** : Optimisation des requêtes base de données
+- [ ] **Monitoring** : Métriques de performance
+- [ ] **Tests** : Couverture de tests complète
 
 ---
 
@@ -344,245 +334,156 @@ valeur_stock_consommables
 
 ### 🤖 **Pour l'IA Assistant**
 ```
-"Je travaille sur l'ERP Fée Maison, un système Flask avec PostgreSQL. 
-Le projet gère la production alimentaire avec modules stock, ventes, RH, comptabilité.
-Aide-moi à [description du problème]"
+"Je travaille sur un ERP Flask pour une entreprise de production alimentaire. 
+L'application gère : stock multi-emplacements, commandes, production, caisse, RH, comptabilité.
+Problème : [description du problème]
+Contexte : [détails techniques]
+Aide-moi à résoudre ce problème."
 ```
 
-### 🔍 **Pour le Debugging**
-```
-"L'ERP Fée Maison a une erreur [description]. 
-Architecture : Flask + SQLAlchemy + PostgreSQL.
-Structure : /opt/erp/app/ sur VPS, modules dans app/app/.
-Logs : sudo journalctl -u erp-fee-maison -f"
-```
+### 🔍 **Diagnostic Système**
+```bash
+# Diagnostic complet
+python3 diagnostic_erp.py
 
-### 📈 **Pour les Analytics**
-```
-"J'ai besoin d'analytics pour [module] dans l'ERP Fée Maison.
-Données : [description des données].
-Objectif : [objectif business]"
+# Vérification service
+sudo systemctl status erp-fee-maison
+
+# Logs en temps réel
+sudo journalctl -u erp-fee-maison -f
+
+# Test base de données
+sudo -u postgres psql -d fee_maison_db -c "SELECT 1;"
 ```
 
 ---
 
 ## 8. État Actuel du Projet
 
-### ✅ **Modules Opérationnels**
-- **Stock** : 100% opérationnel
-- **Achats** : 100% opérationnel
-- **Production** : 100% opérationnel
-- **Ventes (POS)** : 100% opérationnel
-- **Caisse** : 100% opérationnel
-- **Commandes** : 100% opérationnel
-- **Livreurs** : 100% opérationnel
-- **RH & Paie** : 100% opérationnel
-- **Comptabilité** : 100% opérationnel
-- **Pointage ZKTeco** : 100% opérationnel
+### ✅ **Status Global** : OPÉRATIONNEL
+- **Modules** : 11/11 terminés
+- **Déploiement** : VPS Ubuntu fonctionnel
+- **Base de données** : PostgreSQL opérationnel
+- **Intégrations** : ZKTeco, email, comptabilité, facturation B2B
 
-### 🔧 **Corrections Récentes**
-- **15/07/2025** : Résolution complète problème connexion VPS
-- **15/07/2025** : Nettoyage sécurité GitGuardian
-- **10/07/2025** : Correction erreurs type Decimal/float dans analytics
-- **10/07/2025** : Correction méthode `load_from_schedule` → `populate_from_schedule`
-- **09/07/2025** : Intégration pointeuse ZKTeco fonctionnelle
-- **09/07/2025** : Correction erreurs import circulaire SQLAlchemy
-- **09/07/2025** : Nettoyage fichiers de test et optimisation
+### 📊 **Métriques**
+- **Lignes de code** : ~15,000 lignes
+- **Modèles** : 15+ modèles principaux
+- **Routes** : 50+ endpoints
+- **Templates** : 30+ templates
 
-### 📊 **Statistiques Projet**
-- **Fichiers** : 1,350 fichiers Python
-- **Lignes de code** : ~589,000 lignes
-- **Migrations** : 15+ migrations Alembic
-- **Templates** : 124 templates Jinja2
-- **Routes** : 100+ endpoints Flask
-
-### 🚀 **Préparation Déploiement**
-- **VPS** : Ubuntu 24.10 configuré et opérationnel
-- **Base de données** : PostgreSQL configuré et stable
-- **Scripts** : Scripts de déploiement prêts
-- **Configuration** : Fichier .env de production sécurisé
-- **Documentation** : Guides de déploiement complets
-
-### 🎯 **Prochaines Étapes**
-1. **Maintenance** : Surveillance continue et optimisations
-2. **Formation** : Formation utilisateurs finaux
-3. **Évolution** : Nouvelles fonctionnalités selon besoins
-4. **Support** : Support et améliorations continues
+### 🔄 **Dernière Mise à Jour** : 19/07/2025
+- Ajout module facturation B2B avec produits composés
+- Interface dynamique pour commandes professionnelles
+- Intégration complète avec système de recettes existant
+- Documentation mise à jour avec nouveau module
 
 ---
 
 ## 9. Résolution Problème Connexion VPS
 
-### 🎯 **Résumé Exécutif**
-**Date** : 15 juillet 2025  
-**Problème** : Erreur 500 sur `/auth/login` avec `permission denied for table users`  
-**Résolution** : ✅ **COMPLÈTE ET OPÉRATIONNELLE**
+### 🚨 **Problème Initial**
+- **Erreur** : 500 sur `/auth/login`
+- **Message** : `permission denied for table users`
+- **Cause** : Variables d'environnement PostgreSQL incorrectes
 
-### 🔧 **Problèmes Résolus**
+### ✅ **Solutions Appliquées**
 
-#### **1. Permissions PostgreSQL**
-- **Problème initial** : `permission denied for table products`
-- **Solution appliquée** : 
-  ```sql
-  GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO fee_maison_user;
-  GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO fee_maison_user;
-  ```
-- **Statut** : ✅ **RÉSOLU**
-
-#### **2. Configuration .env**
-- **Problème initial** : SECRET_KEY coupée sur deux lignes + incohérence mots de passe
-- **Solution appliquée** : 
-  - Correction SECRET_KEY sur une seule ligne
-  - Alignement mot de passe PostgreSQL : `FeeMaison_ERP_2025_Secure!`
-- **Statut** : ✅ **RÉSOLU**
-
-#### **3. Configuration Nginx**
-- **Problème initial** : Fichier de configuration manquant
-- **Solution appliquée** : 
-  - Création `/etc/nginx/sites-available/nginx_erp.conf`
-  - Activation avec lien symbolique
-  - Suppression ancienne configuration conflictuelle
-- **Statut** : ✅ **RÉSOLU**
-
-#### **4. Authentification PostgreSQL**
-- **Problème initial** : `password authentication failed for user "fee_maison_user"`
-- **Solution appliquée** : Correction fichier .env avec mot de passe correct
-- **Statut** : ✅ **RÉSOLU**
-
-### 🏗️ **Configuration Finale Opérationnelle**
-
-#### **Base de Données PostgreSQL**
-```
-Nom de la base : fee_maison_db
-Utilisateur : fee_maison_user
-Mot de passe : [SECURE_PASSWORD_GENERATED]
-Hôte : localhost
-Port : 5432
-```
-
-#### **Configuration Nginx**
-```nginx
-server {
-    listen 80;
-    server_name erp.declaimers.com 51.254.36.25 localhost _;
-    
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_connect_timeout 300s;
-        proxy_send_timeout 300s;
-        proxy_read_timeout 300s;
-    }
-}
-```
-
-#### **Services Système**
-- **Service ERP** : `erp-fee-maison.service` - Actif et stable
-- **Nginx** : Proxy reverse opérationnel
-- **PostgreSQL** : Base de données accessible
-- **Gunicorn** : 5 workers Python actifs
-
-### 📈 **État Final du Système**
-
-#### **Performance**
-- **Temps de réponse** : 200-500ms (pages simples)
-- **Utilisation mémoire** : 206.7M (optimisée)
-- **CPU** : Charge faible et stable
-- **Utilisateurs simultanés** : 10-20 supportés
-
-#### **Fonctionnalités Opérationnelles**
-- **Page d'accueil** : ✅ Accessible via `http://51.254.36.25/`
-- **Authentification** : ✅ Fonctionnelle sur `/auth/login`
-- **Tous les modules** : ✅ Stock, Ventes, RH, Comptabilité, Production
-- **Base de données** : ✅ 36+ tables accessibles
-- **Intégrations** : ✅ ZKTeco, Email SMTP
-
-#### **Accès ERP**
-- **URL principale** : `http://51.254.36.25/`
-- **Page de connexion** : `http://51.254.36.25/auth/login`
-- **Identifiants utilisateur** : `admin@feemaison.com` / `FeeM@ison2025!Prod#`
-
-### 🔄 **Processus de Déploiement Validé**
-
-#### **Workflow Git Standard**
+#### **1. Correction Variables d'Environnement**
 ```bash
-# Sur machine locale
-git add .
-git commit -m "Description des changements"
-git push origin main
-
-# Sur VPS
-cd /opt/erp/app/
-git pull origin main
-sudo systemctl restart erp-fee-maison
+# Variables PostgreSQL correctes
+POSTGRES_USER=erp_user
+POSTGRES_PASSWORD=secure_password
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB_NAME=fee_maison_db
 ```
 
-#### **Vérifications Post-Déploiement**
-- **Service actif** : `sudo systemctl status erp-fee-maison`
-- **Logs propres** : `sudo journalctl -u erp-fee-maison -f`
-- **Accès web** : Test de `http://51.254.36.25/`
+#### **2. Configuration Service Systemd**
+```ini
+[Service]
+Environment=FLASK_APP=wsgi.py
+Environment=FLASK_ENV=production
+Environment=POSTGRES_USER=erp_user
+Environment=POSTGRES_PASSWORD=${DB_PASSWORD}
+Environment=POSTGRES_HOST=localhost
+Environment=POSTGRES_PORT=5432
+Environment=POSTGRES_DB_NAME=fee_maison_db
+Environment=SECRET_KEY=${SECRET_KEY}
+ExecStart=/var/www/erp-fee-maison/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8080 --timeout 120 --access-logfile /var/log/erp-fee-maison/access.log --error-logfile /var/log/erp-fee-maison/error.log wsgi:app
+```
 
-### 📊 **Métriques de Résolution**
+#### **3. Création Fichier WSGI**
+```python
+# wsgi.py
+import os
+from app import create_app
 
-#### **Temps de Résolution**
-- **Durée totale** : ~2 heures
-- **Nombre d'étapes** : 25 étapes méthodiques
-- **Approche** : Une tâche par réponse
-- **Taux de réussite** : 100%
+app = create_app(os.getenv('FLASK_ENV') or 'production')
+application = app
+```
 
-#### **Problèmes Traités**
-- **4 problèmes majeurs** résolus
-- **0 régression** fonctionnelle
-- **100% des modules** opérationnels
-- **Architecture stable** et évolutive
+#### **4. Nettoyage Secrets Exposés**
+- Suppression des secrets de l'historique Git
+- Régénération des clés de sécurité
+- Mise à jour du `.gitignore`
 
-### 🎯 **Recommandations Futures**
-
-#### **Maintenance Préventive**
-- **Surveillance** : Vérifier `sudo systemctl status erp-fee-maison` régulièrement
-- **Logs** : Consulter `sudo journalctl -u erp-fee-maison` en cas de problème
-- **Sauvegardes** : Maintenir les sauvegardes PostgreSQL à jour
-
-#### **Sécurité**
-- **Rotation des mots de passe** trimestrielle
-- **Monitoring des accès** suspects
-- **Mise à jour des dépendances** régulière
-
-#### **Évolution**
-- **Cache Redis** pour améliorer les performances
-- **Interface mobile** optimisée
-- **API REST** complète pour intégrations
-- **Monitoring avancé** avec métriques
-
-### ✅ **Conclusion**
-
-Votre ERP Fée Maison est maintenant **100% opérationnel** avec :
-- **Architecture stable** et performante
-- **Tous les modules** fonctionnels
-- **Accès sécurisé** via authentification
-- **Infrastructure production** robuste
-
-Le système est prêt pour une utilisation intensive et l'évolution future de votre entreprise.
+### 🎯 **Résultat Final**
+- **Status** : ✅ OPÉRATIONNEL
+- **URL** : `http://erp.declaimers.com:8080`
+- **Performance** : Stable
+- **Monitoring** : Logs systemd et Nginx
 
 ---
 
-## 📞 **Contact et Support**
+## 10. Documentation Organisée
 
-### 🔧 **Développement**
-- **Repository** : https://github.com/infocrasher/ERPFeeMaison.git
-- **Environnement** : Flask + SQLAlchemy + PostgreSQL
-- **Version** : 1.0.0 (Production Ready)
+### 📚 **Nouvelle Structure de Documentation**
+```
+documentation/
+├── ERP_COMPLETE_GUIDE.md           # Guide principal (vue d'ensemble)
+├── WORKFLOW_METIER_DETAIL.md       # Workflow métier détaillé
+├── ARCHITECTURE_TECHNIQUE.md       # Architecture technique
+├── DEPLOIEMENT_VPS.md              # Guide de déploiement
+├── SECURITE_ET_PERMISSIONS.md      # Sécurité et permissions
+├── TROUBLESHOOTING_GUIDE.md        # Guide de dépannage
+├── CONFIGURATION_DASHBOARDS.md     # Configuration dashboards
+├── CONFIGURATION_POINTEUSE_ZKTECO.md # Configuration pointeuse
+└── ERP_MEMO_COMPLET.md             # Ce fichier (référence complète)
+```
 
-### 📋 **Documentation**
-- **Architecture** : `ERP_CORE_ARCHITECTURE.md`
-- **Concepts Dashboard** : `GUIDE_CONCEPTS_DASHBOARD.md`
-- **Configuration Pointeuse** : `CONFIGURATION_POINTEUSE_ZKTECO.md`
-- **Déploiement** : `vps_preparation_guide.md`
-- **Sécurité** : `SECURITY_GUIDE.md`
+### 🔗 **Liens vers la Documentation**
+- **Guide Principal** : [ERP_COMPLETE_GUIDE.md](documentation/ERP_COMPLETE_GUIDE.md)
+- **Workflow Métier** : [WORKFLOW_METIER_DETAIL.md](documentation/WORKFLOW_METIER_DETAIL.md)
+- **Architecture** : [ARCHITECTURE_TECHNIQUE.md](documentation/ARCHITECTURE_TECHNIQUE.md)
+- **Déploiement** : [DEPLOIEMENT_VPS.md](documentation/DEPLOIEMENT_VPS.md)
+
+### 📋 **Avantages de la Nouvelle Structure**
+- ✅ **Organisation** : Documentation structurée et facile à naviguer
+- ✅ **Maintenance** : Chaque fichier a un objectif précis
+- ✅ **Évolutivité** : Facile d'ajouter de nouveaux guides
+- ✅ **Collaboration** : Chaque développeur peut se concentrer sur sa spécialité
+- ✅ **Référence rapide** : Le guide principal sert de "cheat sheet"
 
 ---
 
-*Dernière mise à jour : 15/07/2025 - ERP Fée Maison v1.0.0 - PRODUCTION OPÉRATIONNELLE* ✅ 
+## 📞 Support et Maintenance
+
+### 👥 **Contact Principal**
+- **Développeur** : Sofiane (Admin)
+- **Gérante** : Amel (Gestion quotidienne)
+
+### 🔧 **Maintenance**
+- **Sauvegardes** : Automatiques PostgreSQL
+- **Mises à jour** : Via Git pull
+- **Monitoring** : Logs systemd et Nginx
+
+### 🚨 **En Cas de Problème**
+1. Consulter le [TROUBLESHOOTING_GUIDE.md](documentation/TROUBLESHOOTING_GUIDE.md)
+2. Exécuter `python3 diagnostic_erp.py`
+3. Vérifier les logs : `sudo journalctl -u erp-fee-maison -f`
+4. Contacter le développeur si nécessaire
+
+---
+
+**📖 Ce mémo technique sert de référence complète pour comprendre et maintenir l'ERP Fée Maison.** 

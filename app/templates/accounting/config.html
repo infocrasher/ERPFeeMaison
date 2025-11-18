@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="bi bi-gear me-2"></i>{{ title }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Alerte informative -->
+                    <div class="alert alert-info d-flex align-items-center mb-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <div>
+                            <strong>Configuration des objectifs :</strong> 
+                            Ces paramètres affectent tous les dashboards et calculs de performance de l'ERP.
+                        </div>
+                    </div>
+
+                    <form method="POST" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <!-- Objectifs Financiers -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>Objectifs Financiers</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            {{ form.daily_objective.label(class="form-label") }}
+                                            {{ form.daily_objective(class="form-control") }}
+                                            {% if form.daily_objective.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.daily_objective.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            {{ form.monthly_objective.label(class="form-label") }}
+                                            {{ form.monthly_objective(class="form-control") }}
+                                            {% if form.monthly_objective.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.monthly_objective.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            {{ form.yearly_objective.label(class="form-label") }}
+                                            {{ form.yearly_objective(class="form-control") }}
+                                            {% if form.yearly_objective.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.yearly_objective.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Paramètres Stock -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-boxes me-2"></i>Paramètres Stock</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ form.stock_rotation_days.label(class="form-label") }}
+                                            {{ form.stock_rotation_days(class="form-control") }}
+                                            {% if form.stock_rotation_days.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.stock_rotation_days.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted">Période pour calculer la rotation du stock</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Paramètres Qualité -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-award me-2"></i>Paramètres Qualité</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ form.quality_target_percent.label(class="form-label") }}
+                                            <div class="input-group">
+                                                {{ form.quality_target_percent(class="form-control") }}
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                            {% if form.quality_target_percent.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.quality_target_percent.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted">Objectif de qualité pour les commandes</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Paramètres RH -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-people me-2"></i>Paramètres Ressources Humaines</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ form.standard_work_hours_per_day.label(class="form-label") }}
+                                            <div class="input-group">
+                                                {{ form.standard_work_hours_per_day(class="form-control") }}
+                                                <span class="input-group-text">h</span>
+                                            </div>
+                                            {% if form.standard_work_hours_per_day.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.standard_work_hours_per_day.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted">Nombre d'heures de travail standard par jour</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex justify-content-end">
+                            <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-secondary me-2">
+                                <i class="bi bi-arrow-left me-1"></i>Retour au Dashboard
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Informations actuelles -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Configuration Actuelle</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Objectif journalier :</strong> {{ "{:,.0f}".format(config.daily_objective) }} DZD</p>
+                            <p><strong>Objectif mensuel :</strong> {{ "{:,.0f}".format(config.monthly_objective) }} DZD</p>
+                            <p><strong>Objectif annuel :</strong> {{ "{:,.0f}".format(config.yearly_objective) }} DZD</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Rotation stock :</strong> {{ config.stock_rotation_days }} jours</p>
+                            <p><strong>Objectif qualité :</strong> {{ config.quality_target_percent }}%</p>
+                            <p><strong>Heures standard :</strong> {{ config.standard_work_hours_per_day }}h/jour</p>
+                        </div>
+                    </div>
+                    {% if config.updated_at %}
+                    <hr>
+                    <small class="text-muted">
+                        Dernière mise à jour : {{ config.updated_at.strftime('%d/%m/%Y à %H:%M') }}
+                        {% if config.updated_by %}par {{ config.updated_by.username }}{% endif %}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-calcul des objectifs liés
+    const monthlyField = document.getElementById('monthly_objective');
+    const dailyField = document.getElementById('daily_objective');
+    const yearlyField = document.getElementById('yearly_objective');
+    
+    if (monthlyField && dailyField && yearlyField) {
+        monthlyField.addEventListener('input', function() {
+            const monthly = parseFloat(this.value) || 0;
+            dailyField.value = Math.round(monthly / 30);
+            yearlyField.value = Math.round(monthly * 12);
+        });
+        
+        dailyField.addEventListener('input', function() {
+            const daily = parseFloat(this.value) || 0;
+            monthlyField.value = Math.round(daily * 30);
+            yearlyField.value = Math.round(daily * 365);
+        });
+    }
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+

@@ -61,8 +61,10 @@ def dashboard():
     # Exercice courant
     current_fiscal_year = FiscalYear.query.filter_by(is_current=True).first()
     
-    # Objectif mensuel (à définir par l'utilisateur, pour l'instant fixe)
-    objectif_mensuel = 500000  # 500k DZD
+    # Objectif mensuel depuis la configuration
+    from .models import BusinessConfig
+    config = BusinessConfig.get_current()
+    objectif_mensuel = float(config.monthly_objective)
     progression_objectif = (ca_mensuel / objectif_mensuel * 100) if objectif_mensuel > 0 else 0
     
     # Données pour le template
@@ -95,6 +97,33 @@ def dashboard():
     }
     
     return render_template('accounting/dashboard.html', **dashboard_data)
+
+
+@bp.route('/config', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def business_config():
+    """Configuration des objectifs et paramètres métier"""
+    from .models import BusinessConfig
+    from .forms import BusinessConfigForm
+    
+    config = BusinessConfig.get_current()
+    form = BusinessConfigForm(obj=config)
+    
+    if form.validate_on_submit():
+        config.monthly_objective = form.monthly_objective.data
+        config.daily_objective = form.daily_objective.data
+        config.yearly_objective = form.yearly_objective.data
+        config.stock_rotation_days = form.stock_rotation_days.data
+        config.quality_target_percent = form.quality_target_percent.data
+        config.standard_work_hours_per_day = form.standard_work_hours_per_day.data
+        config.updated_by_id = current_user.id
+        
+        db.session.commit()
+        flash('Configuration mise à jour avec succès!', 'success')
+        return redirect(url_for('accounting.business_config'))
+    
+    return render_template('accounting/config.html', form=form, config=config, title="Configuration Métier")
 
 
 # ==================== GESTION DES COMPTES ====================
@@ -725,6 +754,123 @@ def list_expenses():
                          expenses=expense_entries)
 
 
+@bp.route('/treasury/set-initial-balances', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def set_initial_balances():
+    """Définir les soldes initiaux de caisse et banque"""
+    from app.accounting.models import Account
+    
+    if request.method == 'POST':
+        initial_cash = float(request.form.get('initial_cash', 0))
+        initial_bank = float(request.form.get('initial_bank', 0))
+        
+        # Mettre à jour le compte caisse (530)
+        cash_account = Account.query.filter_by(code='530').first()
+        if cash_account:
+            cash_account.balance = initial_cash
+        else:
+            # Créer le compte caisse s'il n'existe pas
+            cash_account = Account(
+                code='530',
+                name='Caisse',
+                account_type='5',
+                account_nature='ACTIF',
+                balance=initial_cash
+            )
+            db.session.add(cash_account)
+        
+        # Mettre à jour le compte banque (512)
+        bank_account = Account.query.filter_by(code='512').first()
+        if bank_account:
+            bank_account.balance = initial_bank
+        else:
+            # Créer le compte banque s'il n'existe pas
+            bank_account = Account(
+                code='512',
+                name='Banque',
+                account_type='5',
+                account_nature='ACTIF',
+                balance=initial_bank
+            )
+            db.session.add(bank_account)
+        
+        db.session.commit()
+        flash(f'Soldes initiaux définis : Caisse {initial_cash} DZD, Banque {initial_bank} DZD', 'success')
+        return redirect(url_for('accounting.dashboard'))
+    
+    # Récupérer les soldes actuels
+    cash_account = Account.query.filter_by(code='530').first()
+    bank_account = Account.query.filter_by(code='512').first()
+    
+    initial_cash = float(cash_account.balance or 0) if cash_account else 0
+    initial_bank = float(bank_account.balance or 0) if bank_account else 0
+    
+    return render_template('accounting/set_initial_balances.html', 
+                         initial_cash=initial_cash, 
+                         initial_bank=initial_bank)
+
+@bp.route('/treasury/adjust-cash', methods=['POST'])
+@login_required
+@admin_required
+def adjust_cash():
+    """Ajuster le solde de caisse (ajout ou retrait)"""
+    from app.sales.models import CashRegisterSession, CashMovement
+    
+    amount = float(request.form.get('amount', 0))
+    operation = request.form.get('operation', 'add')  # 'add' ou 'remove'
+    reason = request.form.get('reason', 'Ajustement manuel')
+    
+    session = CashRegisterSession.query.filter_by(is_open=True).first()
+    if not session:
+        flash('Aucune session de caisse ouverte', 'error')
+        return redirect(url_for('accounting.dashboard'))
+    
+    # Créer le mouvement de caisse
+    movement_type = 'entrée' if operation == 'add' else 'sortie'
+    movement = CashMovement(
+        session_id=session.id,
+        created_at=datetime.utcnow(),
+        type=movement_type,
+        amount=amount,
+        reason=f'Ajustement caisse - {reason}',
+        notes=f'{"Ajout" if operation == "add" else "Retrait"} manuel de {amount} DZD',
+        employee_id=current_user.id
+    )
+    
+    db.session.add(movement)
+    db.session.commit()
+    
+    flash(f'{"Ajout" if operation == "add" else "Retrait"} de {amount} DZD en caisse effectué', 'success')
+    return redirect(url_for('accounting.dashboard'))
+
+@bp.route('/treasury/adjust-bank', methods=['POST'])
+@login_required
+@admin_required
+def adjust_bank():
+    """Ajuster le solde bancaire (ajout ou retrait)"""
+    from app.accounting.models import Account
+    
+    amount = float(request.form.get('amount', 0))
+    operation = request.form.get('operation', 'add')  # 'add' ou 'remove'
+    reason = request.form.get('reason', 'Ajustement manuel')
+    
+    bank_account = Account.query.filter_by(code='512').first()
+    if not bank_account:
+        flash('Compte banque non trouvé', 'error')
+        return redirect(url_for('accounting.dashboard'))
+    
+    # Ajuster le solde bancaire
+    if operation == 'add':
+        bank_account.balance = (bank_account.balance or 0) + amount
+    else:
+        bank_account.balance = (bank_account.balance or 0) - amount
+    
+    db.session.commit()
+    
+    flash(f'{"Ajout" if operation == "add" else "Retrait"} de {amount} DZD en banque effectué', 'success')
+    return redirect(url_for('accounting.dashboard'))
+
 @bp.route('/expenses/new', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -764,37 +910,47 @@ def new_expense():
             flash('Erreur : Comptes comptables non trouvés. Veuillez créer les comptes nécessaires.', 'error')
             return render_template('accounting/expenses/form.html', form=form)
         
+        # Préparer la description avec précision si applicable
+        description = form.description.data
+        if form.other_category.data:
+            description = f"{form.description.data} - {form.other_category.data}"
+        
         # Créer l'écriture
         entry = JournalEntry(
             journal_id=journal.id,
             entry_date=form.date.data,
-            reference=f"DEP{datetime.now().strftime('%Y%m%d%H%M%S')}",
-            description=form.description.data,
-            total_amount=form.amount.data,
-            created_by=current_user.id
+            accounting_date=form.date.data,
+            description=description,
+            reference_document=form.reference.data,
+            created_by_id=current_user.id
         )
+        
+        # Générer la référence automatique
+        entry.generate_reference()
         
         db.session.add(entry)
         db.session.flush()
         
         # Ligne débit (charge)
         debit_line = JournalEntryLine(
-            entry_id=entry.id,
+            journal_entry_id=entry.id,
             account_id=expense_account.id,
             debit_amount=form.amount.data,
             credit_amount=0,
-            description=form.description.data,
-            reference=form.reference.data
+            description=description,
+            reference=form.reference.data,
+            line_number=1
         )
         
         # Ligne crédit (paiement)
         credit_line = JournalEntryLine(
-            entry_id=entry.id,
+            journal_entry_id=entry.id,
             account_id=payment_account.id,
             debit_amount=0,
             credit_amount=form.amount.data,
             description=f"Paiement {form.payment_method.data}",
-            reference=form.reference.data
+            reference=form.reference.data,
+            line_number=2
         )
         
         db.session.add(debit_line)
@@ -810,9 +966,120 @@ def new_expense():
         flash(f'Dépense de {form.amount.data} DZD enregistrée avec succès.', 'success')
         return redirect(url_for('accounting.list_expenses'))
     
+    # Récupérer le solde bancaire pour l'affichage
+    from .services import DashboardService
+    bank_balance = DashboardService.get_bank_balance()
+    
     return render_template('accounting/expenses/form.html', 
                          form=form,
+                         bank_balance=bank_balance,
                          title="Nouvelle Dépense")
+
+
+@bp.route('/bank-statement')
+@login_required
+@admin_required
+def bank_statement():
+    """État de la banque avec solde et historique des mouvements"""
+    from .services import DashboardService
+    from sqlalchemy import desc
+    
+    # Calculer le solde bancaire actuel
+    bank_balance = DashboardService.get_bank_balance()
+    
+    # Récupérer tous les mouvements bancaires (compte 512)
+    bank_account = Account.query.filter_by(code='512').first()
+    
+    if not bank_account:
+        flash('Compte bancaire (512) non trouvé. Veuillez créer le compte bancaire.', 'error')
+        return redirect(url_for('accounting.dashboard'))
+    
+    # Récupérer toutes les lignes d'écriture du compte banque
+    bank_movements = JournalEntryLine.query.filter_by(account_id=bank_account.id)\
+                                          .join(JournalEntry)\
+                                          .order_by(desc(JournalEntry.entry_date), desc(JournalEntry.id))\
+                                          .all()
+    
+    # Calculer le solde cumulé pour chaque mouvement
+    movements_with_balance = []
+    running_balance = 0
+    
+    # Calculer d'abord le solde total
+    for movement in reversed(bank_movements):  # Ordre chronologique pour le calcul
+        if movement.debit_amount:
+            running_balance += float(movement.debit_amount)
+        if movement.credit_amount:
+            running_balance -= float(movement.credit_amount)
+    
+    # Maintenant créer la liste avec les soldes (ordre anti-chronologique pour l'affichage)
+    current_balance = running_balance
+    for movement in bank_movements:
+        # Déterminer le type de mouvement
+        movement_type = "Entrée" if movement.debit_amount else "Sortie"
+        amount = float(movement.debit_amount or movement.credit_amount)
+        
+        # Catégoriser le mouvement
+        description = movement.journal_entry.description.lower()
+        if 'salaire' in description or 'paiement salaire' in description:
+            category = "Salaire"
+            icon = "bi-person-check"
+            color = "text-warning"
+        elif 'achat' in description or 'charge' in description or 'dépense' in description:
+            category = "Charge/Achat"
+            icon = "bi-cart"
+            color = "text-danger"
+        elif 'vente' in description or 'encaissement' in description:
+            category = "Vente"
+            icon = "bi-cash-coin"
+            color = "text-success"
+        elif 'ajustement' in description or 'correction' in description:
+            category = "Ajustement"
+            icon = "bi-gear"
+            color = "text-info"
+        else:
+            category = "Autre"
+            icon = "bi-arrow-left-right"
+            color = "text-secondary"
+        
+        movements_with_balance.append({
+            'movement': movement,
+            'type': movement_type,
+            'amount': amount,
+            'category': category,
+            'icon': icon,
+            'color': color,
+            'balance': current_balance,
+            'date': movement.journal_entry.entry_date,
+            'reference': movement.journal_entry.reference,
+            'description': movement.journal_entry.description
+        })
+        
+        # Ajuster le solde pour le mouvement précédent
+        if movement.debit_amount:
+            current_balance -= float(movement.debit_amount)
+        if movement.credit_amount:
+            current_balance += float(movement.credit_amount)
+    
+    # Statistiques
+    total_entries = sum(m['amount'] for m in movements_with_balance if m['type'] == 'Entrée')
+    total_exits = sum(m['amount'] for m in movements_with_balance if m['type'] == 'Sortie')
+    
+    # Mouvements par catégorie
+    categories_stats = {}
+    for movement in movements_with_balance:
+        cat = movement['category']
+        if cat not in categories_stats:
+            categories_stats[cat] = {'count': 0, 'amount': 0}
+        categories_stats[cat]['count'] += 1
+        categories_stats[cat]['amount'] += movement['amount']
+    
+    return render_template('accounting/bank_statement.html',
+                         bank_balance=bank_balance,
+                         movements=movements_with_balance,
+                         total_entries=total_entries,
+                         total_exits=total_exits,
+                         categories_stats=categories_stats,
+                         title="État de la Banque")
 
 
 @bp.route('/expenses/<int:expense_id>/edit', methods=['GET', 'POST'])

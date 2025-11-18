@@ -16,31 +16,8 @@ def hello_world():
 @main.route('/dashboard')
 @login_required
 def dashboard():
-    """Dashboard principal avec statistiques"""
-    
-    # Calcul des statistiques pour l'affichage
-    today = date.today()
-    
-    # Compter les commandes d'aujourd'hui
-    orders_today = Order.query.filter(
-        db.func.date(Order.created_at) == today
-    ).count()
-    
-    # Compter les employés actifs
-    employees_count = Employee.query.filter(Employee.is_active == True).count()
-    
-    # Compter les produits
-    products_count = Product.query.count()
-    
-    # Compter les recettes
-    recipes_count = Recipe.query.count()
-    
-    return render_template('main/dashboard.html', 
-                         title="Tableau de Bord",
-                         orders_today=orders_today,
-                         employees_count=employees_count,
-                         products_count=products_count,
-                         recipes_count=recipes_count)
+    """Redirige vers le dashboard unifié Tailwind."""
+    return redirect(url_for('dashboard.unified_dashboard'))
 
 # ==========================================
 # ROUTES POUR LES CONCEPTS DE DASHBOARD
@@ -70,12 +47,22 @@ def dashboard_concept1():
     products_count = Product.query.count()
     recipes_count = Recipe.query.count()
     
+    # Données dynamiques supplémentaires
+    from app.accounting.services import DashboardService
+    from app.accounting.models import BusinessConfig
+    
+    daily_revenue = DashboardService.get_daily_revenue(today)
+    config = BusinessConfig.get_current()
+    daily_objective = float(config.daily_objective)
+    
     return render_template('main/dashboard_concept1.html', 
                          title="Dashboard Concept 1",
                          orders_today=orders_today,
                          employees_count=employees_count,
                          products_count=products_count,
-                         recipes_count=recipes_count)
+                         recipes_count=recipes_count,
+                         daily_revenue=daily_revenue,
+                         daily_objective=daily_objective)
 
 @main.route('/dashboard/concept2')
 @login_required
@@ -101,26 +88,3 @@ def dashboard_concept2():
                          products_count=products_count,
                          recipes_count=recipes_count)
 
-@main.route('/dashboard/concept3')
-@login_required
-def dashboard_concept3():
-    """Dashboard Concept 3 - Template pour test"""
-    
-    # Calcul des statistiques pour l'affichage
-    today = date.today()
-    
-    # KPI de base
-    orders_today = Order.query.filter(
-        db.func.date(Order.created_at) == today
-    ).count()
-    
-    employees_count = Employee.query.filter(Employee.is_active == True).count()
-    products_count = Product.query.count()
-    recipes_count = Recipe.query.count()
-    
-    return render_template('main/dashboard_concept3.html', 
-                         title="Dashboard Concept 3",
-                         orders_today=orders_today,
-                         employees_count=employees_count,
-                         products_count=products_count,
-                         recipes_count=recipes_count)

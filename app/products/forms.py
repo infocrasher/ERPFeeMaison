@@ -1,7 +1,7 @@
 # Fichier: app/products/forms.py
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SelectField, FloatField, SubmitField
+from wtforms import StringField, TextAreaField, SelectField, FloatField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
 from wtforms_sqlalchemy.fields import QuerySelectField
 from models import Category
@@ -13,6 +13,8 @@ def category_query_factory():
 class CategoryForm(FlaskForm):
     name = StringField('Nom de la catégorie', validators=[DataRequired(), Length(max=100)])
     description = TextAreaField('Description', validators=[Optional()])
+    show_in_pos = BooleanField('Afficher au Point de Vente (POV)', default=True, 
+                                description="Cocher pour afficher cette catégorie dans l'interface de vente")
     submit = SubmitField('Enregistrer')
 
 class ProductForm(FlaskForm):
@@ -49,6 +51,19 @@ class ProductForm(FlaskForm):
     cost_price = FloatField("Coût de Revient Initial / PMP (DA par unité de base)", 
                             validators=[Optional(), NumberRange(min=0)],
                             description="Sera mis à jour automatiquement par les achats (PMP).")
+    
+    # Seuils d'alerte de stock par localisation
+    seuil_min_comptoir = FloatField('Seuil Min Comptoir', validators=[Optional(), NumberRange(min=0)],
+                                   render_kw={"placeholder": "Seuil d'alerte pour stock comptoir"})
+    
+    seuil_min_ingredients_local = FloatField('Seuil Min Local (Production)', validators=[Optional(), NumberRange(min=0)],
+                                            render_kw={"placeholder": "Seuil d'alerte pour stock local"})
+    
+    seuil_min_ingredients_magasin = FloatField('Seuil Min Magasin (Réserve)', validators=[Optional(), NumberRange(min=0)],
+                                                render_kw={"placeholder": "Seuil d'alerte pour stock magasin"})
+    
+    seuil_min_consommables = FloatField('Seuil Min Consommables', validators=[Optional(), NumberRange(min=0)],
+                                       render_kw={"placeholder": "Seuil d'alerte pour stock consommables"})
     
     # On retire le champ 'quantity_in_stock' qui était source de confusion.
     # Le stock initial sera géré par un "Ajustement de stock" ou un premier achat.

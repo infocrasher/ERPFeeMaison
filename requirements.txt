@@ -33,3 +33,22 @@ Werkzeug==3.1.3
 WTForms==3.2.1
 WTForms-SQLAlchemy==0.4.2
 webdriver-manager==4.0.1
+PyYAML==6.0.1
+WeasyPrint==61.2
+
+# ═══════════════════════════════════════════════════════════════
+# Dépendances Module AI
+# ═══════════════════════════════════════════════════════════════
+prophet==1.1.5
+openai>=1.12.0
+groq>=0.3.0
+
+# ═══════════════════════════════════════════════════════════════
+# Dépendances Réseau et HTTP
+# ═══════════════════════════════════════════════════════════════
+requests>=2.31.0
+
+# ═══════════════════════════════════════════════════════════════
+# Dépendances Imprimante USB (optionnel, seulement si imprimante locale)
+# ═══════════════════════════════════════════════════════════════
+# pyusb>=1.2.1  # Décommenter si imprimante USB locale nécessaire

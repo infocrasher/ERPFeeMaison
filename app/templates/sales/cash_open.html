@@ -249,8 +249,8 @@
     <form method="POST" id="cashOpenForm" class="form-body">
         <div class="form-group">
             <label for="initial_amount">Montant initial (DA)</label>
-            <input type="number" class="form-control" id="initial_amount" name="initial_amount" min="0" step="0.01" required readonly>
-            <small class="form-text">Montant calculé automatiquement selon le comptage ci-dessous</small>
+            <input type="number" class="form-control" id="initial_amount" name="initial_amount" min="0" step="0.01" required value="{{ default_initial_amount|default(0, true)|round(2) }}" data-default-value="{{ default_initial_amount|default(0, true)|round(2) }}">
+            <small class="form-text">Montant proposé = fermeture précédente (modifiable ou recalculable via le comptage ci-dessous)</small>
         </div>
 
         <div class="cash-counting-section">
@@ -320,7 +320,7 @@
             <div class="total-section">
                 <div class="total-display">
                     <span class="total-label">Total compté :</span>
-                    <span class="total-amount" id="totalCounted">0 DA</span>
+                    <span class="total-amount" id="totalCounted">{{ default_initial_amount|default(0, true)|round(2) }} DA</span>
                 </div>
             </div>
         </div>
@@ -346,6 +346,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const denominationInputs = document.querySelectorAll('.denomination-input');
     const totalAmountInput = document.getElementById('initial_amount');
     const totalCountedSpan = document.getElementById('totalCounted');
+    const defaultInitial = parseFloat(totalAmountInput.dataset.defaultValue || totalAmountInput.value || '0') || 0;
+
+    function formatAmount(value) {
+        return (parseFloat(value) || 0).toFixed(2) + ' DA';
+    }
+
+    if (defaultInitial > 0) {
+        totalAmountInput.value = defaultInitial.toFixed(2);
+        totalCountedSpan.textContent = formatAmount(defaultInitial);
+    }
     
     function calculateTotal() {
         let total = 0;
@@ -363,8 +373,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Mettre à jour le total général
-        totalAmountInput.value = total;
-        totalCountedSpan.textContent = total + ' DA';
+        totalAmountInput.value = total.toFixed(2);
+        totalCountedSpan.textContent = formatAmount(total);
     }
     
     // Ajouter les event listeners
@@ -372,9 +382,10 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', calculateTotal);
         input.addEventListener('change', calculateTotal);
     });
-    
-    // Calculer le total initial
-    calculateTotal();
+
+    totalAmountInput.addEventListener('input', function() {
+        totalCountedSpan.textContent = formatAmount(this.value);
+    });
 });
 </script>
 {% endblock %}

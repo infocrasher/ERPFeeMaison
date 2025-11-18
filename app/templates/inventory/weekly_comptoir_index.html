@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Inventaires Hebdomadaires Comptoir{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-calendar-week me-2"></i>Inventaires Hebdomadaires Comptoir</h2>
+                <a href="{{ url_for('inventory.create_weekly_comptoir') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Nouvel inventaire
+                </a>
+            </div>
+
+            <!-- Filtres -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                {{ form.year.label(class="form-label") }}
+                                {{ form.year(class="form-select") }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form.week.label(class="form-label") }}
+                                {{ form.week(class="form-select") }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form.status.label(class="form-label") }}
+                                {{ form.status(class="form-select") }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    {{ form.submit(class="btn btn-outline-primary") }}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Liste des inventaires -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Inventaires hebdomadaires</h5>
+                </div>
+                <div class="card-body">
+                    {% if inventories %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Semaine</th>
+                                        <th>Date</th>
+                                        <th>Statut</th>
+                                        <th>Créé par</th>
+                                        <th>Créé le</th>
+                                        <th>Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for inventory in inventories %}
+                                    <tr>
+                                        <td>
+                                            <strong>Semaine {{ inventory.week_number }}</strong>
+                                            <br><small class="text-muted">{{ inventory.year }}</small>
+                                        </td>
+                                        <td>{{ inventory.inventory_date.strftime('%d/%m/%Y') }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if inventory.status == 'EN_COURS' %}warning{% elif inventory.status == 'COMPLETE' %}info{% elif inventory.status == 'VALIDE' %}success{% else %}secondary{% endif %}">
+                                                {{ inventory.status.replace('_', ' ').title() }}
+                                            </span>
+                                        </td>
+                                        <td>{{ inventory.created_by.username }}</td>
+                                        <td>{{ inventory.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>
+                                            {% if inventory.notes %}
+                                                <small class="text-muted">{{ inventory.notes[:50] }}{% if inventory.notes|length > 50 %}...{% endif %}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('inventory.weekly_comptoir_view', id=inventory.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye me-1"></i>Voir
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                            <h5 class="text-muted mt-3">Aucun inventaire</h5>
+                            <p class="text-muted">Aucun inventaire hebdomadaire n'a été créé pour les critères sélectionnés.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+

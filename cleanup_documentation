@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Script principal de nettoyage de la documentation ERP Fée Maison
+# Redirige vers le dossier scripts/
+
+echo "🧹 Nettoyage de la documentation ERP Fée Maison"
+echo "==============================================="
+echo
+
+# Vérifier que le dossier scripts existe
+if [ ! -d "scripts" ]; then
+    echo "❌ Erreur : Dossier 'scripts' non trouvé"
+    echo "📁 Répertoire actuel : $(pwd)"
+    exit 1
+fi
+
+# Aller dans le dossier scripts et exécuter le script
+cd scripts
+./cleanup_docs.sh
+
+# Retourner à la racine
+cd .. 

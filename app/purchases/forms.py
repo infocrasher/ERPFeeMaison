@@ -151,6 +151,11 @@ class PurchaseForm(FlaskForm):
 class MarkAsPaidForm(FlaskForm):
     """Formulaire simple pour marquer un achat comme payé"""
     payment_date = DateField('Date de paiement', validators=[DataRequired()], default=date.today)
+    payment_method = SelectField('Mode de paiement', choices=[
+        ('bank', 'Par virement (Banque)'),
+        ('cash', 'En espèces (Caisse)'),
+        ('credit', 'À crédit (Fournisseurs)')
+    ], default='bank', validators=[DataRequired()])
     submit = SubmitField('Marquer comme Payé')
 
     def validate_payment_date(self, field):

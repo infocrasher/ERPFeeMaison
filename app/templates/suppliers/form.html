@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-building me-2"></i>{{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.csrf_token }}
+                        
+                        <!-- Informations principales -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="bi bi-info-circle me-2"></i>Informations Principales
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-8 mb-3">
+                                {{ form.company_name.label(class="form-label required") }}
+                                {{ form.company_name(class="form-control") }}
+                                {% if form.company_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.company_name.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form.supplier_type.label(class="form-label") }}
+                                {{ form.supplier_type(class="form-select") }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.contact_person.label(class="form-label") }}
+                                {{ form.contact_person(class="form-control") }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.phone.label(class="form-label") }}
+                                {{ form.phone(class="form-control") }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.email.label(class="form-label") }}
+                                {{ form.email(class="form-control", type="email") }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.email.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.tax_number.label(class="form-label") }}
+                                {{ form.tax_number(class="form-control") }}
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                {{ form.address.label(class="form-label") }}
+                                {{ form.address(class="form-control", rows="3") }}
+                            </div>
+                        </div>
+
+                        <!-- Informations commerciales -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="bi bi-credit-card me-2"></i>Informations Commerciales
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.payment_terms.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.payment_terms(class="form-control") }}
+                                    <span class="input-group-text">jours</span>
+                                </div>
+                                <div class="form-text">Délai de paiement accordé par le fournisseur</div>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                {{ form.bank_details.label(class="form-label") }}
+                                {{ form.bank_details(class="form-control", rows="3", placeholder="RIB, IBAN, coordonnées bancaires...") }}
+                            </div>
+                        </div>
+
+                        <!-- Notes et statut -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="bi bi-journal-text me-2"></i>Notes et Statut
+                                </h5>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                {{ form.notes.label(class="form-label") }}
+                                {{ form.notes(class="form-control", rows="4", placeholder="Notes internes, conditions particulières...") }}
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <div class="form-check">
+                                    {{ form.is_active(class="form-check-input") }}
+                                    {{ form.is_active.label(class="form-check-label") }}
+                                </div>
+                                <div class="form-text">Les fournisseurs inactifs n'apparaissent pas dans les sélecteurs</div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                            <a href="{{ url_for('suppliers.list_suppliers') }}" class="btn btn-outline-secondary">
+                                Annuler
+                            </a>
+                            {% if supplier %}
+                            <a href="{{ url_for('suppliers.view_supplier', supplier_id=supplier.id) }}" class="btn btn-outline-info">
+                                <i class="bi bi-eye me-1"></i>Voir
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.required::after {
+    content: " *";
+    color: red;
+}
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+
+

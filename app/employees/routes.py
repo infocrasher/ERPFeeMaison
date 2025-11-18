@@ -5,7 +5,7 @@ Routes pour la gestion des employés
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from extensions import db
 from app.employees.models import Employee, AttendanceRecord
 from app.employees.forms import EmployeeForm, EmployeeSearchForm, WorkScheduleForm, AnalyticsPeriodForm, WorkHoursForm, PayrollCalculationForm
@@ -1098,10 +1098,8 @@ def calculate_payroll():
         payroll.hourly_rate = float(employee.salaire_fixe) / monthly_hours
         payroll.overtime_rate = payroll.hourly_rate * 1.5  # Majoration 50%
         
-        # Mettre à jour les taux de charges
-        payroll.social_security_rate = form.social_security_rate.data
-        payroll.unemployment_rate = form.unemployment_rate.data
-        payroll.retirement_rate = form.retirement_rate.data
+        # Les taux de charges sont définis par défaut dans le modèle (9%, 1.5%, 7%)
+        # Pas besoin de les modifier depuis le formulaire
         
         # Calculer tous les montants
         payroll.calculate_all()
@@ -1118,12 +1116,181 @@ def calculate_payroll():
         
         db.session.commit()
         
+        # Intégration comptable automatique lors de la validation
+        if form.is_validated.data:
+            try:
+                from app.accounting.services import AccountingIntegrationService
+                payroll_entry = AccountingIntegrationService.create_payroll_entry(
+                    payroll_id=payroll.id,
+                    gross_salary=float(payroll.gross_salary),
+                    net_salary=float(payroll.net_salary),
+                    description=f"Calcul salaire {employee.name} - {form.period_month.data}/{form.period_year.data}"
+                )
+                # Lier l'écriture au calcul de paie
+                payroll.payroll_entry_id = payroll_entry.id
+            except Exception as e:
+                print(f"Erreur intégration comptable salaire: {e}")
+            # On continue même si l'intégration comptable échoue
+        
         flash('Paie calculée avec succès!', 'success')
-        return redirect(url_for('employees.view_payroll', payroll_id=payroll.id))
+        
+        # Pré-remplir le formulaire avec les résultats calculés
+        form.base_salary.data = payroll.base_salary
+        form.overtime_amount.data = payroll.overtime_amount
+        form.total_bonuses.data = payroll.total_bonuses
+        form.total_deductions.data = payroll.total_deductions
+        form.gross_salary.data = payroll.gross_salary
+        form.total_charges.data = payroll.total_charges
+        form.net_salary.data = payroll.net_salary
+        form.is_validated.data = payroll.is_validated
+        form.validation_notes.data = payroll.validation_notes
+        
+        # Passer les données du calcul au template
+        return render_template('employees/payroll_calculation.html', 
+                             form=form, 
+                             payroll=payroll,
+                             employee=employee,
+                             work_hours=work_hours,
+                             title='Calcul de Paie')
+    
+    # Vérifier si on doit pré-charger un calcul existant (via paramètres GET)
+    employee_id = request.args.get('employee_id')
+    period_month = request.args.get('period_month')
+    period_year = request.args.get('period_year')
+    
+    payroll = None
+    employee = None
+    work_hours = None
+    
+    if employee_id and period_month and period_year:
+        try:
+            existing_payroll = PayrollCalculation.query.filter_by(
+                employee_id=int(employee_id),
+                period_month=int(period_month),
+                period_year=int(period_year)
+            ).first()
+            
+            if existing_payroll:
+                payroll = existing_payroll
+                employee = Employee.query.get(employee_id)
+                work_hours = WorkHours.query.get(payroll.work_hours_id)
+                
+                # Pré-remplir le formulaire
+                form.employee_id.data = str(employee_id)
+                form.period_month.data = str(period_month)
+                form.period_year.data = int(period_year)
+                form.base_salary.data = payroll.base_salary
+                form.overtime_amount.data = payroll.overtime_amount
+                form.total_bonuses.data = payroll.total_bonuses
+                form.total_deductions.data = payroll.total_deductions
+                form.gross_salary.data = payroll.gross_salary
+                form.total_charges.data = payroll.total_charges
+                form.net_salary.data = payroll.net_salary
+                form.is_validated.data = payroll.is_validated
+                form.validation_notes.data = payroll.validation_notes
+                
+        except (ValueError, TypeError):
+            pass  # Paramètres invalides, ignorer
     
     return render_template('employees/payroll_calculation.html', 
-                         form=form, 
+                         form=form,
+                         payroll=payroll,
+                         employee=employee,
+                         work_hours=work_hours,
                          title='Calcul de Paie')
+
+@employees_bp.route('/salaries', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def salaries_dashboard():
+    """
+    Affiche la liste des employés avec leurs salaires calculés pour une période donnée
+    Permet de payer chaque employé individuellement
+    """
+    from app.employees.models import PayrollCalculation, WorkHours
+    from app.accounting.services import AccountingIntegrationService
+    
+    # Récupérer la période sélectionnée ou courante par défaut
+    current_date = datetime.now()
+    selected_month = request.args.get('month', current_date.month, type=int)
+    selected_year = request.args.get('year', current_date.year, type=int)
+    
+    if request.method == 'POST':
+        # Traitement du paiement d'un salaire (toujours par banque)
+        payroll_id = request.form.get('payroll_id')
+        
+        if payroll_id:
+            try:
+                payroll = PayrollCalculation.query.get(payroll_id)
+                if payroll and payroll.is_validated and not payroll.is_paid:
+                    # Créer l'écriture comptable de paiement (toujours par banque)
+                    payment_entry = AccountingIntegrationService.create_salary_payment_entry(
+                        payroll_id=payroll.id,
+                        employee_id=payroll.employee_id,
+                        net_salary=float(payroll.net_salary),
+                        payment_method='bank',  # Toujours par banque
+                        description=f"Paiement salaire {payroll.employee.name} - {payroll.period_month}/{payroll.period_year}"
+                    )
+                    
+                    # Lier l'écriture de paiement au calcul de paie
+                    payroll.payment_entry_id = payment_entry.id
+                    
+                    # Marquer le salaire comme payé
+                    payroll.is_paid = True
+                    payroll.paid_at = datetime.utcnow()
+                    payroll.paid_by = current_user.id
+                    db.session.commit()
+                    
+                    flash(f'Paiement de {payroll.net_salary:.2f} DZD effectué par virement bancaire pour {payroll.employee.name}', 'success')
+                elif payroll and payroll.is_paid:
+                    flash('Ce salaire a déjà été payé', 'warning')
+                else:
+                    flash('Calcul de paie non trouvé ou non validé', 'error')
+            except Exception as e:
+                flash(f'Erreur lors du paiement: {str(e)}', 'error')
+        
+        # Rediriger en conservant les paramètres de période
+        return redirect(url_for('employees.salaries_dashboard', month=selected_month, year=selected_year))
+    
+    # Récupérer tous les calculs de paie validés pour la période sélectionnée
+    payrolls = PayrollCalculation.query.filter(
+        PayrollCalculation.is_validated == True,
+        PayrollCalculation.period_month == selected_month,
+        PayrollCalculation.period_year == selected_year
+    ).join(Employee).order_by(Employee.name).all()
+    
+    # Séparer les payés et non payés
+    paid_payrolls = [p for p in payrolls if p.is_paid]
+    unpaid_payrolls = [p for p in payrolls if not p.is_paid]
+    
+    # Calculer les totaux
+    total_gross = sum(float(p.gross_salary) for p in payrolls)
+    total_net = sum(float(p.net_salary) for p in payrolls)
+    total_paid = sum(float(p.net_salary) for p in paid_payrolls)
+    total_unpaid = sum(float(p.net_salary) for p in unpaid_payrolls)
+    
+    # Générer les options pour le sélecteur de période
+    # Récupérer toutes les périodes disponibles
+    available_periods = db.session.query(
+        PayrollCalculation.period_year,
+        PayrollCalculation.period_month
+    ).filter(PayrollCalculation.is_validated == True).distinct().order_by(
+        PayrollCalculation.period_year.desc(),
+        PayrollCalculation.period_month.desc()
+    ).all()
+    
+    return render_template('employees/salaries.html',
+                         payrolls=payrolls,
+                         paid_payrolls=paid_payrolls,
+                         unpaid_payrolls=unpaid_payrolls,
+                         selected_month=selected_month,
+                         selected_year=selected_year,
+                         available_periods=available_periods,
+                         total_gross=total_gross,
+                         total_net=total_net,
+                         total_paid=total_paid,
+                         total_unpaid=total_unpaid,
+                         title='Gestion des Salaires')
 
 @employees_bp.route('/payroll/<int:payroll_id>')
 @login_required

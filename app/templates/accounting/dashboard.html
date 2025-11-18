@@ -102,10 +102,15 @@
             <p class="text-muted">Vue d'ensemble de la santé financière</p>
         </div>
         <div class="col-md-4 text-end">
-            <div class="btn-group">
-                <button class="btn btn-outline-secondary btn-sm active" data-filter="current">Ce mois-ci</button>
-                <button class="btn btn-outline-secondary btn-sm" data-filter="last">Mois dernier</button>
-                <button class="btn btn-outline-secondary btn-sm" data-filter="custom">Personnalisé</button>
+            <div class="d-flex justify-content-end align-items-center gap-2">
+                <div class="btn-group me-2">
+                    <button class="btn btn-outline-secondary btn-sm active" data-filter="current">Ce mois-ci</button>
+                    <button class="btn btn-outline-secondary btn-sm" data-filter="last">Mois dernier</button>
+                    <button class="btn btn-outline-secondary btn-sm" data-filter="custom">Personnalisé</button>
+                </div>
+                <a href="{{ url_for('accounting.new_expense') }}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>Nouvelle Charge
+                </a>
             </div>
         </div>
     </div>
@@ -337,26 +342,26 @@
                         <div class="col-12 mb-3">
                             <a href="{{ url_for('accounting.new_expense') }}" class="btn btn-danger btn-action w-100">
                                 <i class="bi bi-plus-circle me-2"></i>
-                                Nouvelle Dépense
+                                Nouvelle Charge
                             </a>
                         </div>
                         <div class="col-12 mb-3">
-                            <a href="{{ url_for('accounting.new_entry') }}" class="btn btn-success btn-action w-100">
+                            <a href="{{ url_for('accounting.set_initial_balances') }}" class="btn btn-primary btn-action w-100">
+                                <i class="bi bi-gear me-2"></i>
+                                Soldes Initiaux
+                            </a>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <button type="button" class="btn btn-success btn-action w-100" data-bs-toggle="modal" data-bs-target="#adjustCashModal">
                                 <i class="bi bi-plus-circle me-2"></i>
-                                Nouvelle Écriture
-                            </a>
-                        </div>
-                        <div class="col-12 mb-3">
-                            <a href="{{ url_for('accounting.trial_balance') }}" class="btn btn-info btn-action w-100">
-                                <i class="bi bi-table me-2"></i>
-                                Balance Générale
-                            </a>
+                                Ajuster Caisse
+                            </button>
                         </div>
                         <div class="col-12">
-                            <a href="{{ url_for('accounting.profit_loss') }}" class="btn btn-warning btn-action w-100">
-                                <i class="bi bi-graph-up me-2"></i>
-                                Compte de Résultat
-                            </a>
+                            <button type="button" class="btn btn-info btn-action w-100" data-bs-toggle="modal" data-bs-target="#adjustBankModal">
+                                <i class="bi bi-bank me-2"></i>
+                                Ajuster Banque
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -591,4 +596,78 @@
         });
     });
 </script>
+
+<!-- Modal Ajuster Caisse -->
+<div class="modal fade" id="adjustCashModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-safe me-2"></i>Ajuster le Solde de Caisse
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('accounting.adjust_cash') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="cash_operation" class="form-label">Opération</label>
+                        <select class="form-select" id="cash_operation" name="operation" required>
+                            <option value="add">Ajouter de l'argent</option>
+                            <option value="remove">Retirer de l'argent</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cash_amount" class="form-label">Montant (DZD)</label>
+                        <input type="number" class="form-control" id="cash_amount" name="amount" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cash_reason" class="form-label">Raison</label>
+                        <input type="text" class="form-control" id="cash_reason" name="reason" placeholder="Ex: Dépôt client, Retrait pour achat..." required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">Ajuster</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajuster Banque -->
+<div class="modal fade" id="adjustBankModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-bank me-2"></i>Ajuster le Solde Bancaire
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('accounting.adjust_bank') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="bank_operation" class="form-label">Opération</label>
+                        <select class="form-select" id="bank_operation" name="operation" required>
+                            <option value="add">Ajouter de l'argent</option>
+                            <option value="remove">Retirer de l'argent</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bank_amount" class="form-label">Montant (DZD)</label>
+                        <input type="number" class="form-control" id="bank_amount" name="amount" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bank_reason" class="form-label">Raison</label>
+                        <input type="text" class="form-control" id="bank_reason" name="reason" placeholder="Ex: Virement reçu, Paiement fournisseur..." required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-info">Ajuster</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

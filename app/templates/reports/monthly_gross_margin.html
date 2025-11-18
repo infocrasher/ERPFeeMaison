@@ -1,0 +1,34 @@
+{% extends "reports/_generic_report.html" %}
+{% set report_type = 'monthly_gross_margin' %}
+{% block report_title %}monthly gross margin{% endblock %}
+
+{% block ai_section %}
+<!-- PHASE 3 - Intégration IA -->
+{% include 'components/ai_summary_block.html' %}
+
+<script src="{{ url_for('static', filename='js/ai_forecast.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Extraire les métadonnées IA du rapport
+    const metadata = {
+        growth_rate: {{ data.growth_rate | default(0) | tojson }},
+        variance: {{ data.variance | default(0) | tojson }},
+        trend_direction: {{ data.trend_direction | default('stable') | tojson }},
+        benchmark: {{ data.benchmark | default({}) | tojson }}
+    };
+    
+    // Initialiser le module IA
+    initAIModule({
+        type: "monthly",
+        reportName: "gross_margin",
+        endpoints: {
+            forecast: null,
+            insights: null,
+            anomalies: null
+        },
+        metadata: metadata
+    });
+});
+</script>
+{% endblock %}
+

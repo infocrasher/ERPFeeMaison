@@ -19,6 +19,10 @@ def all_product_query_factory():
 def active_products_with_stock():
     return Product.query.filter(Product.quantity_in_stock > 0).order_by(Product.name)
 
+# Factory pour lister SEULEMENT les ingrédients (pour transferts)
+def ingredients_only_query_factory():
+    return Product.query.filter_by(product_type='ingredient').order_by(Product.name)
+
 # Factory pour lister tous les utilisateurs
 def all_users_query_factory():
     return User.query.filter_by(role='admin').order_by(User.username)
@@ -69,26 +73,22 @@ class MultiLocationAdjustmentForm(FlaskForm):
             raise ValidationError('L\'ajustement ne peut pas dépasser 1000 unités.')
 
 class StockTransferLineForm(FlaskForm):
-    """Formulaire pour une ligne de transfert"""
+    """Formulaire pour une ligne de transfert - SEULEMENT INGRÉDIENTS"""
     product_id = IntegerField('Produit ID', validators=[Optional()])
-    product = QuerySelectField('Produit', query_factory=all_product_query_factory, get_label='name', allow_blank=True)
+    product = QuerySelectField('Ingrédient', query_factory=ingredients_only_query_factory, get_label='name', allow_blank=True, validators=[Optional()])
     quantity_requested = FloatField('Quantité', validators=[Optional(), NumberRange(min=0.01)])
     notes = StringField('Notes', validators=[Optional(), Length(max=255)])
 
 class StockTransferForm(FlaskForm):
-    """Formulaire de création de transfert entre stocks"""
+    """Formulaire de création de transfert entre stocks - Seulement ingrédients"""
     source_location = SelectField('Stock Source', choices=[
-        ('ingredients_magasin', 'Stock Magasin → Stock Local'),
-        ('ingredients_local', 'Stock Local → Stock Magasin'),
-        ('comptoir', 'Stock Comptoir → Stock Local'),
-        ('ingredients_local', 'Stock Local → Stock Comptoir')
+        ('ingredients_magasin', 'Stock Magasin'),
+        ('ingredients_local', 'Stock Local')
     ], validators=[DataRequired()])
     
     destination_location = SelectField('Stock Destination', choices=[
         ('ingredients_local', 'Stock Local (Production)'),
-        ('ingredients_magasin', 'Stock Magasin (Réserve)'),
-        ('comptoir', 'Stock Comptoir (Vitrine)'),
-        ('consommables', 'Stock Consommables')
+        ('ingredients_magasin', 'Stock Magasin (Réserve)')
     ], validators=[DataRequired()])
     
     reason = StringField('Motif du transfert', validators=[DataRequired(), Length(min=5, max=255)],
@@ -117,8 +117,11 @@ class StockTransferForm(FlaskForm):
     def validate_transfer_lines(self, field):
         """Validation pour s'assurer qu'au moins une ligne est remplie"""
         valid_lines = 0
-        for line in field.data:
-            if line.get('product_id') and line.get('quantity_requested', 0) > 0:
+        # Parcourir les FormField au lieu de field.data
+        for line_form in field.entries:
+            product_obj = getattr(line_form.product, 'data', None)
+            quantity = getattr(line_form.quantity_requested, 'data', None)
+            if product_obj and quantity and float(quantity) > 0:
                 valid_lines += 1
         
         if valid_lines == 0:

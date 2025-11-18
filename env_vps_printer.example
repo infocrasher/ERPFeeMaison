@@ -1,0 +1,19 @@
+# Configuration Imprimante sur VPS (Mode Réseau)
+# Ajouter ces lignes au fichier .env sur le VPS
+
+# Mode réseau activé (le VPS communique avec l'agent sur la machine POS)
+PRINTER_NETWORK_ENABLED=true
+
+# Adresse IP de la machine POS (remplacer par l'IP réelle de votre MacBook)
+# Trouver l'IP avec: ifconfig | grep "inet " | grep -v 127.0.0.1
+PRINTER_AGENT_HOST=192.168.1.100
+
+# Port de l'agent (doit correspondre à celui configuré sur la machine POS)
+PRINTER_AGENT_PORT=8080
+
+# Token d'authentification (DOIT être identique à celui de la machine POS)
+PRINTER_AGENT_TOKEN=your_secure_token_here_change_me
+
+# Note: Les autres variables PRINTER_* ne sont pas nécessaires sur le VPS
+# car l'imprimante est gérée par l'agent sur la machine POS
+

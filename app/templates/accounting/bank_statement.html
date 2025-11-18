@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Fée Maison{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="bi bi-bank me-2"></i>{{ title }}
+                </h2>
+                <div class="btn-group">
+                    <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Retour Dashboard
+                    </a>
+                    <a href="{{ url_for('accounting.adjust_bank') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-gear me-1"></i>Ajuster Solde
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Solde bancaire actuel -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-primary">
+                                <i class="bi bi-bank me-2"></i>Solde Bancaire
+                            </h5>
+                            <h2 class="text-primary mb-0">{{ "{:,.2f}".format(bank_balance) }} DZD</h2>
+                            <small class="text-muted">Solde actuel</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-success">
+                                <i class="bi bi-arrow-down-circle me-2"></i>Total Entrées
+                            </h5>
+                            <h3 class="text-success mb-0">{{ "{:,.2f}".format(total_entries) }} DZD</h3>
+                            <small class="text-muted">Encaissements</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-danger">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-danger">
+                                <i class="bi bi-arrow-up-circle me-2"></i>Total Sorties
+                            </h5>
+                            <h3 class="text-danger mb-0">{{ "{:,.2f}".format(total_exits) }} DZD</h3>
+                            <small class="text-muted">Décaissements</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques par catégorie -->
+            {% if categories_stats %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pie-chart me-2"></i>Répartition par Catégorie
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for category, stats in categories_stats.items() %}
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title">{{ category }}</h6>
+                                    <p class="mb-1"><strong>{{ "{:,.2f}".format(stats.amount) }} DZD</strong></p>
+                                    <small class="text-muted">{{ stats.count }} mouvement(s)</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Historique des mouvements -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-ul me-2"></i>Historique des Mouvements Bancaires
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if movements %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Référence</th>
+                                    <th>Description</th>
+                                    <th>Catégorie</th>
+                                    <th class="text-end">Montant</th>
+                                    <th class="text-end">Solde</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for movement in movements %}
+                                <tr>
+                                    <td>
+                                        <span class="text-muted">{{ movement.date.strftime('%d/%m/%Y') }}</span>
+                                    </td>
+                                    <td>
+                                        <code class="small">{{ movement.reference }}</code>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="{{ movement.icon }} {{ movement.color }} me-2"></i>
+                                            <div>
+                                                <div class="fw-medium">{{ movement.description }}</div>
+                                                {% if movement.movement.description != movement.description %}
+                                                <small class="text-muted">{{ movement.movement.description }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ movement.category }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        {% if movement.type == 'Entrée' %}
+                                            <span class="text-success fw-bold">
+                                                <i class="bi bi-plus-circle me-1"></i>
+                                                {{ "{:,.2f}".format(movement.amount) }} DZD
+                                            </span>
+                                        {% else %}
+                                            <span class="text-danger fw-bold">
+                                                <i class="bi bi-dash-circle me-1"></i>
+                                                {{ "{:,.2f}".format(movement.amount) }} DZD
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="{% if movement.balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                            {{ "{:,.2f}".format(movement.balance) }} DZD
+                                        </strong>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox display-1 text-muted"></i>
+                        <h4 class="mt-3 text-muted">Aucun mouvement bancaire</h4>
+                        <p class="text-muted">Aucune transaction bancaire enregistrée pour le moment.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Informations complémentaires -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-info-circle me-2"></i>Informations
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li><i class="bi bi-check-circle text-success me-2"></i>Solde calculé automatiquement</li>
+                                <li><i class="bi bi-arrow-clockwise text-primary me-2"></i>Mise à jour en temps réel</li>
+                                <li><i class="bi bi-shield-check text-info me-2"></i>Basé sur les écritures comptables</li>
+                                <li><i class="bi bi-graph-up text-warning me-2"></i>Historique complet des mouvements</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-gear me-2"></i>Actions Disponibles
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('accounting.new_expense') }}" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-plus-circle me-1"></i>Nouvelle Dépense
+                                </a>
+                                <a href="{{ url_for('accounting.list_entries') }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-journal-text me-1"></i>Voir Toutes les Écritures
+                                </a>
+                                <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-speedometer2 me-1"></i>Dashboard Comptabilité
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+code {
+    font-size: 0.8em;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+
+

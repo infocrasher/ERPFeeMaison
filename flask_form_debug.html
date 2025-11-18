@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Formulaire B2B - Flask ERP</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .diagnostic-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 5px solid #007bff;
+        }
+        
+        .critical {
+            border-left-color: #dc3545;
+        }
+        
+        .warning {
+            border-left-color: #ffc107;
+        }
+        
+        .success {
+            border-left-color: #28a745;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+        }
+        
+        .step {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .checklist {
+            background: #f1f8e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="diagnostic-card critical">
+        <h1>🚨 Diagnostic Formulaire B2B - Problème Critique</h1>
+        <p><strong>Problème :</strong> Le bouton "Enregistrer la commande" ne déclenche aucune action</p>
+        <p><strong>Symptômes :</strong> Aucun log JavaScript, aucun log serveur Flask</p>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>📋 Phase 1 : Tests de Diagnostic Immédiat</h2>
+        
+        <div class="step">
+            <h3>1.1 Vérification de l'Event Listener</h3>
+            <p>Testez si l'event listener est bien attaché au formulaire :</p>
+            <div class="code-block">
+// À ajouter TEMPORAIREMENT dans votre form.html
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DIAGNOSTIC DOM LOADED ===');
+    
+    const orderForm = document.getElementById('orderForm');
+    console.log('Formulaire trouvé:', orderForm);
+    
+    if (orderForm) {
+        console.log('Formulaire existe - Type:', orderForm.tagName);
+        console.log('ID:', orderForm.id);
+        console.log('Method:', orderForm.method);
+        console.log('Action:', orderForm.action);
+        
+        // Test direct de soumission
+        orderForm.addEventListener('submit', function(e) {
+            console.log('🔥 EVENT SUBMIT DÉCLENCHÉ !');
+            console.log('Event:', e);
+            // TEMPORAIRE : empêcher la soumission pour debug
+            e.preventDefault();
+            return false;
+        });
+        
+        console.log('Event listener attaché avec succès');
+    } else {
+        console.error('❌ FORMULAIRE NON TROUVÉ !');
+        console.log('Tous les forms sur la page:');
+        document.querySelectorAll('form').forEach((form, index) => {
+            console.log(`Form ${index}:`, form);
+        });
+    }
+});
+            </div>
+            <button class="btn" onclick="copyToClipboard(this.previousElementSibling.textContent)">
+                📋 Copier le code
+            </button>
+        </div>
+
+        <div class="step">
+            <h3>1.2 Test du Bouton Submit</h3>
+            <div class="code-block">
+// Test direct du bouton
+document.addEventListener('DOMContentLoaded', function() {
+    const submitBtn = document.getElementById('submit-btn');
+    console.log('Bouton submit:', submitBtn);
+    
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function(e) {
+            console.log('🔘 BOUTON CLIQUÉ !');
+            console.log('Type du bouton:', submitBtn.type);
+            console.log('Form associé:', submitBtn.form);
+        });
+    }
+});
+            </div>
+        </div>
+    </div>
+
+    <div class="diagnostic-card warning">
+        <h2>🔍 Phase 2 : Vérifications Structure HTML</h2>
+        
+        <div class="checklist">
+            <h3>Checklist Structure HTML :</h3>
+            <ul>
+                <li>✅ Le formulaire a bien l'ID <code>orderForm</code></li>
+                <li>✅ L'attribut <code>method="POST"</code> est présent</li>
+                <li>✅ Le token CSRF <code>{{ form.hidden_tag() }}</code> est inclus</li>
+                <li>❓ Pas de formulaires imbriqués</li>
+                <li>❓ Pas de conflits d'IDs</li>
+                <li>❓ Le bouton est bien de <code>type="submit"</code></li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>2.1 Vérification HTML généré</h3>
+            <p>Inspectez le HTML généré dans le navigateur (F12 → Elements) :</p>
+            <div class="code-block">
+// Console JavaScript - Vérification structure
+console.log('=== VÉRIFICATION STRUCTURE ===');
+const form = document.getElementById('orderForm');
+if (form) {
+    console.log('HTML du formulaire:');
+    console.log(form.outerHTML.substring(0, 500) + '...');
+    console.log('Nombre d\'éléments:', form.elements.length);
+    console.log('Action:', form.action || 'Pas d\'action définie');
+    console.log('Method:', form.method);
+}
+            </div>
+        </div>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>⚙️ Phase 3 : Diagnostic Backend Flask</h2>
+        
+        <div class="step">
+            <h3>3.1 Debug Route Flask</h3>
+            <p>Modifiez temporairement votre route <code>new_order</code> :</p>
+            <div class="code-block">
+@b2b.route('/orders/new', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def new_order():
+    print(f"\n{'='*50}")
+    print(f"🔍 ROUTE NEW_ORDER APPELÉE")
+    print(f"Method: {request.method}")
+    print(f"Content-Type: {request.content_type}")
+    print(f"Form keys: {list(request.form.keys())}")
+    print(f"Args: {dict(request.args)}")
+    print(f"{'='*50}\n")
+    
+    form = B2BOrderForm()
+    
+    print(f"Form submitted: {form.is_submitted()}")
+    print(f"Form errors: {form.errors}")
+    
+    if request.method == 'POST':
+        print("📨 POST reçu - Données brutes:")
+        for key, value in request.form.items():
+            print(f"  {key}: {value}")
+    
+    if form.validate_on_submit():
+        print("✅ Validation réussie")
+        # Votre code existant...
+    else:
+        if request.method == 'POST':
+            print("❌ Validation échouée:")
+            for field, errors in form.errors.items():
+                print(f"  {field}: {errors}")
+    
+    # Reste de votre code...
+            </div>
+        </div>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>🛠️ Phase 4 : Solutions Potentielles</h2>
+        
+        <div class="step">
+            <h3>4.1 Solution : Event Listener Alternatif</h3>
+            <p>Si l'event listener standard ne fonctionne pas, essayez cette approche :</p>
+            <div class="code-block">
+// Approche alternative pour l'event listener
+function attachSubmitHandler() {
+    const form = document.getElementById('orderForm');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    if (!form || !submitBtn) {
+        console.error('Éléments manquants:', { form, submitBtn });
+        return;
+    }
+    
+    // Méthode 1 : Via le bouton
+    submitBtn.onclick = function(e) {
+        console.log('🔥 CLICK VIA ONCLICK');
+        e.preventDefault();
+        handleFormSubmission();
+        return false;
+    };
+    
+    // Méthode 2 : Via addEventListener sur le bouton
+    submitBtn.addEventListener('click', function(e) {
+        console.log('🔥 CLICK VIA ADDEVENTLISTENER');
+        e.preventDefault();
+        handleFormSubmission();
+    });
+    
+    // Méthode 3 : Forcer via le formulaire
+    form.onsubmit = function(e) {
+        console.log('🔥 SUBMIT VIA ONSUBMIT');
+        e.preventDefault();
+        handleFormSubmission();
+        return false;
+    };
+}
+
+function handleFormSubmission() {
+    console.log('=== TRAITEMENT SOUMISSION ===');
+    
+    // Votre validation existante ici
+    const clientSelect = document.querySelector('select[name="client_id"]');
+    if (!clientSelect?.value) {
+        alert('Veuillez sélectionner un client B2B');
+        return;
+    }
+    
+    console.log('Validation OK - Soumission du formulaire...');
+    
+    // Soumettre le formulaire
+    const form = document.getElementById('orderForm');
+    form.submit();
+}
+
+// Attacher les handlers
+document.addEventListener('DOMContentLoaded', attachSubmitHandler);
+// Backup si DOMContentLoaded est déjà passé
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachSubmitHandler);
+} else {
+    attachSubmitHandler();
+}
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>4.2 Solution : Formulaire Minimaliste de Test</h3>
+            <p>Créez un formulaire de test pour isoler le problème :</p>
+            <div class="code-block">
+&lt;!-- À ajouter temporairement dans votre template --&gt;
+&lt;div style="background: yellow; padding: 20px; margin: 20px 0;"&gt;
+    &lt;h3&gt;🧪 FORMULAIRE DE TEST&lt;/h3&gt;
+    &lt;form method="POST" id="testForm"&gt;
+        {{ form.hidden_tag() }}
+        &lt;input type="hidden" name="test" value="1"&gt;
+        &lt;button type="submit" id="testSubmit"&gt;TEST SUBMIT&lt;/button&gt;
+    &lt;/form&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+document.getElementById('testForm').addEventListener('submit', function(e) {
+    console.log('🧪 TEST FORM SUBMITTED');
+    e.preventDefault();
+    alert('Test form fonctionne !');
+});
+&lt;/script&gt;
+            </div>
+        </div>
+    </div>
+
+    <div class="diagnostic-card success">
+        <h2>🎯 Plan d'Action Recommandé</h2>
+        
+        <div class="step">
+            <h3>Étapes à suivre dans l'ordre :</h3>
+            <ol>
+                <li><strong>Ajoutez le code de diagnostic Phase 1</strong> dans votre template</li>
+                <li><strong>Rechargez la page</strong> et ouvrez la console (F12)</li>
+                <li><strong>Cliquez sur "Enregistrer la commande"</strong> et notez les logs</li>
+                <li><strong>Si aucun log</strong> → Problème d'event listener (utilisez la Solution 4.1)</li>
+                <li><strong>Si logs présents mais pas de POST</strong> → Problème de validation JavaScript</li>
+                <li><strong>Si POST reçu mais validation échoue</strong> → Problème Flask-WTF</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="diagnostic-card">
+        <h2>🔧 Tests Interactifs</h2>
+        <p>Utilisez ces boutons pour tester différentes approches :</p>
+        
+        <button class="btn" onclick="testFormExistence()">
+            🔍 Tester existence formulaire
+        </button>
+        
+        <button class="btn btn-danger" onclick="testEventListener()">
+            ⚡ Tester event listener
+        </button>
+        
+        <button class="btn btn-success" onclick="showDiagnosticCode()">
+            📝 Copier code diagnostic complet
+        </button>
+        
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Code copié dans le presse-papiers !');
+            });
+        }
+        
+        function testFormExistence() {
+            const results = document.getElementById('test-results');
+            const forms = document.querySelectorAll('form');
+            
+            let html = '<div class="test-result test-';
+            html += forms.length > 0 ? 'pass">✅ ' : 'fail">❌ ';
+            html += `${forms.length} formulaire(s) trouvé(s) sur cette page</div>`;
+            
+            forms.forEach((form, index) => {
+                html += `<div class="test-result test-pass">Formulaire ${index + 1}: ID="${form.id}", Method="${form.method}"</div>`;
+            });
+            
+            results.innerHTML = html;
+        }
+        
+        function testEventListener() {
+            const results = document.getElementById('test-results');
+            const testForm = document.createElement('form');
+            testForm.id = 'diagnostic-test-form';
+            testForm.innerHTML = '<button type="submit">Test Submit</button>';
+            
+            document.body.appendChild(testForm);
+            
+            let eventFired = false;
+            testForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                eventFired = true;
+                
+                const html = '<div class="test-result test-pass">✅ Event listener fonctionne correctement</div>';
+                results.innerHTML = html;
+                
+                setTimeout(() => {
+                    document.body.removeChild(testForm);
+                }, 2000);
+            });
+            
+            setTimeout(() => {
+                testForm.querySelector('button').click();
+                
+                setTimeout(() => {
+                    if (!eventFired) {
+                        results.innerHTML = '<div class="test-result test-fail">❌ Event listener ne fonctionne pas</div>';
+                    }
+                }, 100);
+            }, 100);
+        }
+        
+        function showDiagnosticCode() {
+            const code = `
+// CODE DIAGNOSTIC COMPLET À AJOUTER DANS VOTRE form.html
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DIAGNOSTIC COMPLET B2B ===');
+    
+    // 1. Vérification existence formulaire
+    const orderForm = document.getElementById('orderForm');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    console.log('Formulaire trouvé:', !!orderForm);
+    console.log('Bouton trouvé:', !!submitBtn);
+    
+    if (!orderForm) {
+        console.error('❌ FORMULAIRE orderForm NON TROUVÉ');
+        document.querySelectorAll('form').forEach((form, i) => {
+            console.log('Form', i, ':', form.id || 'pas d\\'id', form);
+        });
+        return;
+    }
+    
+    // 2. Triple event listener pour être sûr
+    orderForm.addEventListener('submit', function(e) {
+        console.log('🔥 EVENT SUBMIT - addEventListener');
+        handleSubmit(e);
+    });
+    
+    orderForm.onsubmit = function(e) {
+        console.log('🔥 EVENT SUBMIT - onsubmit');
+        handleSubmit(e);
+    };
+    
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function(e) {
+            console.log('🔥 BUTTON CLICK - addEventListener');
+            // Laisser le comportement normal du bouton submit
+        });
+    }
+    
+    function handleSubmit(e) {
+        console.log('=== TRAITEMENT SOUMISSION ===');
+        console.log('Event type:', e.type);
+        console.log('Target:', e.target);
+        
+        // Validation client
+        const clientSelect = document.querySelector('select[name="client_id"]');
+        console.log('Client sélectionné:', clientSelect?.value);
+        
+        if (!clientSelect?.value) {
+            e.preventDefault();
+            console.warn('Validation échouée - Pas de client');
+            alert('Veuillez sélectionner un client B2B');
+            return false;
+        }
+        
+        // Validation produits
+        const items = document.querySelectorAll('.order-item-row, .order-item');
+        console.log('Items trouvés:', items.length);
+        
+        let hasValidItems = false;
+        items.forEach((item, index) => {
+            const productSelect = item.querySelector('select[name*="product"]');
+            const quantity = item.querySelector('input[name*="quantity"]');
+            console.log('Item', index, '- Produit:', productSelect?.value, 'Quantité:', quantity?.value);
+            
+            if (productSelect?.value && quantity?.value > 0) {
+                hasValidItems = true;
+            }
+        });
+        
+        if (!hasValidItems) {
+            e.preventDefault();
+            console.warn('Validation échouée - Pas de produits valides');
+            alert('Veuillez ajouter au moins un produit avec une quantité valide');
+            return false;
+        }
+        
+        console.log('✅ Validation réussie - Soumission autorisée');
+        // Ne pas empêcher la soumission si tout est OK
+    }
+    
+    console.log('=== DIAGNOSTIC TERMINÉ ===');
+});
+            `;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Code diagnostic complet copié ! Collez-le dans votre template form.html');
+            });
+        }
+    </script>
+</body>
+</html>

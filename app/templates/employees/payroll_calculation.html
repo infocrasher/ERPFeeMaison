@@ -67,60 +67,53 @@
 
                         <hr class="my-4">
 
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <h6 class="text-primary fw-bold">
-                                    <i class="bi bi-percent me-2"></i>Taux de Charges Sociales
-                                </h6>
-                            </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                {{ form.social_security_rate.label(class="form-label") }}
-                                <div class="input-group">
-                                    {{ form.social_security_rate(class="form-control", step="0.1") }}
-                                    <span class="input-group-text">%</span>
-                                </div>
-                                {% if form.social_security_rate.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.social_security_rate.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                {{ form.unemployment_rate.label(class="form-label") }}
-                                <div class="input-group">
-                                    {{ form.unemployment_rate(class="form-control", step="0.1") }}
-                                    <span class="input-group-text">%</span>
-                                </div>
-                                {% if form.unemployment_rate.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.unemployment_rate.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                {{ form.retirement_rate.label(class="form-label") }}
-                                <div class="input-group">
-                                    {{ form.retirement_rate(class="form-control", step="0.1") }}
-                                    <span class="input-group-text">%</span>
-                                </div>
-                                {% if form.retirement_rate.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.retirement_rate.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
+                        <!-- Informations sur le calcul -->
+                        <div class="alert alert-success">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-calculator me-2"></i>Calcul Simplifié
+                            </h6>
+                            <div class="text-center">
+                                <strong>Salaire Net = (Heures × Taux horaire) + Primes - Avances</strong>
+                                <br>
+                                <small class="text-muted">Les assurances sont gérées séparément dans les charges trimestrielles</small>
                             </div>
                         </div>
 
                         <hr class="my-4">
+
+                        {% if payroll %}
+                        <!-- Résultats du calcul -->
+                        <div class="alert alert-success">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-check-circle me-2"></i>Résultats du Calcul
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Employé:</strong> {{ employee.name }}</p>
+                                    <p><strong>Période:</strong> {{ '%02d' % payroll.period_month }}/{{ payroll.period_year }}</p>
+                                    <p><strong>Heures normales:</strong> {{ work_hours.regular_hours }}h</p>
+                                    <p><strong>Heures supplémentaires:</strong> {{ work_hours.overtime_hours }}h</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Salaire brut:</strong> {{ payroll.gross_salary|round(2) }} DZD</p>
+                                    <p><strong>Déductions:</strong> {{ payroll.total_deductions|round(2) }} DZD</p>
+                                    <p><strong class="text-success">Salaire net:</strong> {{ payroll.net_salary|round(2) }} DZD</p>
+                                    <p><strong>Statut:</strong> 
+                                        {% if payroll.is_validated %}
+                                            <span class="badge bg-success">Validé</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Non validé</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <a href="{{ url_for('employees.view_payroll', payroll_id=payroll.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-eye me-1"></i>Voir le bulletin détaillé
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
 
                         <div class="row">
                             <div class="col-12 mb-3">
@@ -172,7 +165,8 @@
                 <ul class="mb-0">
                     <li>Le taux horaire est calculé automatiquement basé sur 173.33 heures par mois</li>
                     <li>Les heures supplémentaires sont majorées de 50%</li>
-                    <li>Les charges sociales sont calculées sur le salaire brut</li>
+                    <li>Le calcul se base directement sur les heures pointées + primes - avances</li>
+                    <li>Les assurances sociales sont gérées manuellement dans les charges trimestrielles</li>
                     <li>La validation est requise pour générer les bulletins de paie</li>
                 </ul>
             </div>

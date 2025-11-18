@@ -1,5 +1,5 @@
-from datetime import datetime
-from decimal import Decimal
+from datetime import datetime, date
+from decimal import Decimal, ROUND_HALF_UP
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func
 from flask_login import UserMixin
@@ -14,6 +14,32 @@ CONVERSION_FACTORS = {
     'l_ml': 1000, 'ml_l': 0.001,
 }
 
+class Profile(db.Model):
+    """Profils utilisateurs avec permissions granulaires"""
+    __tablename__ = 'profiles'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Permissions stockées en JSON
+    # Format: {"ventes_pos": true, "caisse_ouverture": true, ...}
+    permissions = db.Column(db.JSON, nullable=False, default=dict)
+    
+    # Relations
+    users = db.relationship('User', backref='profile', lazy='dynamic')
+    
+    def has_permission(self, permission_key):
+        """Vérifie si le profil a une permission spécifique"""
+        return self.permissions.get(permission_key, False)
+    
+    def __repr__(self):
+        return f'<Profile {self.name}>'
+
+
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     
@@ -21,7 +47,8 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='user')
+    role = db.Column(db.String(20), nullable=False, default='user')  # Conservé pour compatibilité
+    profile_id = db.Column(db.Integer, db.ForeignKey('profiles.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relations
@@ -29,7 +56,23 @@ class User(UserMixin, db.Model):
     
     @property
     def is_admin(self):
-        return self.role == 'admin'
+        """Vérifie si l'utilisateur est admin (via role ou profil)"""
+        if self.role == 'admin':
+            return True
+        if self.profile and self.profile.name.lower() == 'admin':
+            return True
+        return False
+    
+    def has_permission(self, permission_key):
+        """Vérifie si l'utilisateur a une permission via son profil"""
+        # Admin a tous les accès
+        if self.is_admin:
+            return True
+        # Vérifier via profil
+        if self.profile:
+            return self.profile.has_permission(permission_key)
+        # Fallback : vérifier via role (compatibilité)
+        return False
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -46,6 +89,7 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text)
+    show_in_pos = db.Column(db.Boolean, default=True, nullable=False, server_default='true')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relations
@@ -75,6 +119,7 @@ class Product(db.Model):
     stock_consommables = db.Column(db.Float, default=0.0, nullable=False)
     
     total_stock_value = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
+    value_deficit_total = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
 
     seuil_min_comptoir = db.Column(db.Float, default=0.0)
     seuil_min_ingredients_local = db.Column(db.Float, default=0.0)
@@ -87,8 +132,18 @@ class Product(db.Model):
 
     valeur_stock_ingredients_magasin = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
     valeur_stock_ingredients_local = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
+    valeur_stock_comptoir = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
+    valeur_stock_consommables = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
+    deficit_stock_ingredients_magasin = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
+    deficit_stock_ingredients_local = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
+    deficit_stock_comptoir = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
+    deficit_stock_consommables = db.Column(db.Numeric(12, 4), nullable=False, default=0.0, server_default='0.0')
 
     image_filename = db.Column(db.String(255), nullable=True)
+    
+    # Gestion de la péremption
+    shelf_life_days = db.Column(db.Integer, nullable=True)  # Durée de conservation en jours
+    requires_expiry_tracking = db.Column(db.Boolean, default=False)  # Suivi de péremption requis
 
     @property
     def to_dict(self):
@@ -153,23 +208,77 @@ class Product(db.Model):
     def get_stock_by_location(self, location_key: str) -> float:
         return getattr(self, location_key, 0.0)
 
-    def update_stock_by_location(self, location_key: str, quantity_change: float) -> bool:
-        """Met à jour le stock d'un produit à un emplacement spécifique"""
-        if location_key == 'stock_ingredients_magasin':
-            current_value = self.stock_ingredients_magasin or 0.0
-            self.stock_ingredients_magasin = max(0, current_value + quantity_change)
-        elif location_key == 'stock_ingredients_local':
-            current_value = self.stock_ingredients_local or 0.0
-            self.stock_ingredients_local = max(0, current_value + quantity_change)
-        elif location_key == 'stock_comptoir':
-            current_value = self.stock_comptoir or 0.0
-            self.stock_comptoir = max(0, current_value + quantity_change)
-        elif location_key == 'stock_consommables':
-            current_value = self.stock_consommables or 0.0
-            self.stock_consommables = max(0, current_value + quantity_change)
-        else:
+    def update_stock_by_location(self, location_key: str, quantity_change: float, unit_cost_override=None) -> bool:
+        """
+        Met à jour le stock d'un produit à un emplacement spécifique ainsi que la valorisation associée.
+        Autorise les stocks négatifs mais conserve une valorisation cohérente grâce à un déficit de valeur
+        (consommation à découvert) qui sera résorbé lors des prochaines entrées.
+        """
+        location_mappings = {
+            'stock_ingredients_magasin': ('stock_ingredients_magasin', 'valeur_stock_ingredients_magasin', 'deficit_stock_ingredients_magasin'),
+            'stock_ingredients_local': ('stock_ingredients_local', 'valeur_stock_ingredients_local', 'deficit_stock_ingredients_local'),
+            'stock_comptoir': ('stock_comptoir', 'valeur_stock_comptoir', 'deficit_stock_comptoir'),
+            'stock_consommables': ('stock_consommables', 'valeur_stock_consommables', 'deficit_stock_consommables')
+        }
+        
+        mapping = location_mappings.get(location_key)
+        if not mapping:
             return False
         
+        qty_attr, value_attr, deficit_attr = mapping
+        if unit_cost_override is not None:
+            unit_cost = Decimal(str(unit_cost_override))
+        else:
+            unit_cost = Decimal(str(self.cost_price or 0.0))
+        qty_change = Decimal(str(quantity_change))
+        
+        current_qty = Decimal(str(getattr(self, qty_attr) or 0.0))
+        new_qty = current_qty + qty_change
+        setattr(self, qty_attr, float(new_qty))
+        
+        current_value = Decimal(str(getattr(self, value_attr) or 0.0))
+        current_deficit = Decimal(str(getattr(self, deficit_attr) or 0.0))
+        total_value = Decimal(str(self.total_stock_value or 0.0))
+        total_deficit = Decimal(str(self.value_deficit_total or 0.0))
+        
+        def q(value: Decimal) -> Decimal:
+            return value.quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+        
+        if qty_change < 0:
+            requested = abs(qty_change)
+            available_qty = max(Decimal('0'), current_qty)
+            qty_from_stock = min(requested, available_qty)
+            shortage_qty = requested - qty_from_stock
+            
+            if qty_from_stock > 0:
+                value_to_remove = q(qty_from_stock * unit_cost)
+                value_to_remove = min(value_to_remove, current_value)
+                current_value -= value_to_remove
+                total_value = max(Decimal('0'), total_value - value_to_remove)
+            
+            if shortage_qty > 0:
+                value_shortage = q(shortage_qty * unit_cost)
+                current_deficit += value_shortage
+                total_deficit += value_shortage
+        
+        elif qty_change > 0:
+            value_increase = q(qty_change * unit_cost)
+            
+            if current_deficit > 0 and value_increase > 0:
+                applied_to_deficit = min(value_increase, current_deficit)
+                current_deficit -= applied_to_deficit
+                value_increase -= applied_to_deficit
+                total_deficit = max(Decimal('0'), total_deficit - applied_to_deficit)
+            
+            if value_increase > 0:
+                current_value += value_increase
+                total_value += value_increase
+        # qty_change == 0 → pas de variation de valeur
+        
+        setattr(self, value_attr, q(max(Decimal('0'), current_value)))
+        setattr(self, deficit_attr, q(max(Decimal('0'), current_deficit)))
+        self.total_stock_value = q(max(Decimal('0'), total_value))
+        self.value_deficit_total = q(max(Decimal('0'), total_deficit))
         self.last_stock_update = datetime.utcnow()
         return True
 
@@ -179,20 +288,44 @@ class Product(db.Model):
             stock_value = self.total_stock_all_locations
         else:
             stock_value = self.get_stock_by_location_type(location_type)
-        display_unit = self.unit.lower()
+        
+        return self.format_quantity_display(stock_value)
+    
+    def format_quantity_display(self, quantity):
+        """Formate une quantité donnée pour l'affichage avec conversion automatique"""
+        display_unit = self.unit.lower() if self.unit else 'unité'
         base_unit = self.base_unit_for_recipes()
-        if stock_value == 0:
-            return f"0 {display_unit.upper()}"
+        
+        if quantity == 0:
+            return f"0 {display_unit}"
+        
         try:
-            if display_unit == 'kg' and base_unit == 'g':
-                display_value = stock_value / 1000
+            # Auto-conversion pour les grammes >= 1000 → kg
+            if display_unit == 'g' and quantity >= 1000:
+                display_value = quantity / 1000
                 return f"{display_value:,.3f} kg".replace(",", " ").replace(".", ",")
-            if display_unit == 'l' and base_unit == 'ml':
-                display_value = stock_value / 1000
+            
+            # Auto-conversion pour les millilitres >= 1000 → L
+            elif display_unit == 'ml' and quantity >= 1000:
+                display_value = quantity / 1000
                 return f"{display_value:,.3f} L".replace(",", " ").replace(".", ",")
-            return f"{int(stock_value)} {display_unit}"
-        except Exception:
-            return f"{stock_value} {base_unit} (brut)"
+            
+            # Cas spécial pour kg (déjà en kg, pas de conversion)
+            elif display_unit == 'kg':
+                display_value = quantity / 1000  # Stock est en grammes, afficher en kg
+                return f"{display_value:,.3f} kg".replace(",", " ").replace(".", ",")
+            
+            # Cas spécial pour L (déjà en L, pas de conversion)
+            elif display_unit == 'l':
+                display_value = quantity / 1000  # Stock est en ml, afficher en L
+                return f"{display_value:,.3f} L".replace(",", " ").replace(".", ",")
+            
+            # Pour les autres unités (pièce, unité, etc.)
+            else:
+                return f"{int(quantity)} {display_unit}"
+                
+        except Exception as e:
+            return f"{quantity} {base_unit} (erreur)"
 
     def base_unit_for_recipes(self):
         unit_lower = self.unit.lower()
@@ -291,16 +424,25 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     order_type = db.Column(db.String(50), nullable=False, default='customer_order')
+    
+    # Client (nouvelle approche centralisée)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)  # Nullable pour compatibilité
+    
+    # Informations client (ancien système - gardé pour compatibilité)
     customer_name = db.Column(db.String(200))
     customer_phone = db.Column(db.String(20))
     customer_address = db.Column(db.Text)
     delivery_option = db.Column(db.String(20), default='pickup')
     due_date = db.Column(db.DateTime, nullable=False)
     delivery_cost = db.Column(db.Numeric(10, 2), default=0.0)
+    delivery_zone = db.Column(db.String(100), nullable=True)  # Commune / zone de livraison
     deliveryman_id = db.Column(db.Integer, db.ForeignKey('deliverymen.id'), nullable=True)  # Champ livreur
     status = db.Column(db.String(50), default='pending', index=True)
     notes = db.Column(db.Text)
     total_amount = db.Column(db.Numeric(10, 2), default=0.0)
+    amount_paid = db.Column(db.Numeric(10, 2), default=0.0, nullable=False)
+    payment_status = db.Column(db.String(20), default='pending')
+    payment_paid_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     items = db.relationship('OrderItem', backref='order', lazy='dynamic', cascade='all, delete-orphan')
@@ -471,14 +613,19 @@ class Order(db.Model):
     
     def decrement_ingredients_stock_on_production(self):
         """
-        Décrémente le stock des ingrédients lors de la production d'un produit fini,
+        Décrémente le stock des ingrédients ET consommables lors de la production d'un produit fini,
         en tenant compte du rendement de la recette (yield_quantity).
         """
         for item in self.items:
             product_fini = item.product
-            if product_fini and product_fini.recipe_definition:
+            if not product_fini:
+                continue
+            
+            # 1. DÉCRÉMENTATION DES INGRÉDIENTS (si recette existe)
+            if product_fini.recipe_definition:
                 recipe = product_fini.recipe_definition
                 labo_key = recipe.production_location
+                
                 # Pour chaque ingrédient de la recette
                 for ingredient_in_recipe in recipe.ingredients:
                     ingredient_product = ingredient_in_recipe.product
@@ -497,15 +644,104 @@ class Order(db.Model):
                     # Décrémentation du stock
                     ingredient_product.update_stock_by_location(stock_attr, -needed_qty)
                     # Log/debug
-                    print(f"Décrémentation: {ingredient_product.name} - {needed_qty:.3f} {ingredient_in_recipe.unit} (stock: {stock_attr})")
+                    print(f"Décrémentation ingrédient: {ingredient_product.name} - {needed_qty:.3f} {ingredient_in_recipe.unit} (stock: {stock_attr})")
+            
+            # 2. DÉCRÉMENTATION DES CONSOMMABLES (toujours exécutée)
+            # Deux systèmes: Ancien (ConsumableRecipe) et Nouveau (ConsumableCategory)
+            
+            # --- ANCIEN SYSTÈME : Recettes individuelles ---
+            from app.consumables.models import ConsumableRecipe, ConsumableCategory
+            consumable_recipes = ConsumableRecipe.query.filter(
+                ConsumableRecipe.finished_product_id == product_fini.id
+            ).all()
+            
+            if consumable_recipes:
+                for consumable_recipe in consumable_recipes:
+                    consumable_product = consumable_recipe.consumable_product
+                    if not consumable_product:
+                        continue
+                    
+                    # Quantité de consommable par unité produite
+                    qty_per_unit = float(consumable_recipe.quantity_per_unit)
+                    # Quantité totale à décrémenter pour la production réelle
+                    needed_qty_consumable = qty_per_unit * float(item.quantity)
+                    
+                    # Décrémentation du stock consommables
+                    consumable_product.update_stock_by_location('stock_consommables', -needed_qty_consumable)
+                    
+                    # Log/debug
+                    print(f"Décrémentation consommable (recette): {consumable_product.name} - {needed_qty_consumable:.3f} {consumable_product.unit} (stock_consommables)")
+            
+            # --- NOUVEAU SYSTÈME : Catégories avec plages de quantités ---
+            # Trouver si une catégorie de consommables existe pour cette catégorie de produit
+            if product_fini.category:
+                consumable_category = ConsumableCategory.query.filter(
+                    ConsumableCategory.product_category_id == product_fini.category.id,
+                    ConsumableCategory.is_active == True
+                ).first()
+                
+                if consumable_category:
+                    # Utiliser la logique intelligente des catégories
+                    consumables_needed = consumable_category.calculate_consumables_needed(int(item.quantity))
+                    
+                    for consumable_product, quantity in consumables_needed:
+                        if not consumable_product:
+                            continue
+                        
+                        # Décrémentation du stock consommables
+                        consumable_product.update_stock_by_location('stock_consommables', -float(quantity))
+                        
+                        # Log/debug
+                        print(f"Décrémentation consommable (catégorie): {consumable_product.name} - {quantity} {consumable_product.unit} (stock_consommables)")
 
     def calculate_total_amount(self):
         items_total = Decimal('0.0')
         for item in self.items:
             items_total += item.subtotal
         delivery_cost = Decimal(self.delivery_cost or 0)
-        self.total_amount = items_total + delivery_cost
+        self.total_amount = (items_total + delivery_cost).quantize(Decimal('0.01'))
         return self.total_amount
+
+    def update_payment_status(self):
+        total = Decimal(self.total_amount or 0)
+        paid = Decimal(self.amount_paid or 0)
+        if total <= 0:
+            if paid > 0:
+                self.payment_status = 'paid'
+                if not self.payment_paid_at:
+                    self.payment_paid_at = datetime.utcnow()
+            else:
+                self.payment_status = 'pending'
+                self.payment_paid_at = None
+            return
+
+        if paid >= total:
+            self.payment_status = 'paid'
+            if not self.payment_paid_at:
+                self.payment_paid_at = datetime.utcnow()
+        elif paid > 0:
+            self.payment_status = 'partial'
+            self.payment_paid_at = None
+        else:
+            self.payment_status = 'pending'
+            self.payment_paid_at = None
+
+    @property
+    def balance_due(self):
+        total = Decimal(self.total_amount or 0)
+        paid = Decimal(self.amount_paid or 0)
+        remaining = (total - paid).quantize(Decimal('0.01'))
+        if remaining < Decimal('0.00'):
+            return Decimal('0.00')
+        return remaining
+
+    @property
+    def amount_paid_value(self):
+        return float(Decimal(self.amount_paid or 0))
+
+    @property
+    def balance_due_value(self):
+        return float(self.balance_due)
     
     def get_items_subtotal(self):
         return sum(item.subtotal for item in self.items)
@@ -621,3 +857,335 @@ class DeliveryDebt(db.Model):
     
     def __repr__(self):
         return f'<DeliveryDebt {self.id} - Order {self.order_id} - Livreur {self.deliveryman_id}>'
+
+# ==================== MODÈLES B2B ====================
+
+# Table de liaison pour les factures et commandes
+invoice_orders = db.Table('invoice_orders',
+    db.Column('invoice_id', db.Integer, db.ForeignKey('invoices.id'), primary_key=True),
+    db.Column('b2b_order_id', db.Integer, db.ForeignKey('b2b_orders.id'), primary_key=True)
+)
+
+# ==================== MODÈLES CLIENTS ET FOURNISSEURS ====================
+
+class Supplier(db.Model):
+    """Fournisseurs - Base centralisée pour tous les achats"""
+    __tablename__ = 'suppliers'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Informations principales
+    company_name = db.Column(db.String(200), nullable=False, index=True)
+    contact_person = db.Column(db.String(100))
+    email = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    address = db.Column(db.Text)
+    
+    # Informations commerciales
+    tax_number = db.Column(db.String(50))  # NIF/RC
+    payment_terms = db.Column(db.Integer, default=30)  # Jours de paiement
+    bank_details = db.Column(db.Text)  # RIB et informations bancaires
+    
+    # Catégorisation
+    supplier_type = db.Column(db.String(50), default='general')  # general, ingredients, equipment, services
+    notes = db.Column(db.Text)
+    
+    # Statut et dates
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relations
+    purchases = db.relationship('Purchase', backref='supplier', lazy='dynamic')
+    
+    def __repr__(self):
+        return f'<Supplier {self.company_name}>'
+    
+    @property
+    def total_purchases(self):
+        """Montant total des achats chez ce fournisseur"""
+        return sum(purchase.total_amount for purchase in self.purchases if purchase.total_amount)
+    
+    @property
+    def active_purchases_count(self):
+        """Nombre d'achats en cours"""
+        from app.purchases.models import PurchaseStatus
+        return self.purchases.filter(
+            Purchase.status.in_([PurchaseStatus.ORDERED, PurchaseStatus.PARTIALLY_RECEIVED])
+        ).count()
+
+
+class Customer(db.Model):
+    """Clients particuliers - Différent des clients B2B (entreprises)"""
+    __tablename__ = 'customers'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Informations personnelles
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20), nullable=False, index=True)
+    email = db.Column(db.String(120))
+    
+    # Adresses
+    address = db.Column(db.Text)
+    delivery_address = db.Column(db.Text)  # Adresse de livraison différente si nécessaire
+    
+    # Informations complémentaires
+    birth_date = db.Column(db.Date)
+    customer_type = db.Column(db.String(50), default='regular')  # regular, vip, occasional
+    preferred_delivery = db.Column(db.String(20), default='pickup')  # pickup, delivery
+    
+    # Historique et préférences
+    notes = db.Column(db.Text)
+    allergies = db.Column(db.Text)  # Allergies alimentaires
+    preferences = db.Column(db.Text)  # Préférences culinaires
+    
+    # Statut et dates
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_order_date = db.Column(db.DateTime)
+    
+    # Relations
+    orders = db.relationship('Order', backref='customer', lazy='dynamic')
+    
+    def __repr__(self):
+        return f'<Customer {self.first_name} {self.last_name}>'
+    
+    @property
+    def full_name(self):
+        """Nom complet du client"""
+        return f"{self.first_name} {self.last_name}"
+    
+    @property
+    def total_orders(self):
+        """Nombre total de commandes"""
+        return self.orders.count()
+    
+    @property
+    def total_spent(self):
+        """Montant total dépensé"""
+        return sum(order.total_amount for order in self.orders if order.total_amount)
+    
+    @property
+    def display_phone(self):
+        """Téléphone formaté pour affichage"""
+        if self.phone and len(self.phone) >= 10:
+            # Format: 0556 25 03 70
+            phone = self.phone.replace(' ', '').replace('-', '')
+            if len(phone) == 10:
+                return f"{phone[:4]} {phone[4:6]} {phone[6:8]} {phone[8:]}"
+        return self.phone
+
+
+class B2BClient(db.Model):
+    """Clients B2B (entreprises)"""
+    __tablename__ = 'b2b_clients'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(200), nullable=False)
+    contact_person = db.Column(db.String(100))
+    email = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    address = db.Column(db.Text)
+    
+    # Informations de facturation
+    tax_number = db.Column(db.String(50))  # NIF
+    payment_terms = db.Column(db.Integer, default=30)  # Jours de paiement
+    credit_limit = db.Column(db.Numeric(12, 2), default=0.0)
+    
+    # Statut
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relations
+    orders = db.relationship('B2BOrder', backref='b2b_client', lazy='dynamic')
+    invoices = db.relationship('Invoice', backref='b2b_client', lazy='dynamic')
+    
+    def __repr__(self):
+        return f'<B2BClient {self.company_name}>'
+
+class B2BOrder(db.Model):
+    """Commandes B2B"""
+    __tablename__ = 'b2b_orders'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    b2b_client_id = db.Column(db.Integer, db.ForeignKey('b2b_clients.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    # Informations de commande
+    order_number = db.Column(db.String(50), unique=True, nullable=False)
+    order_date = db.Column(db.Date, nullable=False, default=date.today)
+    delivery_date = db.Column(db.Date, nullable=False)
+    
+    # Gestion des périodes multi-jours
+    is_multi_day = db.Column(db.Boolean, default=False)
+    period_start = db.Column(db.Date, nullable=True)
+    period_end = db.Column(db.Date, nullable=True)
+    
+    # Statut et montants
+    status = db.Column(db.String(50), default='pending', index=True)
+    total_amount = db.Column(db.Numeric(12, 2), default=0.0)
+    
+    # Notes et métadonnées
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relations
+    items = db.relationship('B2BOrderItem', backref='b2b_order', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<B2BOrder {self.order_number}>'
+    
+    def generate_order_number(self):
+        """Générer le numéro de commande automatiquement"""
+        if not self.order_number:
+            year = datetime.now().year
+            prefix = f"B2B-{year}-"
+            # Récupérer tous les numéros existants de l'année et trouver le max séquentiel
+            existing = db.session.query(B2BOrder.order_number) \
+                .filter(B2BOrder.order_number.like(f"{prefix}%")).all()
+            max_seq = 0
+            for (num,) in existing:
+                try:
+                    seq = int((num or "").split('-')[-1])
+                    if seq > max_seq:
+                        max_seq = seq
+                except Exception:
+                    continue
+            next_seq = max_seq + 1
+            candidate = f"{prefix}{next_seq:03d}"
+            # Sécuriser l'unicité en bouclant si collision (concurrence)
+            while db.session.query(B2BOrder.id).filter_by(order_number=candidate).first() is not None:
+                next_seq += 1
+                candidate = f"{prefix}{next_seq:03d}"
+            self.order_number = candidate
+    
+    def calculate_total_amount(self):
+        """Calculer le montant total de la commande"""
+        total = sum(item.subtotal for item in self.items)
+        self.total_amount = total
+        return total
+    
+    def get_status_display(self):
+        """Afficher le statut en français"""
+        status_types = {
+            'pending': 'En attente',
+            'in_production': 'En production',
+            'ready_at_shop': 'Reçue au magasin',
+            'delivered': 'Livrée',
+            'completed': 'Terminée',
+            'cancelled': 'Annulée'
+        }
+        return status_types.get(self.status, self.status.title())
+
+class B2BOrderItem(db.Model):
+    """Lignes de commande B2B"""
+    __tablename__ = 'b2b_order_items'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    b2b_order_id = db.Column(db.Integer, db.ForeignKey('b2b_orders.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True)  # Permettre None pour les produits composés
+    
+    # Quantités et prix
+    quantity = db.Column(db.Numeric(10, 3), nullable=False)
+    unit_price = db.Column(db.Numeric(10, 2), nullable=False)
+    
+    # Description personnalisée
+    description = db.Column(db.String(255))
+    
+    # Relations
+    product = db.relationship('Product')
+    
+    @property
+    def subtotal(self):
+        """Calculer le sous-total de la ligne"""
+        return float(self.quantity) * float(self.unit_price)
+    
+    def __repr__(self):
+        return f'<B2BOrderItem {self.product.name if self.product else "Produit composé"} x {self.quantity}>'
+
+class Invoice(db.Model):
+    """Factures B2B"""
+    __tablename__ = 'invoices'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_number = db.Column(db.String(50), unique=True, nullable=False)
+    b2b_client_id = db.Column(db.Integer, db.ForeignKey('b2b_clients.id'), nullable=False)
+    
+    # Type de facture
+    invoice_type = db.Column(db.String(20), default='proforma')  # proforma, final
+    
+    # Dates
+    invoice_date = db.Column(db.Date, nullable=False)
+    due_date = db.Column(db.Date, nullable=False)
+    
+    # Montants
+    subtotal = db.Column(db.Numeric(12, 2), default=0.0)
+    tax_amount = db.Column(db.Numeric(12, 2), default=0.0)
+    total_amount = db.Column(db.Numeric(12, 2), default=0.0)
+    
+    # Mode de paiement
+    payment_method = db.Column(db.String(20), default='cheque')  # cheque, espece, virement, traite
+    
+    # Statut
+    status = db.Column(db.String(20), default='draft')  # draft, sent, paid, overdue, cancelled
+    payment_date = db.Column(db.Date, nullable=True)
+    
+    # Métadonnées
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relations
+    invoice_items = db.relationship('InvoiceItem', backref='invoice', lazy='dynamic', cascade='all, delete-orphan')
+    b2b_orders = db.relationship('B2BOrder', secondary=invoice_orders, backref='invoices')
+    
+    def __repr__(self):
+        return f'<Invoice {self.invoice_number}>'
+    
+    def generate_invoice_number(self):
+        """Générer le numéro de facture automatiquement"""
+        if not self.invoice_number:
+            year = datetime.now().year
+            count = Invoice.query.filter(
+                db.extract('year', Invoice.created_at) == year
+            ).count() + 1
+            self.invoice_number = f"FEE-{year}-{count:03d}"
+    
+    def calculate_amounts(self):
+        """Calculer les montants de la facture"""
+        self.subtotal = sum(item.total_price for item in self.invoice_items)
+        # TVA 19% (à adapter selon vos besoins)
+        self.tax_amount = self.subtotal * Decimal('0.19')
+        self.total_amount = self.subtotal + self.tax_amount
+        return self.total_amount
+    
+    def get_status_display(self):
+        """Afficher le statut en français"""
+        status_types = {
+            'draft': 'Brouillon',
+            'sent': 'Envoyée',
+            'paid': 'Payée',
+            'overdue': 'En retard',
+            'cancelled': 'Annulée'
+        }
+        return status_types.get(self.status, self.status.title())
+
+class InvoiceItem(db.Model):
+    """Lignes de facture"""
+    __tablename__ = 'invoice_items'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoices.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True)
+    
+    description = db.Column(db.String(255), nullable=False)
+    quantity = db.Column(db.Numeric(10, 3), nullable=False)
+    unit_price = db.Column(db.Numeric(10, 2), nullable=False)
+    total_price = db.Column(db.Numeric(12, 2), nullable=False)
+    
+    # Relations
+    product = db.relationship('Product')
+    
+    def __repr__(self):
+        return f'<InvoiceItem {self.description}>'

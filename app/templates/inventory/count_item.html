@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Saisie Stock - {{ item.product.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">📦 Saisie Stock Physique</h2>
+                    <p class="text-muted mb-0">
+                        {{ item.inventory.title }} - 
+                        {% if item.location_type == 'ingredients_magasin' %}
+                            📦 Magasin
+                        {% elif item.location_type == 'ingredients_local' %}
+                            🏭 Local
+                        {% elif item.location_type == 'consommables' %}
+                            📋 Consommables
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('inventory.count_location', id=item.inventory_id, location=item.location_type) }}" 
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Retour
+                    </a>
+                </div>
+            </div>
+
+            <!-- Informations du produit -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">📋 Informations du produit</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>{{ item.product.name }}</h6>
+                            {% if item.product.description %}
+                                <p class="text-muted">{{ item.product.description }}</p>
+                            {% endif %}
+                            <p><strong>Unité :</strong> {{ item.product.unit }}</p>
+                            <p><strong>Coût unitaire :</strong> {{ "%.2f"|format(item.unit_cost) if item.unit_cost else 'N/A' }} DA</p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">Stock théorique</h6>
+                                <h4 class="text-primary mb-0">{{ item.product.format_quantity_display(item.theoretical_stock) }}</h4>
+                                <small>Stock système au moment de l'inventaire</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulaire de saisie -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">✏️ Saisie du stock physique</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.physical_stock.label(class="form-label fw-bold") }}
+                                    {{ form.physical_stock(class="form-control form-control-lg text-end", 
+                                                         placeholder="0.000", 
+                                                         step="0.001",
+                                                         min="0") }}
+                                    <div class="form-text">{{ form.physical_stock.description }}</div>
+                                    {% if form.physical_stock.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.physical_stock.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Écart calculé</label>
+                                    <div id="variance-display" class="form-control-plaintext h4 text-center">
+                                        <span class="text-muted">Saisissez le stock physique</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.adjustment_reason.label(class="form-label") }}
+                                    {{ form.adjustment_reason(class="form-select") }}
+                                    <div class="form-text">{{ form.adjustment_reason.description }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Niveau d'écart</label>
+                                    <div id="variance-level" class="form-control-plaintext text-center">
+                                        <span class="text-muted">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows="3", placeholder="Commentaires sur cet écart...") }}
+                            <div class="form-text">{{ form.notes.description }}</div>
+                        </div>
+
+                        <!-- Aperçu de l'ajustement -->
+                        <div id="adjustment-preview" class="alert alert-light" style="display: none;">
+                            <h6 class="alert-heading">Aperçu de l'ajustement</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Stock théorique :</strong><br>
+                                    <span id="theoretical-display">{{ "%.3f"|format(item.theoretical_stock) }} {{ item.product.unit }}</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Stock physique :</strong><br>
+                                    <span id="physical-display">-</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Écart :</strong><br>
+                                    <span id="variance-display-final">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('inventory.count_location', id=item.inventory_id, location=item.location_type) }}" 
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Annuler
+                            </a>
+                            {{ form.submit(class="btn btn-success") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const physicalStockInput = document.getElementById('physical_stock');
+    const varianceDisplay = document.getElementById('variance-display');
+    const varianceLevel = document.getElementById('variance-level');
+    const adjustmentPreview = document.getElementById('adjustment-preview');
+    const physicalDisplay = document.getElementById('physical-display');
+    const varianceDisplayFinal = document.getElementById('variance-display-final');
+    
+    const theoreticalStock = {{ item.theoretical_stock }};
+    const unit = '{{ item.product.unit }}';
+    
+    // Fonction pour formater l'affichage des quantités (simulation de get_stock_display)
+    function formatStockDisplay(value, unit) {
+        if (value === 0) return `0 ${unit}`;
+        
+        // Conversion automatique pour l'affichage
+        if (unit === 'g' && value >= 1000) {
+            return `${(value / 1000).toFixed(3).replace('.', ',')} kg`;
+        } else if (unit === 'ml' && value >= 1000) {
+            return `${(value / 1000).toFixed(3).replace('.', ',')} L`;
+        } else if (unit === 'kg') {
+            return `${(value / 1000).toFixed(3).replace('.', ',')} kg`;
+        } else if (unit === 'l') {
+            return `${(value / 1000).toFixed(3).replace('.', ',')} L`;
+        } else {
+            return `${value.toFixed(3).replace('.', ',')} ${unit}`;
+        }
+    }
+    
+    function calculateVariance() {
+        const physicalValue = parseFloat(physicalStockInput.value) || 0;
+        const variance = physicalValue - theoreticalStock;
+        const variancePercentage = theoreticalStock !== 0 ? (variance / theoreticalStock) * 100 : 0;
+        
+        // Mise à jour de l'affichage de l'écart
+        if (physicalStockInput.value) {
+            const varianceText = variance > 0 ? `+${formatStockDisplay(variance, unit)}` : formatStockDisplay(variance, unit);
+            const varianceClass = variance > 0 ? 'text-success' : (variance < 0 ? 'text-danger' : 'text-muted');
+            
+            varianceDisplay.innerHTML = `<span class="${varianceClass}">${varianceText}</span>`;
+            
+            // Détermination du niveau d'écart
+            const absPercentage = Math.abs(variancePercentage);
+            let levelClass, levelText;
+            
+            if (absPercentage < 5) {
+                levelClass = 'text-success';
+                levelText = 'OK';
+            } else if (absPercentage <= 10) {
+                levelClass = 'text-warning';
+                levelText = 'Normal';
+            } else {
+                levelClass = 'text-danger';
+                levelText = 'Critique';
+            }
+            
+            varianceLevel.innerHTML = `<span class="${levelClass}">${levelText} (${variancePercentage.toFixed(1)}%)</span>`;
+            
+            // Aperçu de l'ajustement
+            physicalDisplay.textContent = formatStockDisplay(physicalValue, unit);
+            varianceDisplayFinal.innerHTML = `<span class="${varianceClass}">${varianceText}</span>`;
+            adjustmentPreview.style.display = 'block';
+        } else {
+            varianceDisplay.innerHTML = '<span class="text-muted">Saisissez le stock physique</span>';
+            varianceLevel.innerHTML = '<span class="text-muted">-</span>';
+            adjustmentPreview.style.display = 'none';
+        }
+    }
+    
+    // Écouter les changements
+    physicalStockInput.addEventListener('input', calculateVariance);
+    
+    // Initialiser si déjà une valeur
+    if (physicalStockInput.value) {
+        calculateVariance();
+    }
+    
+    // Focus automatique sur le champ de saisie
+    physicalStockInput.focus();
+});
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.form-control-lg {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.alert-light {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+#variance-display, #variance-level {
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#adjustment-preview .row > div {
+    text-align: center;
+}
+</style>
+{% endblock %}

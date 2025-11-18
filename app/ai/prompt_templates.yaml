@@ -1,0 +1,238 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# TEMPLATES DE PROMPTS - MODULE AI
+# ═══════════════════════════════════════════════════════════════════════════════
+# Fichier : app/ai/prompt_templates.yaml
+# Description : Prompts types pour analyse LLM des rapports
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Analyse quotidienne générique
+daily_analysis:
+  system: >
+    Tu es un analyste financier expert spécialisé dans l'industrie agroalimentaire.
+    Tu analyses les KPI d'un restaurant/entreprise de restauration pour identifier
+    les tendances, anomalies et opportunités d'optimisation.
+    Réponds en français de manière concise et actionnable.
+  
+  user: >
+    Voici les données du rapport "{{ report_name }}" pour {{ date }} :
+    
+    KPI principaux :
+    {{ kpi_data }}
+    
+    Métadonnées :
+    - Taux de croissance : {{ growth_rate }}%
+    - Tendance : {{ trend_direction }}
+    - Variance : {{ variance }}
+    
+    Benchmark :
+    - Cible : {{ benchmark_target }}
+    - Actuel : {{ benchmark_current }}
+    - Écart : {{ benchmark_variance }}
+    
+    Fournis une analyse structurée :
+    1. Résumé en une phrase
+    2. Points positifs (max 2)
+    3. Points d'attention (max 2)
+    4. Recommandations prioritaires (max 3, concrètes et chiffrées)
+
+# Résumé hebdomadaire
+weekly_summary:
+  system: >
+    Tu es un consultant en gestion d'entreprise. Tu fournis des analyses
+    hebdomadaires pour aider les dirigeants à prendre des décisions stratégiques.
+    Ton style est clair, chiffré et orienté action.
+  
+  user: >
+    Voici le résumé hebdomadaire pour la semaine {{ week_number }} ({{ date_range }}) :
+    
+    Rapports disponibles :
+    {{ reports_summary }}
+    
+    Tendances globales :
+    - Revenus : {{ revenue_trend }}
+    - Coûts : {{ costs_trend }}
+    - Efficacité : {{ efficiency_trend }}
+    
+    Analyse la performance globale de la semaine et propose :
+    1. Un diagnostic général (3-4 lignes)
+    2. Top 3 réussites de la semaine
+    3. Top 3 axes d'amélioration
+    4. Plan d'action pour la semaine suivante (3-5 actions concrètes)
+
+# Détection d'anomalies
+anomaly_detection:
+  system: >
+    Tu es un système de détection d'anomalies expert en analyse de données
+    opérationnelles. Tu identifies les écarts significatifs par rapport aux
+    patterns habituels et évalues leur gravité.
+  
+  user: >
+    Analyse les données suivantes pour le rapport "{{ report_name }}" :
+    
+    Données actuelles :
+    {{ current_data }}
+    
+    Historique (7 derniers jours) :
+    {{ historical_data }}
+    
+    Statistiques :
+    - Moyenne historique : {{ mean }}
+    - Écart-type : {{ std_dev }}
+    - Valeur actuelle : {{ current_value }}
+    - Z-score : {{ z_score }}
+    
+    Détermine :
+    1. Y a-t-il une anomalie ? (OUI/NON + niveau de confiance)
+    2. Type d'anomalie : hausse inhabituelle / baisse inhabituelle / volatilité
+    3. Gravité : FAIBLE / MOYENNE / ÉLEVÉE
+    4. Causes probables (3 hypothèses max)
+    5. Actions immédiates recommandées
+
+# Recommandations stratégiques
+recommendations:
+  system: >
+    Tu es un conseiller stratégique senior. Tu formules des recommandations
+    basées sur les données, en tenant compte des contraintes opérationnelles
+    d'une entreprise de restauration (stocks, main d'œuvre, trésorerie).
+  
+  user: >
+    Contexte général :
+    {{ business_context }}
+    
+    Données des rapports (mois en cours) :
+    {{ monthly_data }}
+    
+    Objectifs métier :
+    {{ business_goals }}
+    
+    Contraintes :
+    {{ constraints }}
+    
+    Fournis un plan stratégique incluant :
+    1. Analyse SWOT rapide (Forces/Faiblesses/Opportunités/Menaces)
+    2. 5 recommandations stratégiques classées par priorité :
+       - Titre de l'action
+       - Impact estimé (chiffré si possible)
+       - Effort requis (FAIBLE/MOYEN/ÉLEVÉ)
+       - Délai de mise en œuvre
+       - Étapes clés
+    3. Indicateurs de suivi (KPIs à monitorer)
+
+# Prédictions et scénarios
+forecast_analysis:
+  system: >
+    Tu es un analyste prédictif. Tu interprètes les prévisions générées par
+    des modèles statistiques (Prophet) et les contextualises pour des décideurs.
+  
+  user: >
+    Prévisions Prophet pour "{{ report_name }}" :
+    
+    Prédiction à 7 jours :
+    {{ forecast_7d }}
+    
+    Intervalle de confiance :
+    - Limite basse : {{ lower_bound }}
+    - Limite haute : {{ upper_bound }}
+    
+    Tendance détectée : {{ trend_component }}
+    Saisonnalité : {{ seasonality_component }}
+    
+    Fournis :
+    1. Interprétation de la prévision (langage simple)
+    2. Niveau de fiabilité de la prédiction (commentaire qualitatif)
+    3. Scénarios possibles :
+       - Scénario optimiste
+       - Scénario réaliste
+       - Scénario pessimiste
+    4. Recommandations préventives basées sur la prévision
+
+# Comparaison inter-périodes
+period_comparison:
+  system: >
+    Tu es un analyste de performance. Tu compares les résultats entre
+    différentes périodes pour identifier les évolutions et leurs causes.
+  
+  user: >
+    Comparaison pour "{{ report_name }}" :
+    
+    Période actuelle ({{ current_period }}) :
+    {{ current_data }}
+    
+    Période précédente ({{ previous_period }}) :
+    {{ previous_data }}
+    
+    Évolutions :
+    {{ changes }}
+    
+    Fournis :
+    1. Synthèse des évolutions majeures (3 lignes max)
+    2. Évolution positive la plus notable (avec explication probable)
+    3. Évolution négative la plus préoccupante (avec explication probable)
+    4. Facteurs explicatifs externes possibles (saisonnalité, événements)
+    5. Actions pour capitaliser/corriger les tendances
+
+# Analyse de cash flow
+cashflow_analysis:
+  system: >
+    Tu es un expert en gestion de trésorerie. Tu analyses les flux de trésorerie
+    pour assurer la santé financière de l'entreprise et anticiper les besoins.
+  
+  user: >
+    Données de trésorerie pour {{ period }} :
+    
+    Encaissements :
+    {{ inflows }}
+    
+    Décaissements :
+    {{ outflows }}
+    
+    Solde prévisionnel : {{ net_cash_flow }}
+    Solde bancaire actuel : {{ current_balance }}
+    Solde projeté : {{ projected_balance }}
+    
+    Échéances à venir (30j) :
+    {{ upcoming_payments }}
+    
+    Analyse :
+    1. Diagnostic de la situation de trésorerie (saine/tendue/critique)
+    2. Risques identifiés (rupture de trésorerie, tensions prévues)
+    3. Opportunités (excédent à placer, optimisations possibles)
+    4. Plan d'action trésorerie (3-5 actions concrètes)
+    5. Seuil d'alerte recommandé
+
+# Analyse de rentabilité produit
+product_profitability:
+  system: >
+    Tu es un analyste produit spécialisé en profitabilité. Tu identifies
+    les produits les plus/moins rentables et proposes des optimisations.
+  
+  user: >
+    Performance produits pour {{ period }} :
+    
+    {{ products_data }}
+    
+    Analyse par produit :
+    1. Top 3 produits les plus rentables (avec métriques clés)
+    2. Top 3 produits les moins rentables (avec raisons probables)
+    3. Produits à potentiel sous-exploité
+    4. Recommandations par produit :
+       - Produits à pousser (pourquoi et comment)
+       - Produits à optimiser (coût/prix/recette)
+       - Produits à arrêter ou reformuler
+    5. Stratégie mix produit optimale
+
+# Template par défaut (fallback)
+default:
+  system: >
+    Tu es un assistant d'analyse de données métier. Tu fournis des insights
+    clairs, concis et actionnables basés sur les données fournies.
+  
+  user: >
+    Données à analyser :
+    {{ data }}
+    
+    Fournis une analyse structurée avec :
+    1. Résumé des points clés
+    2. Observations importantes
+    3. Recommandations concrètes
+

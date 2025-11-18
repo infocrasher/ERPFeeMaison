@@ -11,12 +11,27 @@ from datetime import datetime, date, timedelta
 from sqlalchemy import func, and_, or_, desc, asc
 from decimal import Decimal
 import json
+import logging
 
 # Imports des modèles
 from models import Order, OrderItem, Product, Category
 from app.employees.models import Employee, AttendanceRecord, OrderIssue
 from app.accounting.models import Account, JournalEntry, JournalEntryLine
 from app.sales.models import CashRegisterSession, CashMovement
+
+# Imports des services reports (Phase 1 - Intégration IA)
+from app.reports.services import (
+    DailySalesReportService,
+    StockAlertReportService,
+    MonthlyProfitLossService,
+    WeeklyProductPerformanceService
+)
+
+# Import AI Manager (Phase 1 - Intégration IA)
+from app.ai import AIManager
+
+# Logger
+logger = logging.getLogger(__name__)
 
 # Création du blueprint
 dashboard_api = Blueprint('dashboard_api', __name__)
@@ -95,77 +110,156 @@ def daily_production():
 @login_required
 @admin_required
 def daily_stock():
-    """Section Stock - Alertes et niveaux critiques"""
+    """Section Stock - Alertes et niveaux critiques
     
-    # Produits en rupture (stock = 0)
-    out_of_stock = Product.query.filter(
-        or_(
-            Product.stock_comptoir <= 0,
-            Product.stock_ingredients_local <= 0,
-            Product.stock_ingredients_magasin <= 0
-        )
-    ).all()
+    PHASE 1 - Intégration app/reports : Utilise StockAlertReportService (remplacement complet)
+    """
     
-    # Produits en alerte (stock <= seuil)
-    low_stock = Product.query.filter(
-        or_(
-            and_(Product.stock_comptoir > 0, Product.stock_comptoir <= Product.seuil_min_comptoir),
-            and_(Product.stock_ingredients_local > 0, Product.stock_ingredients_local <= Product.seuil_min_ingredients_local),
-            and_(Product.stock_ingredients_magasin > 0, Product.stock_ingredients_magasin <= Product.seuil_min_ingredients_magasin)
-        )
-    ).all()
+    today = date.today()
     
-    # Valeur totale du stock
-    total_stock_value = db.session.query(func.sum(Product.total_stock_value)).scalar() or 0
-    
-    # Mouvements aujourd'hui (simulation - à implémenter avec table mouvements)
-    today_movements = 0  # À remplacer par vraie requête
-    
-    def format_product(product):
-        return {
-            'id': product.id,
-            'name': product.name,
-            'category': product.category.name if product.category else 'N/A',
-            'stock_comptoir': float(product.stock_comptoir or 0),
-            'stock_local': float(product.stock_ingredients_local or 0),
-            'stock_magasin': float(product.stock_ingredients_magasin or 0),
-            'seuil_comptoir': float(product.seuil_min_comptoir or 0),
-            'seuil_local': float(product.seuil_min_ingredients_local or 0),
-            'seuil_magasin': float(product.seuil_min_ingredients_magasin or 0),
-            'total_value': float(product.total_stock_value or 0)
-        }
-    
-    return jsonify({
-        'success': True,
-        'data': {
-            'stats': {
-                'out_of_stock_count': len(out_of_stock),
-                'low_stock_count': len(low_stock),
-                'total_stock_value': float(total_stock_value),
-                'today_movements': today_movements
-            },
-            'out_of_stock': [format_product(p) for p in out_of_stock],
-            'low_stock': [format_product(p) for p in low_stock]
-        }
-    })
+    # PHASE 1 - Utiliser StockAlertReportService pour alertes stock
+    try:
+        report_data = StockAlertReportService.generate()
+        logger.info("[REPORT] Data loaded from StockAlertReportService")
+        
+        # Extraction des données depuis le rapport
+        out_of_stock = report_data.get('out_of_stock', [])
+        low_stock_products = report_data.get('low_stock_products', [])
+        
+        # Format des produits (pour compatibilité front-end)
+        def format_product(product_data):
+            if isinstance(product_data, dict):
+                # Déjà formaté par le service
+                return product_data
+            else:
+                # Objet Product
+                return {
+                    'id': product_data.id,
+                    'name': product_data.name,
+                    'category': product_data.category.name if product_data.category else 'N/A',
+                    'stock_comptoir': float(product_data.stock_comptoir or 0),
+                    'stock_local': float(product_data.stock_ingredients_local or 0),
+                    'stock_magasin': float(product_data.stock_ingredients_magasin or 0),
+                    'seuil_comptoir': float(product_data.seuil_min_comptoir or 0),
+                    'seuil_local': float(product_data.seuil_min_ingredients_local or 0),
+                    'seuil_magasin': float(product_data.seuil_min_ingredients_magasin or 0),
+                    'total_value': float(product_data.total_stock_value or 0)
+                }
+        
+        # Valeur totale du stock
+        total_stock_value = db.session.query(func.sum(Product.total_stock_value)).scalar() or 0
+        
+        # Mouvements aujourd'hui (basé sur les commandes)
+        today_movements = Order.query.filter(
+            func.date(Order.created_at) == today
+        ).count()
+        
+        # Métadonnées IA disponibles
+        benchmark = report_data.get('benchmark', {})
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'stats': {
+                    'out_of_stock_count': len(out_of_stock),
+                    'low_stock_count': len(low_stock_products),
+                    'total_stock_value': float(total_stock_value),
+                    'today_movements': today_movements,
+                    # Métadonnées IA (Phase 1)
+                    'benchmark': benchmark
+                },
+                'out_of_stock': [format_product(p) for p in out_of_stock],
+                'low_stock': [format_product(p) for p in low_stock_products]
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"[REPORT] Error loading StockAlertReportService: {e}")
+        # Fallback sur calcul direct si erreur
+        out_of_stock = Product.query.filter(
+            or_(
+                Product.stock_comptoir <= 0,
+                Product.stock_ingredients_local <= 0,
+                Product.stock_ingredients_magasin <= 0
+            )
+        ).all()
+        
+        low_stock = Product.query.filter(
+            or_(
+                and_(Product.stock_comptoir > 0, Product.stock_comptoir <= Product.seuil_min_comptoir),
+                and_(Product.stock_ingredients_local > 0, Product.stock_ingredients_local <= Product.seuil_min_ingredients_local),
+                and_(Product.stock_ingredients_magasin > 0, Product.stock_ingredients_magasin <= Product.seuil_min_ingredients_magasin)
+            )
+        ).all()
+        
+        total_stock_value = db.session.query(func.sum(Product.total_stock_value)).scalar() or 0
+        today_movements = Order.query.filter(func.date(Order.created_at) == today).count()
+        
+        def format_product(product):
+            return {
+                'id': product.id,
+                'name': product.name,
+                'category': product.category.name if product.category else 'N/A',
+                'stock_comptoir': float(product.stock_comptoir or 0),
+                'stock_local': float(product.stock_ingredients_local or 0),
+                'stock_magasin': float(product.stock_ingredients_magasin or 0),
+                'seuil_comptoir': float(product.seuil_min_comptoir or 0),
+                'seuil_local': float(product.seuil_min_ingredients_local or 0),
+                'seuil_magasin': float(product.seuil_min_ingredients_magasin or 0),
+                'total_value': float(product.total_stock_value or 0)
+            }
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'stats': {
+                    'out_of_stock_count': len(out_of_stock),
+                    'low_stock_count': len(low_stock),
+                    'total_stock_value': float(total_stock_value),
+                    'today_movements': today_movements
+                },
+                'out_of_stock': [format_product(p) for p in out_of_stock],
+                'low_stock': [format_product(p) for p in low_stock]
+            }
+        })
 
 @dashboard_api.route('/daily/sales', methods=['GET'])
 @login_required
 @admin_required
 def daily_sales():
-    """Section Ventes - CA et commandes du jour"""
+    """Section Ventes - CA et commandes du jour
+    
+    PHASE 1 - Intégration app/reports : Utilise DailySalesReportService pour cohérence des calculs
+    """
     
     today = date.today()
     
-    # CA du jour depuis les commandes
-    daily_revenue = db.session.query(func.sum(Order.total_amount)).filter(
-        and_(
-            func.date(Order.created_at) == today,
-            Order.status.in_(['delivered', 'completed'])
-        )
-    ).scalar() or 0
+    # PHASE 1 - Utiliser DailySalesReportService pour revenue et transactions
+    try:
+        report_data = DailySalesReportService.generate(today)
+        logger.info("[REPORT] Data loaded from DailySalesReportService")
+        
+        daily_revenue = report_data['total_revenue']
+        total_orders = report_data['total_transactions']
+        
+        # Métadonnées IA disponibles (pour enrichissement futur)
+        growth_rate = report_data.get('growth_rate', 0)
+        trend_direction = report_data.get('trend_direction', 'stable')
+        
+    except Exception as e:
+        logger.error(f"[REPORT] Error loading DailySalesReportService: {e}")
+        # Fallback sur calcul direct si erreur
+        daily_revenue = db.session.query(func.sum(Order.total_amount)).filter(
+            and_(
+                func.date(Order.created_at) == today,
+                Order.status.in_(['delivered', 'completed'])
+            )
+        ).scalar() or 0
+        total_orders = Order.query.filter(func.date(Order.created_at) == today).count()
+        growth_rate = 0
+        trend_direction = 'stable'
     
-    # Commandes du jour
+    # Commandes du jour (pour répartition par statut)
     daily_orders = Order.query.filter(
         func.date(Order.created_at) == today
     ).all()
@@ -179,7 +273,7 @@ def daily_sales():
         orders_by_status[status]['count'] += 1
         orders_by_status[status]['amount'] += float(order.total_amount or 0)
     
-    # Session de caisse
+    # Session de caisse (spécifique au dashboard)
     cash_session = CashRegisterSession.query.filter_by(is_open=True).first()
     
     # Mouvements de caisse aujourd'hui
@@ -195,12 +289,15 @@ def daily_sales():
         'data': {
             'stats': {
                 'daily_revenue': float(daily_revenue),
-                'total_orders': len(daily_orders),
+                'total_orders': total_orders,
                 'delivered_orders': len([o for o in daily_orders if o.status in ['delivered', 'completed']]),
                 'cash_session_open': cash_session is not None,
                 'cash_in_today': cash_in,
                 'cash_out_today': cash_out,
-                'net_cash_flow': cash_in - cash_out
+                'net_cash_flow': cash_in - cash_out,
+                # Métadonnées IA (Phase 1)
+                'growth_rate': growth_rate,
+                'trend_direction': trend_direction
             },
             'orders_by_status': orders_by_status,
             'cash_session': {
@@ -285,7 +382,10 @@ def daily_employees():
 @login_required
 @admin_required
 def monthly_overview():
-    """Vue d'ensemble mensuelle - KPIs stratégiques"""
+    """Vue d'ensemble mensuelle - KPIs stratégiques
+    
+    PHASE 1 - Intégration app/reports : Utilise MonthlyProfitLossService (remplacement complet)
+    """
     
     # Paramètres de date
     year = request.args.get('year', type=int, default=datetime.now().year)
@@ -297,44 +397,67 @@ def monthly_overview():
     else:
         end_date = date(year, month + 1, 1) - timedelta(days=1)
     
+    # PHASE 1 - Utiliser MonthlyProfitLossService pour revenue, expenses, net_profit
+    try:
+        report_data = MonthlyProfitLossService.generate(year, month)
+        logger.info("[REPORT] Data loaded from MonthlyProfitLossService")
+        
+        # Extraction des KPIs depuis le rapport
+        monthly_revenue = report_data['revenue']
+        monthly_expenses = report_data['expenses']
+        net_profit = report_data['net_income']
+        profit_margin = report_data['net_margin']
+        
+        # Métadonnées IA disponibles
+        growth_rate = report_data.get('growth_rate', 0)
+        trend_direction = report_data.get('trend_direction', 'stable')
+        variance = report_data.get('variance', 0)
+        benchmark = report_data.get('benchmark', {})
+        
+    except Exception as e:
+        logger.error(f"[REPORT] Error loading MonthlyProfitLossService: {e}")
+        # Fallback sur calcul direct si erreur
+        start_datetime = datetime.combine(start_date, datetime.min.time())
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+        
+        monthly_revenue = db.session.query(func.sum(Order.total_amount)).filter(
+            and_(
+                Order.created_at >= start_datetime,
+                Order.created_at <= end_datetime,
+                Order.status.in_(['delivered', 'completed'])
+            )
+        ).scalar() or 0
+        
+        monthly_expenses = 0
+        try:
+            expense_accounts = Account.query.filter(Account.code.startswith('6')).all()
+            for account in expense_accounts:
+                expense_amount = db.session.query(func.sum(JournalEntryLine.debit_amount))\
+                    .join(JournalEntry)\
+                    .filter(JournalEntryLine.account_id == account.id)\
+                    .filter(JournalEntry.entry_date >= start_date)\
+                    .filter(JournalEntry.entry_date <= end_date)\
+                    .scalar() or 0
+                monthly_expenses += float(expense_amount)
+        except:
+            pass
+        
+        net_profit = float(monthly_revenue) - monthly_expenses
+        profit_margin = (net_profit / float(monthly_revenue) * 100) if monthly_revenue > 0 else 0
+        growth_rate = 0
+        trend_direction = 'stable'
+        variance = 0
+        benchmark = {}
+    
+    # Nombre de commandes (non inclus dans MonthlyProfitLossService)
     start_datetime = datetime.combine(start_date, datetime.min.time())
     end_datetime = datetime.combine(end_date, datetime.max.time())
-    
-    # CA mensuel
-    monthly_revenue = db.session.query(func.sum(Order.total_amount)).filter(
-        and_(
-            Order.created_at >= start_datetime,
-            Order.created_at <= end_datetime,
-            Order.status.in_(['delivered', 'completed'])
-        )
-    ).scalar() or 0
-    
-    # Nombre de commandes
     monthly_orders = Order.query.filter(
         and_(
             Order.created_at >= start_datetime,
             Order.created_at <= end_datetime
         )
     ).count()
-    
-    # Charges mensuelles (depuis comptabilité)
-    monthly_expenses = 0
-    try:
-        # Comptes de charges (classe 6)
-        expense_accounts = Account.query.filter(Account.code.startswith('6')).all()
-        for account in expense_accounts:
-            expense_amount = db.session.query(func.sum(JournalEntryLine.debit_amount))\
-                .join(JournalEntry)\
-                .filter(JournalEntryLine.account_id == account.id)\
-                .filter(JournalEntry.entry_date >= start_date)\
-                .filter(JournalEntry.entry_date <= end_date)\
-                .scalar() or 0
-            monthly_expenses += float(expense_amount)
-    except:
-        pass  # Si comptabilité pas disponible
-    
-    # Bénéfice net
-    net_profit = float(monthly_revenue) - monthly_expenses
     
     # Valeur stock fin de mois
     stock_value = db.session.query(func.sum(Product.total_stock_value)).scalar() or 0
@@ -359,13 +482,18 @@ def monthly_overview():
             'kpis': {
                 'monthly_revenue': float(monthly_revenue),
                 'monthly_orders': monthly_orders,
-                'monthly_expenses': monthly_expenses,
-                'net_profit': net_profit,
-                'profit_margin': (net_profit / float(monthly_revenue) * 100) if monthly_revenue > 0 else 0,
+                'monthly_expenses': float(monthly_expenses),
+                'net_profit': float(net_profit),
+                'profit_margin': float(profit_margin),
                 'stock_value': float(stock_value),
                 'active_employees': active_employees,
                 'total_salary_cost': float(total_salary_cost),
-                'revenue_per_employee': float(monthly_revenue) / active_employees if active_employees > 0 else 0
+                'revenue_per_employee': float(monthly_revenue) / active_employees if active_employees > 0 else 0,
+                # Métadonnées IA (Phase 1)
+                'growth_rate': growth_rate,
+                'trend_direction': trend_direction,
+                'variance': variance,
+                'benchmark': benchmark
             }
         }
     })
@@ -435,7 +563,10 @@ def monthly_revenue_trend():
 @login_required
 @admin_required
 def monthly_product_performance():
-    """Performance des produits - Top vendeurs"""
+    """Performance des produits - Top vendeurs
+    
+    PHASE 1 - Intégration app/reports : Utilise WeeklyProductPerformanceService avec dates mensuelles
+    """
     
     # Paramètres
     year = request.args.get('year', type=int, default=datetime.now().year)
@@ -448,60 +579,96 @@ def monthly_product_performance():
     else:
         end_date = date(year, month + 1, 1) - timedelta(days=1)
     
-    start_datetime = datetime.combine(start_date, datetime.min.time())
-    end_datetime = datetime.combine(end_date, datetime.max.time())
-    
-    # Top produits par CA
-    top_products = db.session.query(
-        Product.id,
-        Product.name,
-        Category.name.label('category_name'),
-        func.sum(OrderItem.quantity).label('total_quantity'),
-        func.sum(OrderItem.quantity * OrderItem.unit_price).label('total_revenue')
-    ).join(OrderItem).join(Order).join(Category, isouter=True).filter(
-        and_(
-            Order.created_at >= start_datetime,
-            Order.created_at <= end_datetime,
-            Order.status.in_(['delivered', 'completed'])
-        )
-    ).group_by(Product.id, Product.name, Category.name)\
-     .order_by(desc(func.sum(OrderItem.quantity * OrderItem.unit_price)))\
-     .limit(limit).all()
-    
-    # Top produits par quantité
-    top_quantity = db.session.query(
-        Product.id,
-        Product.name,
-        Category.name.label('category_name'),
-        func.sum(OrderItem.quantity).label('total_quantity'),
-        func.sum(OrderItem.quantity * OrderItem.unit_price).label('total_revenue')
-    ).join(OrderItem).join(Order).join(Category, isouter=True).filter(
-        and_(
-            Order.created_at >= start_datetime,
-            Order.created_at <= end_datetime,
-            Order.status.in_(['delivered', 'completed'])
-        )
-    ).group_by(Product.id, Product.name, Category.name)\
-     .order_by(desc(func.sum(OrderItem.quantity)))\
-     .limit(limit).all()
-    
-    def format_product_data(product_data):
-        return {
-            'id': product_data.id,
-            'name': product_data.name,
-            'category': product_data.category_name or 'N/A',
-            'total_quantity': float(product_data.total_quantity or 0),
-            'total_revenue': float(product_data.total_revenue or 0),
-            'avg_price': float(product_data.total_revenue or 0) / float(product_data.total_quantity or 1)
-        }
-    
-    return jsonify({
-        'success': True,
-        'data': {
-            'top_by_revenue': [format_product_data(p) for p in top_products],
-            'top_by_quantity': [format_product_data(p) for p in top_quantity]
-        }
-    })
+    # PHASE 1 - Utiliser WeeklyProductPerformanceService avec dates mensuelles
+    try:
+        report_data = WeeklyProductPerformanceService.generate(start_date, end_date)
+        logger.info("[REPORT] Data loaded from WeeklyProductPerformanceService")
+        
+        # Extraction des données depuis le rapport
+        performance_data = report_data.get('performance_data', [])
+        
+        # Tri par revenue (top_by_revenue)
+        top_by_revenue = sorted(performance_data, key=lambda x: x.get('revenue', 0), reverse=True)[:limit]
+        
+        # Tri par quantité (top_by_quantity)
+        top_by_quantity = sorted(performance_data, key=lambda x: x.get('units_sold', 0), reverse=True)[:limit]
+        
+        # Format des données (pour compatibilité front-end)
+        def format_product_data(product_data):
+            return {
+                'id': product_data.get('product_id'),
+                'name': product_data.get('product_name'),
+                'category': product_data.get('category', 'N/A'),
+                'total_quantity': float(product_data.get('units_sold', 0)),
+                'total_revenue': float(product_data.get('revenue', 0)),
+                'avg_price': float(product_data.get('revenue', 0)) / float(product_data.get('units_sold', 1)) if product_data.get('units_sold', 0) > 0 else 0
+            }
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'top_by_revenue': [format_product_data(p) for p in top_by_revenue],
+                'top_by_quantity': [format_product_data(p) for p in top_by_quantity]
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"[REPORT] Error loading WeeklyProductPerformanceService: {e}")
+        # Fallback sur calcul direct si erreur
+        start_datetime = datetime.combine(start_date, datetime.min.time())
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+        
+        # Top produits par CA
+        top_products = db.session.query(
+            Product.id,
+            Product.name,
+            Category.name.label('category_name'),
+            func.sum(OrderItem.quantity).label('total_quantity'),
+            func.sum(OrderItem.quantity * OrderItem.unit_price).label('total_revenue')
+        ).join(OrderItem).join(Order).join(Category, isouter=True).filter(
+            and_(
+                Order.created_at >= start_datetime,
+                Order.created_at <= end_datetime,
+                Order.status.in_(['delivered', 'completed'])
+            )
+        ).group_by(Product.id, Product.name, Category.name)\
+         .order_by(desc(func.sum(OrderItem.quantity * OrderItem.unit_price)))\
+         .limit(limit).all()
+        
+        # Top produits par quantité
+        top_quantity = db.session.query(
+            Product.id,
+            Product.name,
+            Category.name.label('category_name'),
+            func.sum(OrderItem.quantity).label('total_quantity'),
+            func.sum(OrderItem.quantity * OrderItem.unit_price).label('total_revenue')
+        ).join(OrderItem).join(Order).join(Category, isouter=True).filter(
+            and_(
+                Order.created_at >= start_datetime,
+                Order.created_at <= end_datetime,
+                Order.status.in_(['delivered', 'completed'])
+            )
+        ).group_by(Product.id, Product.name, Category.name)\
+         .order_by(desc(func.sum(OrderItem.quantity)))\
+         .limit(limit).all()
+        
+        def format_product_data(product_data):
+            return {
+                'id': product_data.id,
+                'name': product_data.name,
+                'category': product_data.category_name or 'N/A',
+                'total_quantity': float(product_data.total_quantity or 0),
+                'total_revenue': float(product_data.total_revenue or 0),
+                'avg_price': float(product_data.total_revenue or 0) / float(product_data.total_quantity or 1)
+            }
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'top_by_revenue': [format_product_data(p) for p in top_products],
+                'top_by_quantity': [format_product_data(p) for p in top_quantity]
+            }
+        })
 
 @dashboard_api.route('/monthly/employee-performance', methods=['GET'])
 @login_required
@@ -612,6 +779,190 @@ def refresh_dashboard():
         'message': 'Dashboard refreshed successfully',
         'timestamp': datetime.utcnow().isoformat()
     })
+
+# ==========================================
+# ENDPOINTS IA (PHASE 1)
+# ==========================================
+
+@dashboard_api.route('/daily/ai-insights', methods=['GET'])
+@login_required
+@admin_required
+def daily_ai_insights():
+    """Analyses IA pour le dashboard journalier (multi-rapports)
+    
+    PHASE 1 - Intégration app/ai : Analyse LLM des rapports quotidiens
+    """
+    try:
+        ai_manager = AIManager()
+        logger.info("[AI] Requesting daily AI insights")
+        
+        # Analyse multi-rapports (ventes, stock, production)
+        insights = {
+            'sales': None,
+            'stock': None,
+            'production': None,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        # Analyse ventes
+        try:
+            sales_analysis = ai_manager.analyze_reports('daily_sales', prompt_type='daily_analysis')
+            insights['sales'] = sales_analysis
+            logger.info("[AI] Sales analysis completed")
+        except Exception as e:
+            logger.warning(f"[AI] Sales analysis failed: {e}")
+            insights['sales'] = {
+                'status': 'fallback',
+                'message': 'Analyse IA indisponible pour les ventes (mode hors ligne)',
+                'analysis': 'Consultez les rapports standards pour plus de détails.'
+            }
+        
+        # Analyse stock (détection anomalies)
+        try:
+            stock_analysis = ai_manager.analyze_reports('daily_stock_alerts', prompt_type='anomaly_detection')
+            insights['stock'] = stock_analysis
+            logger.info("[AI] Stock analysis completed")
+        except Exception as e:
+            logger.warning(f"[AI] Stock analysis failed: {e}")
+            insights['stock'] = {
+                'status': 'fallback',
+                'message': 'Analyse IA indisponible pour le stock (mode hors ligne)',
+                'analysis': 'Consultez les alertes stock standards.'
+            }
+        
+        # Analyse production
+        try:
+            production_analysis = ai_manager.analyze_reports('daily_production', prompt_type='daily_analysis')
+            insights['production'] = production_analysis
+            logger.info("[AI] Production analysis completed")
+        except Exception as e:
+            logger.warning(f"[AI] Production analysis failed: {e}")
+            insights['production'] = {
+                'status': 'fallback',
+                'message': 'Analyse IA indisponible pour la production (mode hors ligne)',
+                'analysis': 'Consultez les rapports de production standards.'
+            }
+        
+        return jsonify({
+            'success': True,
+            'data': insights,
+            'source': 'ai_manager',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"[AI] Error in daily_ai_insights: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Erreur lors de la génération des insights IA: {str(e)}',
+            'fallback': 'Utilisez les rapports standards en attendant.',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+@dashboard_api.route('/daily/sales-forecast', methods=['GET'])
+@login_required
+@admin_required
+def daily_sales_forecast():
+    """Prévisions Prophet pour les ventes (7 jours)
+    
+    PHASE 1 - Intégration app/ai : Prédictions Prophet
+    """
+    try:
+        days = request.args.get('days', type=int, default=7)
+        ai_manager = AIManager()
+        logger.info(f"[AI] Requesting sales forecast for {days} days")
+        
+        # Génération des prévisions
+        forecast = ai_manager.generate_forecasts('daily_sales', days=days)
+        logger.info("[AI] Sales forecast completed")
+        
+        return jsonify({
+            'success': True,
+            'data': forecast,
+            'source': 'prophet',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"[AI] Error in daily_sales_forecast: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Erreur lors de la génération des prévisions: {str(e)}',
+            'fallback': 'Les prévisions sont temporairement indisponibles.',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+@dashboard_api.route('/daily/anomalies', methods=['GET'])
+@login_required
+@admin_required
+def daily_anomalies():
+    """Détection d'anomalies IA sur les ventes du jour
+    
+    PHASE 1 - Intégration app/ai : Détection anomalies avec z-score + LLM
+    """
+    try:
+        ai_manager = AIManager()
+        logger.info("[AI] Requesting anomaly detection")
+        
+        # Détection d'anomalies
+        anomalies = ai_manager.detect_anomalies('daily_sales')
+        logger.info("[AI] Anomaly detection completed")
+        
+        return jsonify({
+            'success': True,
+            'data': anomalies,
+            'source': 'ai_manager',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"[AI] Error in daily_anomalies: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Erreur lors de la détection d\'anomalies: {str(e)}',
+            'fallback': 'La détection d\'anomalies est temporairement indisponible.',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+@dashboard_api.route('/monthly/ai-summary', methods=['GET'])
+@login_required
+@admin_required
+def monthly_ai_summary():
+    """Résumé stratégique IA mensuel (analyse LLM complète)
+    
+    PHASE 1 - Intégration app/ai : Résumé stratégique mensuel avec recommandations
+    """
+    try:
+        year = request.args.get('year', type=int, default=datetime.now().year)
+        month = request.args.get('month', type=int, default=datetime.now().month)
+        reference_date = date(year, month, 1)
+        
+        ai_manager = AIManager()
+        logger.info(f"[AI] Requesting monthly AI summary for {year}-{month:02d}")
+        
+        # Génération du résumé stratégique
+        summary = ai_manager.get_ai_summary('monthly', reference_date=reference_date)
+        logger.info("[AI] Monthly AI summary completed")
+        
+        return jsonify({
+            'success': True,
+            'data': summary,
+            'source': 'ai_manager',
+            'period': {
+                'year': year,
+                'month': month
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"[AI] Error in monthly_ai_summary: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Erreur lors de la génération du résumé IA: {str(e)}',
+            'fallback': 'Le résumé stratégique est temporairement indisponible.',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
 
 @dashboard_api.route('/export/monthly', methods=['GET'])
 @login_required

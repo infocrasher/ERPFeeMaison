@@ -4,7 +4,7 @@ from extensions import db
 from models import Order, OrderItem, Product, Recipe, RecipeIngredient
 from .forms import OrderForm, OrderStatusForm, CustomerOrderForm, ProductionOrderForm
 from decorators import admin_required, require_open_cash_session
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, timezone
 from app.sales.models import CashRegisterSession, CashMovement
 
@@ -117,6 +117,35 @@ def new_customer_order():
                         db.session.add(order_item)
 
             order.calculate_total_amount()
+
+            advance_payment = Decimal(str(form.advance_payment.data or 0))
+            if advance_payment < 0:
+                advance_payment = Decimal('0.00')
+            total_amount = Decimal(order.total_amount or 0)
+            if total_amount <= 0:
+                advance_payment = Decimal('0.00')
+            elif advance_payment > total_amount:
+                advance_payment = total_amount
+            advance_payment = advance_payment.quantize(Decimal('0.01'))
+            order.amount_paid = advance_payment
+            order.update_payment_status()
+
+            if advance_payment > Decimal('0.00'):
+                cash_session = CashRegisterSession.query.filter_by(is_open=True).first()
+                if cash_session:
+                    movement = CashMovement(
+                        session_id=cash_session.id,
+                        created_at=datetime.utcnow(),
+                        type='entrée',
+                        amount=float(advance_payment),
+                        reason=f'Acompte commande #{order.id}',
+                        notes=f'Acompte enregistré lors de la création - {order.customer_name or "-"}',
+                        employee_id=current_user.id
+                    )
+                    db.session.add(movement)
+                else:
+                    flash("Acompte enregistré sans mouvement de caisse (aucune session ouverte). Pensez à encaisser l'acompte dès qu'une caisse est ouverte.", 'warning')
+
             db.session.commit()
 
             if not stock_is_sufficient:
@@ -238,34 +267,25 @@ def api_products():
 @login_required
 @admin_required
 def new_order():
-    form = OrderForm()
-    if form.validate_on_submit():
-        try:
-            # Note: Cette route devrait aussi utiliser check_stock_availability si elle est utilisée.
-            order = Order(user_id=current_user.id, order_type=form.order_type.data, customer_name=form.customer_name.data, customer_phone=form.customer_phone.data, customer_address=form.customer_address.data, delivery_option=form.delivery_option.data, due_date=form.due_date.data, delivery_cost=form.delivery_cost.data, notes=form.notes.data, status='pending')
-            db.session.add(order)
-            db.session.flush()
-            for item_data in form.items.data:
-                if item_data.get('product') and item_data.get('quantity', 0) > 0:
-                    product = Product.query.get(int(item_data['product']))
-                    if product:
-                        order_item = OrderItem(order_id=order.id, product_id=product.id, quantity=item_data['quantity'], unit_price=product.price or Decimal('0.00'))
-                        db.session.add(order_item)
-            order.calculate_total_amount()
-            db.session.commit()
-            flash('Nouvelle commande créée avec succès.', 'success')
-            return redirect(url_for('orders.view_order', order_id=order.id))
-        except Exception as e:
-            db.session.rollback()
-            flash(f"Une erreur est survenue lors de la création de la commande: {e}", "danger")
-    return render_template('orders/order_form_multifield.html', form=form, title='Nouvelle Commande')
+    """
+    Route legacy redirigée pour éviter la confusion.
+    Utiliser désormais la création dédiée client.
+    """
+    flash("Cette page est redirigée vers la création d'une commande client.", "info")
+    return redirect(url_for('orders.new_customer_order'))
 
 @orders.route('/<int:order_id>')
 @login_required
 @admin_required
 def view_order(order_id):
     order = db.session.get(Order, order_id) or abort(404)
-    return render_template('orders/view_order.html', order=order, title=f'Détails Commande #{order.id}')
+    cash_session_open = CashRegisterSession.query.filter_by(is_open=True).first() is not None
+    return render_template(
+        'orders/view_order.html',
+        order=order,
+        cash_session_open=cash_session_open,
+        title=f'Détails Commande #{order.id}'
+    )
 
 @orders.route('/<int:order_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -338,46 +358,109 @@ def orders_calendar():
 @require_open_cash_session
 def pay_order(order_id):
     order = Order.query.get_or_404(order_id)
-    # Vérifier si déjà encaissée (mouvement de caisse existant pour cette commande)
-    existing_movement = CashMovement.query.filter(
-        CashMovement.reason.ilike(f'%commande #{order.id}%'),
-        CashMovement.amount == order.total_amount
-    ).first()
-    if existing_movement:
-        flash('Cette commande a déjà été encaissée.', 'info')
+    outstanding = order.balance_due
+    if outstanding <= 0:
+        flash('Cette commande est déjà totalement réglée.', 'info')
         return redirect(url_for('orders.view_order', order_id=order.id))
+
+    amount_raw = request.form.get('amount_received')
+    if not amount_raw or not amount_raw.strip():
+        if Decimal(order.amount_paid or 0) == 0:
+            amount_received = outstanding
+        else:
+            flash('Veuillez saisir le montant à encaisser.', 'warning')
+            return redirect(url_for('orders.view_order', order_id=order.id))
+    else:
+        amount_raw = amount_raw.strip().replace(',', '.')
+        try:
+            amount_received = Decimal(amount_raw)
+        except InvalidOperation:
+            flash('Montant invalide.', 'danger')
+            return redirect(url_for('orders.view_order', order_id=order.id))
+        if amount_received <= 0:
+            flash('Le montant saisi doit être supérieur à zéro.', 'warning')
+            return redirect(url_for('orders.view_order', order_id=order.id))
+
+    amount_received = amount_received.quantize(Decimal('0.01'))
+    outstanding = order.balance_due
+    if outstanding <= 0:
+        flash('Cette commande est déjà totalement réglée.', 'info')
+        return redirect(url_for('orders.view_order', order_id=order.id))
+
+    amount_to_record = amount_received if amount_received <= outstanding else outstanding
+    amount_to_record = amount_to_record.quantize(Decimal('0.01'))
+    change_amount = (amount_received - amount_to_record).quantize(Decimal('0.01')) if amount_received > outstanding else Decimal('0.00')
+
     session = CashRegisterSession.query.filter_by(is_open=True).first()
     if not session:
         flash('Aucune session de caisse ouverte.', 'warning')
         return redirect(url_for('orders.view_order', order_id=order.id))
+
     # Créer le mouvement de caisse
     movement = CashMovement(
         session_id=session.id,
         created_at=datetime.utcnow(),
         type='entrée',
-        amount=order.total_amount,
-        reason=f'Paiement commande #{order.id} ({order.delivery_option})',
-        notes=f'Encaissement commande client: {order.customer_name or "-"}',
+        amount=float(amount_to_record),
+        reason=f'Encaissement commande #{order.id}',
+        notes=f'Paiement {"partiel" if amount_to_record < outstanding else "final"} - {order.customer_name or "-"}',
         employee_id=current_user.id
     )
     db.session.add(movement)
-    db.session.flush()  # Pour obtenir l'ID du mouvement
-    
-    # Intégration comptable automatique
-    try:
-        from app.accounting.services import AccountingIntegrationService
-        AccountingIntegrationService.create_sale_entry(
-            order_id=order.id,
-            sale_amount=float(order.total_amount),
-            payment_method='cash',
-            description=f'Vente commande #{order.id} - {order.customer_name or "Client"}'
-        )
-    except Exception as e:
-        print(f"Erreur intégration comptable: {e}")
-        # On continue même si l'intégration comptable échoue
-    
+
+    previous_payment_status = order.payment_status
+    order.amount_paid = (Decimal(order.amount_paid or 0) + amount_to_record).quantize(Decimal('0.01'))
+    order.update_payment_status()
+
+    # ✅ CORRECTION : Changer le statut de la commande après encaissement
+    status_changed = False
+    previous_status = None
+    if order.status in ['waiting_for_pickup', 'delivered_unpaid'] and order.payment_status == 'paid':
+        previous_status = order.status
+        order.status = 'delivered'
+        status_changed = True
+        print(f"✅ Statut commande #{order.id} changé de '{previous_status}' à 'delivered' après encaissement")
+
     db.session.commit()
-    flash(f'Commande #{order.id} encaissée avec succès ({order.total_amount:.2f} DA).', 'success')
+
+    if order.payment_status == 'paid' and previous_payment_status != 'paid':
+        try:
+            from app.accounting.services import AccountingIntegrationService
+            AccountingIntegrationService.create_sale_entry(
+                order_id=order.id,
+                sale_amount=float(order.total_amount),
+                payment_method='cash',
+                description=f'Vente commande #{order.id} - {order.customer_name or "Client"}'
+            )
+        except Exception as e:
+            print(f"Erreur intégration comptable: {e}")
+
+    # Intégration POS : Impression ticket + ouverture tiroir
+    try:
+        from app.services.printer_service import get_printer_service
+        printer_service = get_printer_service()
+        
+        # Imprimer le ticket et ouvrir le tiroir
+        printer_service.print_ticket(order.id, priority=1)
+        printer_service.open_cash_drawer(priority=1)
+        
+        print(f"🖨️ Impression et ouverture tiroir déclenchées pour commande #{order.id}")
+    except Exception as e:
+        print(f"⚠️ Erreur intégration POS: {e}")
+        # Ne pas faire échouer le paiement si l'impression échoue
+    
+    # Message de confirmation avec info sur le changement de statut
+    message = f'Paiement enregistré ({float(amount_to_record):.2f} DA).'
+    if change_amount > 0:
+        message += f' Monnaie à rendre : {float(change_amount):.2f} DA.'
+    if status_changed:
+        message += ' Statut mis à jour sur "Livrée".'
+    remaining_after = order.balance_due
+    if remaining_after > Decimal('0.00'):
+        message += f' Solde restant : {float(remaining_after):.2f} DA.'
+    else:
+        message += ' Solde totalement réglé.'
+    flash(message, 'success')
     return redirect(url_for('orders.view_order', order_id=order.id))
 
 @orders.route('/<int:order_id>/assign-deliveryman', methods=['GET', 'POST'])
@@ -434,6 +517,23 @@ def assign_deliveryman(order_id):
                 flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name} et encaissée ({products_amount:.2f} DA, frais livraison {order.delivery_cost or 0:.2f} DA pour le livreur).', 'success')
             else:
                 flash(f'Commande #{order.id} assignée et livrée, mais aucune session de caisse ouverte pour l\'encaissement.', 'warning')
+
+            previous_payment_status = order.payment_status
+            incremental_payment = (order.total_amount - (order.delivery_cost or 0)) or Decimal('0.00')
+            order.amount_paid = (Decimal(order.amount_paid or 0) + Decimal(incremental_payment)).quantize(Decimal('0.01'))
+            order.update_payment_status()
+
+            if order.payment_status == 'paid' and previous_payment_status != 'paid':
+                try:
+                    from app.accounting.services import AccountingIntegrationService
+                    AccountingIntegrationService.create_sale_entry(
+                        order_id=order.id,
+                        sale_amount=float(order.total_amount),
+                        payment_method='cash',
+                        description=f'Vente commande #{order.id} - {order.customer_name or "Client"}'
+                    )
+                except Exception as e:
+                    current_app.logger.warning(f"Erreur intégration comptable (assign_deliveryman) : {e}")
         else:
             # Le livreur n'a pas payé : marquer comme livrée non payée et créer une dette
             order.status = 'delivered_unpaid'

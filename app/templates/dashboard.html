@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Global - Fée Maison{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-theme">
+    <div class="dashboard-grid">
+        <aside class="dashboard-sidebar">
+            <div class="brand-block">
+                <div class="brand-logo">Fée Maison</div>
+                <p class="brand-subtitle">Cockpit temps réel</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a class="sidebar-link active" href="{{ url_for('dashboard.unified_dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <a class="sidebar-link" href="{{ url_for('dashboard.shop_dashboard') }}"><i class="bi bi-shop"></i> Magasin</a>
+                <a class="sidebar-link" href="{{ url_for('dashboard.production_dashboard') }}"><i class="bi bi-gear"></i> Production</a>
+                <a class="sidebar-link" href="{{ url_for('stock.dashboard_magasin') }}"><i class="bi bi-box"></i> Stock</a>
+                <a class="sidebar-link" href="{{ url_for('purchases.list_purchases') }}"><i class="bi bi-bag-check"></i> Achats</a>
+                <hr class="sidebar-divider">
+                <a class="sidebar-link" href="{{ url_for('dashboards.dashboard_routes.daily_dashboard') }}"><i class="bi bi-calendar-day"></i> Opérationnel</a>
+                <a class="sidebar-link" href="{{ url_for('dashboards.dashboard_routes.monthly_dashboard') }}"><i class="bi bi-calendar-month"></i> Stratégique</a>
+            </nav>
+            <div class="sidebar-cta">
+                <p>Synchronisé {{ data.generated_at.strftime('%H:%M') }}</p>
+                <small>Interface modernisée Tailwind + Chart.js</small>
+            </div>
+        </aside>
+        <main class="dashboard-main">
+            {% include 'dashboard/_header_kpi.html' %}
+            {% include 'dashboard/_ventes.html' %}
+            {% include 'dashboard/_production.html' %}
+            {% include 'dashboard/_stock.html' %}
+            {% include 'dashboard/_operations.html' %}
+            {% include 'dashboard/_achats.html' %}
+            {% include 'dashboard/_insights.html' %}
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script id="dashboard-chart-data" type="application/json">{{ data.chart_payload | tojson }}</script>
+<script src="{{ url_for('static', filename='js/dashboard_charts.js') }}"></script>
+{% endblock %}
+
