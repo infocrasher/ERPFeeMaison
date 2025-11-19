@@ -49,6 +49,12 @@ groq>=0.3.0
 requests>=2.31.0
 
 # ═══════════════════════════════════════════════════════════════
+# Dépendances Utilitaires
+# ═══════════════════════════════════════════════════════════════
+num2words>=0.5.13  # Conversion nombres en lettres (factures)
+
+# ═══════════════════════════════════════════════════════════════
 # Dépendances Imprimante USB (optionnel, seulement si imprimante locale)
 # ═══════════════════════════════════════════════════════════════
-# pyusb>=1.2.1  # Décommenter si imprimante USB locale nécessaire
+# pyusb>=1.2.1  # Décommenter UNIQUEMENT sur SmartPOS (Windows)
+#                # PAS nécessaire sur VPS si PRINTER_NETWORK_ENABLED=true

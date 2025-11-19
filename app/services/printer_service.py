@@ -128,6 +128,11 @@ class PrinterService:
     
     def _connect_printer(self) -> bool:
         """Connecter à l'imprimante USB"""
+        # Si USB n'est pas disponible (VPS en mode réseau), ne pas essayer de se connecter
+        if not USB_AVAILABLE:
+            logger.warning("⚠️ USB non disponible - mode réseau requis")
+            return False
+            
         try:
             with self._lock:
                 if self.device is not None:

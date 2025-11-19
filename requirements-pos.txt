@@ -1,0 +1,10 @@
+# Requirements pour SmartPOS (Windows)
+# Inclut toutes les dépendances de requirements.txt + pyusb
+
+-r requirements.txt
+
+# ═══════════════════════════════════════════════════════════════
+# Dépendances Imprimante USB (NÉCESSAIRE sur SmartPOS)
+# ═══════════════════════════════════════════════════════════════
+pyusb>=1.2.1  # Accès USB direct à l'imprimante
+
