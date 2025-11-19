@@ -1,10 +1,49 @@
 """
 Service d'impression et gestion du tiroir-caisse pour ERP Fée Maison
 Intégration avec imprimante ZHU HAI SUNCSW Receipt Printer Co.,Ltd. Gprinter USB Printer
+
+Architecture hybride :
+- Mode local : Accès USB direct (SmartPOS uniquement)
+- Mode réseau : Communication HTTP avec PrinterAgent (VPS)
 """
 
-import usb.core
-import usb.util
+# Import conditionnel de usb (uniquement si nécessaire)
+# Sur le VPS en mode réseau, usb n'est pas nécessaire
+try:
+    import usb.core
+    import usb.util
+    USB_AVAILABLE = True
+except ImportError:
+    USB_AVAILABLE = False
+    # Créer des stubs pour éviter les erreurs d'import
+    class USBStub:
+        class USBError(Exception):
+            pass
+        class USBTimeoutError(Exception):
+            pass
+        @staticmethod
+        def find(*args, **kwargs):
+            return None
+        @staticmethod
+        def dispose_resources(*args, **kwargs):
+            pass
+        @staticmethod
+        def endpoint_direction(*args, **kwargs):
+            return 0
+        ENDPOINT_OUT = 0
+    usb = type('usb', (), {
+        'core': type('core', (), {
+            'find': USBStub.find,
+            'USBError': USBStub.USBError,
+            'USBTimeoutError': USBStub.USBTimeoutError
+        })(),
+        'util': type('util', (), {
+            'dispose_resources': USBStub.dispose_resources,
+            'endpoint_direction': lambda x: 0,
+            'ENDPOINT_OUT': 0
+        })()
+    })()
+
 import threading
 import queue
 import time
