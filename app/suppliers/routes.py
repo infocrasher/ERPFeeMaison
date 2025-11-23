@@ -161,6 +161,31 @@ def toggle_supplier_status(supplier_id):
     return redirect(url_for('suppliers.view_supplier', supplier_id=supplier.id))
 
 
+@suppliers.route('/<int:supplier_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_supplier(supplier_id):
+    """Supprimer un fournisseur"""
+    supplier = Supplier.query.get_or_404(supplier_id)
+    
+    # Vérifier s'il y a des achats associés
+    purchases_count = supplier.purchases.count()
+    if purchases_count > 0:
+        flash(f'Impossible de supprimer "{supplier.company_name}" car il a {purchases_count} achat(s) associé(s).', 'danger')
+        return redirect(url_for('suppliers.view_supplier', supplier_id=supplier.id))
+    
+    try:
+        company_name = supplier.company_name
+        db.session.delete(supplier)
+        db.session.commit()
+        flash(f'Fournisseur "{company_name}" supprimé avec succès.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erreur lors de la suppression: {str(e)}', 'danger')
+    
+    return redirect(url_for('suppliers.list_suppliers'))
+
+
 @suppliers.route('/api/search')
 @login_required
 def api_search_suppliers():
