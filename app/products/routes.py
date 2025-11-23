@@ -139,12 +139,48 @@ def edit_product(product_id):
 @admin_required
 def delete_product(product_id):
     product = db.session.get(Product, product_id) or abort(404)
-    if product.recipe_uses.first() or product.order_items.first() or product.recipe_definition:
-        flash(f"Produit '{product.name}' est utilisé et ne peut être supprimé.", 'danger')
+    
+    # Vérifier toutes les relations qui empêchent la suppression
+    blocking_reasons = []
+    
+    if product.recipe_uses.first():
+        blocking_reasons.append("utilisé dans des recettes")
+    if product.order_items.first():
+        blocking_reasons.append("utilisé dans des commandes")
+    if product.recipe_definition:
+        blocking_reasons.append("défini comme produit fini d'une recette")
+    if product.purchase_items.first():
+        blocking_reasons.append("utilisé dans des bons d'achat")
+    if hasattr(product, 'stock_movements') and product.stock_movements.first():
+        blocking_reasons.append("présent dans des mouvements de stock")
+    if hasattr(product, 'inventory_items') and product.inventory_items.first():
+        blocking_reasons.append("présent dans des inventaires")
+    if hasattr(product, 'waste_declarations') and product.waste_declarations.first():
+        blocking_reasons.append("présent dans des déclarations de pertes")
+    if hasattr(product, 'consumable_usage') and product.consumable_usage.first():
+        blocking_reasons.append("utilisé comme consommable")
+    if hasattr(product, 'consumable_adjustments') and product.consumable_adjustments.first():
+        blocking_reasons.append("présent dans des ajustements de consommables")
+    
+    # Vérifier les relations B2B
+    from models import B2BOrderItem, InvoiceItem
+    if B2BOrderItem.query.filter_by(product_id=product_id).first():
+        blocking_reasons.append("utilisé dans des commandes B2B")
+    if InvoiceItem.query.filter_by(product_id=product_id).first():
+        blocking_reasons.append("utilisé dans des factures")
+    
+    if blocking_reasons:
+        reasons_str = ", ".join(blocking_reasons)
+        flash(f"Impossible de supprimer '{product.name}' car il est {reasons_str}.", 'danger')
     else:
-        db.session.delete(product)
-        db.session.commit()
-        flash('Produit supprimé.', 'success')
+        try:
+            db.session.delete(product)
+            db.session.commit()
+            flash(f'Produit "{product.name}" supprimé avec succès.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erreur lors de la suppression: {str(e)}', 'danger')
+    
     return redirect(url_for('products.list_products'))
 
 @products.route('/autocomplete')
