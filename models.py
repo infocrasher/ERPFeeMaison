@@ -909,7 +909,7 @@ class Supplier(db.Model):
     @property
     def active_purchases_count(self):
         """Nombre d'achats en cours"""
-        from app.purchases.models import PurchaseStatus
+        from app.purchases.models import PurchaseStatus, Purchase
         return self.purchases.filter(
             Purchase.status.in_([PurchaseStatus.ORDERED, PurchaseStatus.PARTIALLY_RECEIVED])
         ).count()
