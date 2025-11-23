@@ -129,13 +129,19 @@ class JournalEntry(db.Model):
     description = db.Column(db.Text, nullable=False)
     reference = db.Column(db.String(100))  # Référence externe (facture, commande, etc.)
     
+    # Validation
+    is_validated = db.Column(db.Boolean, default=False, nullable=False)
+    validated_at = db.Column(db.DateTime, nullable=True)
+    validated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
     # Métadonnées
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     
     # Relations
     lines = db.relationship('JournalEntryLine', backref='entry', lazy='dynamic', cascade='all, delete-orphan')
-    created_by = db.relationship('User', backref='created_journal_entries')
+    created_by = db.relationship('User', foreign_keys=[created_by_id], backref='created_journal_entries')
+    validated_by = db.relationship('User', foreign_keys=[validated_by_id], backref='validated_journal_entries')
     
     def __repr__(self):
         return f'<JournalEntry {self.entry_number}>'
@@ -214,3 +220,56 @@ class HistoricalAccountingData(db.Model):
             Decimal(self.rent or 0) +
             Decimal(self.other_expenses or 0)
         )
+
+
+class BusinessConfig(db.Model):
+    """
+    Configuration des objectifs et paramètres métier
+    Singleton : une seule instance active à la fois
+    """
+    __tablename__ = 'business_config'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Objectifs financiers
+    monthly_objective = db.Column(db.Numeric(12, 2), nullable=False, default=0.0)
+    daily_objective = db.Column(db.Numeric(12, 2), nullable=False, default=0.0)
+    yearly_objective = db.Column(db.Numeric(12, 2), nullable=False, default=0.0)
+    
+    # Paramètres stock
+    stock_rotation_days = db.Column(db.Integer, default=30, nullable=False)
+    
+    # Paramètres qualité
+    quality_target_percent = db.Column(db.Numeric(5, 2), default=95.0, nullable=False)
+    
+    # Paramètres RH
+    standard_work_hours_per_day = db.Column(db.Numeric(4, 2), default=8.0, nullable=False)
+    
+    # Métadonnées
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    # Relations
+    updated_by = db.relationship('User', backref='updated_business_configs')
+    
+    @classmethod
+    def get_current(cls):
+        """Récupère la configuration actuelle (singleton)"""
+        config = cls.query.first()
+        if not config:
+            # Créer une configuration par défaut si elle n'existe pas
+            config = cls(
+                monthly_objective=Decimal('0.0'),
+                daily_objective=Decimal('0.0'),
+                yearly_objective=Decimal('0.0'),
+                stock_rotation_days=30,
+                quality_target_percent=Decimal('95.0'),
+                standard_work_hours_per_day=Decimal('8.0')
+            )
+            db.session.add(config)
+            db.session.commit()
+        return config
+    
+    def __repr__(self):
+        return f'<BusinessConfig - Objectif mensuel: {self.monthly_objective} DA>'
