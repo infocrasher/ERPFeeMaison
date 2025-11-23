@@ -104,6 +104,7 @@ class FiscalYear(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     is_closed = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
+    is_current = db.Column(db.Boolean, default=False)  # Exercice comptable courant
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relations

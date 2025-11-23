@@ -56,6 +56,15 @@ SELECT
     8.0
 WHERE NOT EXISTS (SELECT 1 FROM business_config);
 
+-- 3. Ajouter la colonne is_current à accounting_fiscal_years
+-- ============================================================
+ALTER TABLE accounting_fiscal_years 
+ADD COLUMN IF NOT EXISTS is_current BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- Index pour améliorer les performances
+CREATE INDEX IF NOT EXISTS idx_fiscal_years_current 
+ON accounting_fiscal_years(is_current);
+
 -- ============================================================
 -- VÉRIFICATIONS
 -- ============================================================
