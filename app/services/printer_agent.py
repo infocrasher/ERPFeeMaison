@@ -163,6 +163,49 @@ class PrinterAgent:
                 self.stats['errors'] += 1
                 logger.error(f"Erreur test impression: {e}")
                 return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/print/cashout', methods=['POST'])
+        def print_cashout():
+            """Imprimer un reçu de cashout (dépôt banque)"""
+            try:
+                self.stats['requests_received'] += 1
+                
+                data = request.get_json()
+                if not data:
+                    return jsonify({'error': 'Données JSON requises'}), 400
+                
+                amount = data.get('amount', 0)
+                notes = data.get('notes', '')
+                employee_name = data.get('employee_name', 'Employé')
+                priority = data.get('priority', 1)
+                
+                if amount <= 0:
+                    return jsonify({'error': 'Montant invalide'}), 400
+                
+                success = self.printer_service.print_cashout_receipt(
+                    amount=float(amount),
+                    notes=notes,
+                    employee_name=employee_name,
+                    priority=priority
+                )
+                
+                if success:
+                    self.stats['print_jobs'] += 1
+                    return jsonify({
+                        'success': True,
+                        'message': f'Impression reçu cashout de {amount:.2f} DA programmée'
+                    })
+                else:
+                    self.stats['errors'] += 1
+                    return jsonify({
+                        'success': False,
+                        'message': 'Échec programmation impression cashout'
+                    }), 500
+                    
+            except Exception as e:
+                self.stats['errors'] += 1
+                logger.error(f"Erreur impression cashout: {e}")
+                return jsonify({'error': str(e)}), 500
     
     def run(self, debug: bool = False):
         """Démarrer l'agent"""
@@ -173,7 +216,23 @@ class RemotePrinterService:
     """Service pour communiquer avec un agent d'impression distant"""
     
     def __init__(self, agent_host: str, agent_port: int = 8080, token: str = None):
-        self.agent_url = f"http://{agent_host}:{agent_port}"
+        # Détecter le protocole : si l'host contient déjà http:// ou https://, l'utiliser
+        # Sinon, détecter automatiquement pour Ngrok (HTTPS) ou utiliser HTTP par défaut
+        if agent_host.startswith('http://') or agent_host.startswith('https://'):
+            # URL complète fournie
+            if ':' in agent_host.split('://')[1]:
+                # Port déjà dans l'URL
+                self.agent_url = agent_host
+            else:
+                # Ajouter le port
+                self.agent_url = f"{agent_host}:{agent_port}"
+        elif '.ngrok-free.dev' in agent_host or '.ngrok.io' in agent_host or '.ngrok.app' in agent_host:
+            # Domaine Ngrok : utiliser HTTPS (Ngrok utilise HTTPS par défaut)
+            self.agent_url = f"https://{agent_host}:{agent_port}"
+        else:
+            # Par défaut : HTTP
+            self.agent_url = f"http://{agent_host}:{agent_port}"
+        
         self.token = token or "default_token_change_me"
         self.session = requests.Session()
         self.session.headers.update({
@@ -218,6 +277,17 @@ class RemotePrinterService:
     def open_cash_drawer(self, priority: int = 1) -> bool:
         """Ouvrir le tiroir via l'agent distant"""
         result = self._make_request('/drawer/open', 'POST', {
+            'priority': priority
+        })
+        
+        return result is not None and result.get('success', False)
+    
+    def print_cashout_receipt(self, amount: float, notes: str = '', employee_name: str = '', priority: int = 1) -> bool:
+        """Imprimer un reçu de cashout via l'agent distant"""
+        result = self._make_request('/print/cashout', 'POST', {
+            'amount': amount,
+            'notes': notes,
+            'employee_name': employee_name,
             'priority': priority
         })
         
@@ -275,6 +345,8 @@ if __name__ == "__main__":
     
     agent = PrinterAgent(args.host, args.port, args.token)
     agent.run(debug=args.debug)
+
+
 
 
 

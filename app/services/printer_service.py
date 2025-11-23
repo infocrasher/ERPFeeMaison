@@ -715,9 +715,17 @@ class PrinterService:
         # Mode réseau : déléguer à l'agent distant
         if self.config.network_enabled and self.remote_service:
             try:
-                # Pour le mode réseau, on pourrait étendre l'agent pour supporter les cashouts
-                logger.info("🌐 Impression reçu cashout via agent distant non implémentée")
-                return True
+                success = self.remote_service.print_cashout_receipt(
+                    amount=amount,
+                    notes=notes,
+                    employee_name=employee_name,
+                    priority=priority
+                )
+                if success:
+                    logger.info(f"📄 Impression reçu cashout {amount:.2f} DA envoyée à l'agent distant")
+                else:
+                    logger.error(f"❌ Échec impression reçu cashout via agent distant")
+                return success
             except Exception as e:
                 logger.error(f"❌ Erreur communication agent distant: {e}")
                 return False
