@@ -143,23 +143,44 @@ def delete_product(product_id):
     # Vérifier toutes les relations qui empêchent la suppression
     blocking_reasons = []
     
-    if product.recipe_uses.first():
+    # Vérifier recipe_uses (relation one-to-many, retourne une liste)
+    if hasattr(product, 'recipe_uses') and len(list(product.recipe_uses)) > 0:
         blocking_reasons.append("utilisé dans des recettes")
+    
+    # Vérifier order_items (relation lazy='dynamic')
     if product.order_items.first():
         blocking_reasons.append("utilisé dans des commandes")
+    
+    # Vérifier recipe_definition (relation one-to-one)
     if product.recipe_definition:
         blocking_reasons.append("défini comme produit fini d'une recette")
-    if product.purchase_items.first():
+    
+    # Vérifier purchase_items (relation lazy=True, retourne une liste)
+    if hasattr(product, 'purchase_items') and len(list(product.purchase_items)) > 0:
         blocking_reasons.append("utilisé dans des bons d'achat")
-    if hasattr(product, 'stock_movements') and product.stock_movements.first():
-        blocking_reasons.append("présent dans des mouvements de stock")
-    if hasattr(product, 'inventory_items') and product.inventory_items.first():
+    
+    # Vérifier stock_movements (relation lazy='dynamic' ou liste)
+    if hasattr(product, 'stock_movements'):
+        if hasattr(product.stock_movements, 'first'):
+            if product.stock_movements.first():
+                blocking_reasons.append("présent dans des mouvements de stock")
+        elif len(list(product.stock_movements)) > 0:
+            blocking_reasons.append("présent dans des mouvements de stock")
+    
+    # Vérifier inventory_items (relation backref, retourne une liste)
+    if hasattr(product, 'inventory_items') and len(list(product.inventory_items)) > 0:
         blocking_reasons.append("présent dans des inventaires")
-    if hasattr(product, 'waste_declarations') and product.waste_declarations.first():
+    
+    # Vérifier waste_declarations (relation backref, retourne une liste)
+    if hasattr(product, 'waste_declarations') and len(list(product.waste_declarations)) > 0:
         blocking_reasons.append("présent dans des déclarations de pertes")
-    if hasattr(product, 'consumable_usage') and product.consumable_usage.first():
+    
+    # Vérifier consumable_usage (relation backref, retourne une liste)
+    if hasattr(product, 'consumable_usage') and len(list(product.consumable_usage)) > 0:
         blocking_reasons.append("utilisé comme consommable")
-    if hasattr(product, 'consumable_adjustments') and product.consumable_adjustments.first():
+    
+    # Vérifier consumable_adjustments (relation backref, retourne une liste)
+    if hasattr(product, 'consumable_adjustments') and len(list(product.consumable_adjustments)) > 0:
         blocking_reasons.append("présent dans des ajustements de consommables")
     
     # Vérifier les relations B2B
