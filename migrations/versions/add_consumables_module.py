@@ -1,8 +1,11 @@
 """Ajout module gestion consommables avec calcul automatique
 
 Revision ID: add_consumables_module
-Revises: f283921abf9b
+Revises: 7950b875b780
 Create Date: 2025-10-22 01:30:00.000000
+
+Note: Cette migration référence 7950b875b780 (migration initiale VPS) 
+car l'historique des migrations sur le VPS est différent du local.
 
 """
 from alembic import op
@@ -10,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_consumables_module'
-down_revision = 'f283921abf9b'
+down_revision = '7950b875b780'  # Migration initiale VPS
 branch_labels = None
 depends_on = None
 

@@ -1,8 +1,11 @@
 """Ajout gestion invendus quotidiens et inventaire hebdomadaire comptoir
 
 Revision ID: add_waste_weekly_simple
-Revises: 2dc96cd598b0
+Revises: add_consumables_module
 Create Date: 2025-10-22 01:15:00.000000
+
+Note: Cette migration référence add_consumables_module pour créer une chaîne 
+cohérente avec l'historique VPS.
 
 """
 from alembic import op
@@ -10,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_waste_weekly_simple'
-down_revision = '2dc96cd598b0'
+down_revision = 'add_consumables_module'  # Après add_consumables_module
 branch_labels = None
 depends_on = None
 
