@@ -1,8 +1,11 @@
 """Add can_be_sold field to products
 
 Revision ID: 3ca221d643bd
-Revises: 365191f90e87
+Revises: 7950b875b780
 Create Date: 2025-11-25 22:08:43.519679
+
+Note: Cette migration référence 7950b875b780 (migration initiale VPS) 
+car l'historique des migrations sur le VPS est différent du local.
 
 """
 from alembic import op
@@ -11,7 +14,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '3ca221d643bd'
-down_revision = '365191f90e87'
+down_revision = '7950b875b780'  # Migration initiale VPS (au lieu de 365191f90e87)
 branch_labels = None
 depends_on = None
 
