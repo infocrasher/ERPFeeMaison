@@ -272,3 +272,5 @@ class ConsumableRecipe(db.Model):
 
 
 
+
+

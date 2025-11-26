@@ -144,6 +144,23 @@ class Product(db.Model):
     # Gestion de la péremption
     shelf_life_days = db.Column(db.Integer, nullable=True)  # Durée de conservation en jours
     requires_expiry_tracking = db.Column(db.Boolean, default=False)  # Suivi de péremption requis
+    
+    # Peut être vendu directement (pour ingrédients et consommables)
+    can_be_sold = db.Column(db.Boolean, default=False, nullable=False, server_default='false')
+    
+    # Peut être acheté directement (pour produits finis)
+    # Exemple: tartes préparées en interne mais parfois achetées quand pas le temps
+    can_be_purchased = db.Column(db.Boolean, default=False, nullable=False, server_default='false')
+    
+    # Unité de vente (peut être différente de l'unité de base)
+    # Exemple: unit='g' (base) mais sale_unit='kg' (vente)
+    # Si None, utilise 'unit' par défaut
+    sale_unit = db.Column(db.String(20), nullable=True)
+    
+    @property
+    def display_sale_unit(self):
+        """Retourne l'unité de vente à afficher (sale_unit ou unit par défaut)"""
+        return self.sale_unit or self.unit
 
     @property
     def to_dict(self):

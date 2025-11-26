@@ -57,7 +57,11 @@
                                     <div class="card bg-light border">
                                         <div class="card-body">
                                             <h6 class="text-muted small text-uppercase">Prix de Vente</h6>
-                                            <p class="h4 fw-bold mb-0">{{ "%.2f"|format(product.price|float) }} DA</p>
+                                            {% set sale_unit = product.display_sale_unit %}
+                                            <p class="h4 fw-bold mb-0">{{ "%.2f"|format(product.price|float) }} DA{% if sale_unit %}/{{ sale_unit }}{% endif %}</p>
+                                            {% if product.sale_unit and product.sale_unit != product.unit %}
+                                                <small class="text-muted">Unité de base: {{ product.unit }}</small>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>

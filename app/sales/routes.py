@@ -4,7 +4,7 @@ from extensions import db
 from models import Product, Order, OrderItem, DeliveryDebt, Category
 from datetime import datetime, timedelta
 from decimal import Decimal
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app.sales.models import CashRegisterSession, CashMovement
 from app.employees.models import Employee
 from decorators import require_open_cash_session, require_closed_cash_session
@@ -23,11 +23,14 @@ def pos_interface():
     # Récupérer les catégories visibles au POV
     pos_categories = Category.query.filter(Category.show_in_pos == True).order_by(Category.name).all()
     
-    # Récupérer tous les produits finis (pas consommables) avec stock comptoir > 0
+    # Récupérer tous les produits finis OU les produits avec can_be_sold=True avec stock comptoir > 0
     # et appartenant à une catégorie visible au POV
     category_ids = [c.id for c in pos_categories]
     products = Product.query.filter(
-        Product.product_type == 'finished',  # Exclusion automatique des consommables
+        or_(
+            Product.product_type == 'finished',  # Produits finis toujours vendables
+            Product.can_be_sold == True  # Ingrédients/consommables marqués comme vendables
+        ),
         Product.stock_comptoir > 0,
         Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
@@ -47,7 +50,8 @@ def pos_interface():
             'price': float(product.price or 0),
             'category': category_slug,
             'category_id': product.category_id,
-            'stock': int(product.stock_comptoir or 0)
+            'stock': int(product.stock_comptoir or 0),
+            'unit': product.display_sale_unit  # Utiliser l'unité de vente
         })
     
     # Préparer les catégories pour le frontend
@@ -67,9 +71,12 @@ def get_products():
     pos_categories = Category.query.filter(Category.show_in_pos == True).order_by(Category.name).all()
     category_ids = [c.id for c in pos_categories]
     
-    # Récupérer les produits finis (pas consommables) avec stock > 0
+    # Récupérer les produits finis OU les produits avec can_be_sold=True avec stock > 0
     products = Product.query.filter(
-        Product.product_type == 'finished',  # Exclusion automatique des consommables
+        or_(
+            Product.product_type == 'finished',  # Produits finis toujours vendables
+            Product.can_be_sold == True  # Ingrédients/consommables marqués comme vendables
+        ),
         Product.stock_comptoir > 0,
         Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
@@ -88,7 +95,7 @@ def get_products():
             'stock': int(product.stock_comptoir or 0),
             'category': category_slug,
             'category_id': product.category_id,
-            'unit': product.unit,
+            'unit': product.display_sale_unit,  # Utiliser l'unité de vente
             'image_filename': product.image_filename
         })
     
@@ -121,7 +128,10 @@ def get_favorite_products():
         Order.created_at >= date_limit,
         OrderItem.product_id.in_(
             db.session.query(Product.id).filter(
-                Product.product_type == 'finished',
+                or_(
+                    Product.product_type == 'finished',
+                    Product.can_be_sold == True
+                ),
                 Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
             )
         )

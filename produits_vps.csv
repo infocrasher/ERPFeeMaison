@@ -1,0 +1,220 @@
+id,Nom,Type,Catégorie,Unité,SKU,Prix_Revient,Prix_Vente
+205,Barquette 1185,Consommable,Consommables,pièce,,,35.00
+213,Boîte Raib,Consommable,Consommables,pièce,,,10.50
+206,Boîtes 500ccl,Consommable,Consommables,pièce,,10.0000,
+180,Canette Coca Cola ,Produit Fini,Boissons ,pièce,,60.0000,100.00
+187,Canette Fanta Orange ,Produit Fini,Boissons ,pièce,,50.0000,100.00
+170,Canette Hamoud Annanas,Produit Fini,Boissons ,pièce,,44.0000,100.00
+178,Canette Hamoud Cola ,Produit Fini,Boissons ,pièce,,44.0000,100.00
+176,Canette Hamoud Litchi,Produit Fini,Boissons ,pièce,,44.0000,100.00
+171,Canette Hamoud Orange,Produit Fini,Boissons ,pièce,,44.0000,100.00
+172,Canette Hamoud Pomme,Produit Fini,Boissons ,pièce,,44.0000,100.00
+177,Canette Hamoud Selecto,Produit Fini,Boissons ,pièce,,44.0000,100.00
+173,Canette Hamoud citron,Produit Fini,Boissons ,pièce,,44.0000,100.00
+174,Canette Hamoud poire,Produit Fini,Boissons ,pièce,,44.0000,100.00
+175,Canette Hamoud pèche ,Produit Fini,Boissons ,pièce,,44.0000,100.00
+181,Canette Izem Blanc ,Produit Fini,Boissons ,pièce,,72.0000,100.00
+183,Canette Izem Bleu,Produit Fini,Boissons ,pièce,,72.0000,100.00
+184,Canette Izem Noir ,Produit Fini,Boissons ,pièce,,72.0000,100.00
+185,Canette Izem Rouge,Produit Fini,Boissons ,pièce,,72.0000,100.00
+182,Canette Izem Violet ,Produit Fini,Boissons ,pièce,,72.0000,100.00
+179,Canette Shwepes Gold,Produit Fini,Boissons ,pièce,,73.0000,100.00
+186,Canette Sprit,Produit Fini,Boissons ,pièce,,50.0000,100.00
+193,Eau Miniral 0.5,Produit Fini,Boissons ,g,,16.0000,40.00
+188,Hamoud Bouteille Blanc 33 cl,Produit Fini,Boissons ,pièce,,35.0000,80.00
+190,Hamoud Bouteille Cola 33 cl,Produit Fini,Boissons ,pièce,,35.0000,80.00
+189,Hamoud Bouteille Orange 33cl,Produit Fini,Boissons ,pièce,,35.0000,80.00
+194,Hamoud Bouteille pomme 33cl,Produit Fini,Boissons ,pièce,,35.0000,80.00
+192,Jus Rouiba 20cl,Produit Fini,Boissons ,pièce,,21.0000,40.00
+191,Jus Tchina Orange 33 cl,Produit Fini,Boissons ,pièce,,44.0000,80.00
+120,Quiches Viande Hachée ,Produit Fini,Boissons ,pièce,,,150.00
+137,3arayech,Produit Fini,Gâteaux,pièce,,,200.00
+195,Beniwen,Produit Fini,Gâteaux,pièce,,,120.00
+144,Charbet De Baghrir ,Produit Fini,Gâteaux,pièce,,,400.00
+158,Couscous Sauce Blanche Viande de Veau,Produit Fini,Gâteaux,pièce,,,1500.00
+148,Djouza,Produit Fini,Gâteaux,pièce,,,120.00
+140,Gheribya ,Produit Fini,Gâteaux,pièce,,,60.00
+150,Griwech,Produit Fini,Gâteaux,pièce,,,70.00
+149,Griwech Bis,Produit Fini,Gâteaux,pièce,,,70.00
+141,Halwet Tabaa ,Produit Fini,Gâteaux,pièce,,,60.00
+135,Ke3ike3ate Messekerine,Produit Fini,Gâteaux,pièce,,,160.00
+136,Ke3ike3ate Telya,Produit Fini,Gâteaux,pièce,,,200.00
+142,Les Russes ,Produit Fini,Gâteaux,pièce,,,140.00
+138,Makroute La3essel Aux Amandes,Produit Fini,Gâteaux,pièce,,,150.00
+139,Makroute La3essel Aux Dattes ,Produit Fini,Gâteaux,pièce,,,100.00
+146,Mekiret aux Amandes ,Produit Fini,Gâteaux,pièce,,,1000.00
+147,Mekiret aux Dattes ,Produit Fini,Gâteaux,pièce,,,600.00
+153,Mini Cigare,Produit Fini,Gâteaux,pièce,,,1200.00
+151,Mini Mehancha ,Produit Fini,Gâteaux,pièce,,,250.00
+152,Mini Samsa,Produit Fini,Gâteaux,pièce,,,1200.00
+131,Sablé Confiture Amandes Conccassés ,Produit Fini,Gâteaux,pièce,,,100.00
+130,Sablé Confiture Rayures Chocolat,Produit Fini,Gâteaux,pièce,,,70.00
+128,Sablé Confiture Simple ,Produit Fini,Gâteaux,pièce,,,70.00
+129,Sablé Confiture Sucre Glace ,Produit Fini,Gâteaux,pièce,,,70.00
+145,Sablés au chocolat gout Fraise ,Produit Fini,Gâteaux,pièce,,,140.00
+154,Samsa,Produit Fini,Gâteaux,pièce,,,170.00
+132,Tcharak 3arayn Ma,Produit Fini,Gâteaux,pièce,,,160.00
+133,Tcharak 3aryan Se,Produit Fini,Gâteaux,pièce,,,160.00
+134,Tcharak Messeker,Produit Fini,Gâteaux,pièce,,,160.00
+143,Croquet ,Produit Fini,Ingrédients,pièce,,,60.00
+167,Chakhechoukha Cuisse entière ,Produit Fini,Plats Traditionnel,pièce,,,1200.00
+166,Chakhechoukha Demie Cuisse ,Produit Fini,Plats Traditionnel,pièce,,,1000.00
+164,Chakhechoukha Viande d'agneau,Produit Fini,Plats Traditionnel,pièce,,,1700.00
+165,Chakhechoukha Viande de Veau,Produit Fini,Plats Traditionnel,pièce,,,1500.00
+155,Couscous Sauce Blanche  Demie cuisse,Produit Fini,Plats Traditionnel,pièce,,,1000.00
+157,Couscous Sauce Blanche  Viande d'agneau,Produit Fini,Plats Traditionnel,pièce,,,1700.00
+156,Couscous Sauce Blanche Cuisse Entière,Produit Fini,Plats Traditionnel,pièce,,,1200.00
+162,Couscous Sauce Rouge Cuisse Entière ,Produit Fini,Plats Traditionnel,pièce,,,1200.00
+161,Couscous Sauce Rouge Demie Cuisse ,Produit Fini,Plats Traditionnel,pièce,,,1000.00
+163,Couscous Sauce Rouge Viande d'agneau,Produit Fini,Plats Traditionnel,pièce,,,1700.00
+202,Couscous Sauce Rouge Viande de Veau,Produit Fini,Plats Traditionnel,pièce,,,1500.00
+169,Hamiss,Produit Fini,Plats Traditionnel,pièce,,,600.00
+168,Messefouf ,Produit Fini,Plats Traditionnel,pièce,,,600.00
+159,Rechta Sauce Blanche  Demie cuisse,Produit Fini,Plats Traditionnel,pièce,,,1000.00
+160,Rechta Sauce Blanche Cuisse entière ,Produit Fini,Plats Traditionnel,pièce,,,1200.00
+105,Baghrir Grand Taille  aux Raisins secs ,Produit Fini,Pâtes,pièce,,,70.00
+104,Baghrir Grand Taille Simple  ,Produit Fini,Pâtes,pièce,,,50.00
+107,Baghrir Petite Taille Aux Raisins Secs ,Produit Fini,Pâtes,pièce,,,60.00
+106,Baghrir Petite Taille Simple ,Produit Fini,Pâtes,pièce,,,40.00
+90,Bradj Taille Moyenne Taille ,Produit Fini,Pâtes,pièce,,,60.00
+89,Bradj Taille Normale ,Produit Fini,Pâtes,pièce,,,70.00
+96,Chakhechoukate Defer,Produit Fini,Pâtes,pièce,,,500.00
+97,Chakhechoukha Messilya,Produit Fini,Pâtes,pièce,,,500.00
+98,Couscous,Produit Fini,Pâtes,pièce,,,300.00
+87,Galette D'Orge,Produit Fini,Pâtes,pièce,,150.0000,150.00
+88,Galette De Blé Complet,Produit Fini,Pâtes,pièce,,,150.00
+84,Galette Simple,Produit Fini,Pâtes,g,,,100.00
+85,Galette au Grains ,Produit Fini,Pâtes,pièce,,,120.00
+86,Galette aux Herbes,Produit Fini,Pâtes,pièce,,,150.00
+100,Khefaf Grande Taille ,Produit Fini,Pâtes,pièce,,,70.00
+101,Khefaf Moyenne  Taille ,Produit Fini,Pâtes,pièce,,,60.00
+196,Khefaf Petite Taille,Produit Fini,Pâtes,pièce,,,50.00
+78,Mehadjeb Grande Taille Non Piquante,Produit Fini,Pâtes,pièce,GAH01,,100.00
+80,Mehadjeb Grande Taille Piquante,Produit Fini,Pâtes,pièce,,,250.00
+79,Mehadjeb Moyenne Taille Non Piquante ,Produit Fini,Pâtes,pièce,,,60.00
+81,Mehadjeb Moyenne Taille Piquante ,Produit Fini,Pâtes,pièce,,,100.00
+76,Messemen Grande Taille ,Produit Fini,Pâtes,pièce,MS01,,70.00
+77,Messemen Moyenne Taille ,Produit Fini,Pâtes,pièce,MTQ01,,50.00
+93,Meta9eba ,Produit Fini,Pâtes,pièce,,,50.00
+92,Meta9eba Petit,Produit Fini,Pâtes,pièce,,,50.00
+103,Metelou3,Produit Fini,Pâtes,pièce,,,150.00
+102,Metelou3 Petit,Produit Fini,Pâtes,pièce,,,150.00
+91,Mini Bradj,Produit Fini,Pâtes,pièce,,,40.00
+94,Rechta,Produit Fini,Pâtes,pièce,,,250.00
+99,Semoule Temina,Produit Fini,Pâtes,pièce,,,500.00
+95,Terida,Produit Fini,Pâtes,pièce,,,400.00
+82,Un Demie Paquet de Chakhechoukha ,Produit Fini,Pâtes,pièce,,,250.00
+83,Un paquet Chakhechoukha ,Produit Fini,Pâtes,pièce,,,500.00
+114,Mini Batbout Poulet,Produit Fini,Salés,pièce,,,120.00
+113,Mini Batbout Thon ,Produit Fini,Salés,pièce,,,120.00
+115,Mini Batbout Viande Hachée ,Produit Fini,Salés,pièce,,,150.00
+108,Mini Burger Poulet,Produit Fini,Salés,pièce,,,100.00
+110,Mini Burger Thon ,Produit Fini,Salés,pièce,,,120.00
+109,Mini Burger Viande ,Produit Fini,Salés,pièce,,,150.00
+127,Mini Manchons ,Produit Fini,Salés,pièce,,,70.00
+111,Mini Pizza,Produit Fini,Salés,pièce,,,70.00
+112,Mini Pizza au Thon ,Produit Fini,Salés,pièce,,,100.00
+123,Mini Quiches Poulet ,Produit Fini,Salés,pièce,,,100.00
+125,Mini Quiches Thon,Produit Fini,Salés,g,,,100.00
+124,Mini Quiches Viande Hachée ,Produit Fini,Salés,g,,,100.00
+126,Mini Quiches épinards ,Produit Fini,Salés,pièce,,,70.00
+116,Mini Sandwiche Poulet ,Produit Fini,Salés,pièce,,,120.00
+117,Mini Tacos Poulet ,Produit Fini,Salés,pièce,,,120.00
+118,Mini Tacos Viande Hachée ,Produit Fini,Salés,pièce,,,150.00
+119,Quiches Poulet ,Produit Fini,Salés,pièce,,,150.00
+121,Quiches Thon,Produit Fini,Salés,pièce,,,150.00
+122,Quiches épinards ,Produit Fini,Salés,pièce,,,100.00
+53,Ail,Ingrédient,Ingrédients,g,,0.7000,
+49,Amandes Blanc ,Ingrédient,Ingrédients,g,,2.1700,
+50,Amandes Moulu,Ingrédient,Ingrédients,g,,2.1500,
+214,Arome citron ,Ingrédient,Ingrédients,g,,0.7800,
+58,Beurre ,Ingrédient,Ingrédients,g,,1.4000,
+41,Blanc de Poulet,Ingrédient,Ingrédients,g,,0.7000,
+215,Cacao,Ingrédient,Ingrédients,g,,1.4000,
+27,Cannelle En Batton,Ingrédient,Ingrédients,g,,4.0000,
+73,Cannelle En Poudre,Ingrédient,Ingrédients,g,,1.8000,
+67,Carotte ,Ingrédient,Ingrédients,g,,0.1000,
+37,Cheddar,Ingrédient,Ingrédients,g,,1.9000,
+55,Chocolat wedjedane Blanc,Ingrédient,Ingrédients,g,,1.0200,
+56,Chocolat wedjedane Noir,Ingrédient,Ingrédients,g,,1.0200,
+57,Chocolat wedjedane Noisette,Ingrédient,Ingrédients,g,,0.8000,
+54,Chocolat wedjedane au lait,Ingrédient,Ingrédients,g,,1.0200,
+75,Chocolat à Tartiner,Ingrédient,Ingrédients,g,,5.1000,
+219,Colorant,Ingrédient,Ingrédients,g,,5.5000,
+48,Confiture,Ingrédient,Ingrédients,g,,0.4800,
+12,Coriandre Vert,Ingrédient,Ingrédients,g,,0.1500,
+11,Coriandre moulu,Ingrédient,Ingrédients,g,,0.1500,
+68,Courgette,Ingrédient,Ingrédients,g,,0.1000,
+62,Couscous,Ingrédient,Ingrédients,g,,0.1700,
+42,Crème Liquide,Ingrédient,Ingrédients,ml,,0.4300,
+43,Crème Liquide 4 Fromage,Ingrédient,Ingrédients,ml,,0.3500,
+64,Cuisse entière ,Ingrédient,Ingrédients,pièce,,170.0000,
+33,Curdent,Ingrédient,Ingrédients,pièce,,1.0000,
+24,Datte Moulu,Ingrédient,Ingrédients,g,,0.1250,
+65,Demie Cuisse ,Ingrédient,Ingrédients,pièce,,100.0000,
+201,Deyoul,Ingrédient,Ingrédients,pièce,,0.1200,
+23,Eau de fleur d'oranger,Ingrédient,Ingrédients,ml,,0.0650,
+199,Epice Poulet,Ingrédient,Ingrédients,g,,1.7000,
+197,Escalope de poulet,Ingrédient,Ingrédients,g,,0.6500,
+25,Farine Sim,Ingrédient,Ingrédients,g,,0.0800,
+60,Farine Sousimie,Ingrédient,Ingrédients,g,,0.0640,
+216,Flan fraise ,Ingrédient,Ingrédients,g,,0.4500,
+40,Fromage Bidon,Ingrédient,Ingrédients,g,,0.3400,
+51,Fromage Spéciale Pizza,Ingrédient,Ingrédients,g,,0.2600,
+198,Fromage slices ,Ingrédient,Ingrédients,pièce,,19.5000,
+20,Grains d'anis Vert,Ingrédient,Ingrédients,g,,1.3000,
+19,Grains de Nigelle,Ingrédient,Ingrédients,g,,0.9000,
+26,Harrissa ,Ingrédient,Ingrédients,g,,0.2500,
+4,Huile,Ingrédient,Ingrédients,ml,,0.1200,
+218,Huile d'olive,Ingrédient,Ingrédients,g,,1.4000,
+16,Lait en poudre,Ingrédient,Ingrédients,g,,0.9000,
+18,Levure Boulangère,Ingrédient,Ingrédients,g,,0.8400,
+8,Levure Chimique ,Ingrédient,Ingrédients,g,,0.3600,
+46,Maiizina,Ingrédient,Ingrédients,g,,0.1400,
+6,Margarine,Ingrédient,Ingrédients,g,,0.3180,
+39,Maïs,Ingrédient,Ingrédients,g,,1.0000,
+14,Menthe Moulu,Ingrédient,Ingrédients,g,,0.2200,
+13,Menthe vert,Ingrédient,Ingrédients,g,,0.2000,
+10,Miel,Ingrédient,Ingrédients,g,,0.2500,
+210,Motif,Ingrédient,Ingrédients,pièce,,17.0000,
+66,Navet,Ingrédient,Ingrédients,g,,0.1500,
+204,Noix,Ingrédient,Ingrédients,g,,1.3200,
+209,Noix,Ingrédient,Ingrédients,g,,1.3200,
+28,Oeuf,Ingrédient,Ingrédients,pièce,,20.0000,
+52,Ognion ,Ingrédient,Ingrédients,g,,0.0500,
+38,Olive Coupé,Ingrédient,Ingrédients,g,,0.4800,
+32,Olive Dényauté,Ingrédient,Ingrédients,g,,0.4800,
+61,Pain Tacos,Ingrédient,Ingrédients,pièce,,33.0000,
+17,Paprika ,Ingrédient,Ingrédients,g,,1.3000,
+69,Pois chiche,Ingrédient,Ingrédients,g,,0.1200,
+207,Poivre,Ingrédient,Ingrédients,g,,0.1000,
+72,Poivre Noir ,Ingrédient,Ingrédients,g,,1.5000,
+211,Poivron,Ingrédient,Ingrédients,g,,0.2500,
+203,Pomme de terre,Ingrédient,Ingrédients,g,,0.1000,
+208,Poudre Chantilly,Ingrédient,Ingrédients,g,,0.9000,
+29,Poulet Haché,Ingrédient,Ingrédients,g,,0.7000,
+44,Pâte Feuilletée,Ingrédient,Ingrédients,g,,0.4000,
+217,Pâtes de fruits fraise ,Ingrédient,Ingrédients,g,,0.9500,
+74,Raisins Sec,Ingrédient,Ingrédients,g,,1.8000,
+212,Rass el hanout,Ingrédient,Ingrédients,g,,2.0000,
+63,Rechta ,Ingrédient,Ingrédients,g,,0.1000,
+30,Salade ,Ingrédient,Ingrédients,g,,0.2500,
+3,Sel,Ingrédient,Ingrédients,g,,0.0150,
+7,Semen,Ingrédient,Ingrédients,g,,0.2000,
+2,Semoule Fine,Ingrédient,Ingrédients,g,,0.0420,
+15,Semoule Grosse,Ingrédient,Ingrédients,g,,0.0850,
+5,Semoule Moyenne,Ingrédient,Ingrédients,g,,0.0460,
+21,Semoule d'orge,Ingrédient,Ingrédients,g,,0.1200,
+22,Semoule de blé complet,Ingrédient,Ingrédients,g,,0.1000,
+9,Sucre Cristalisé,Ingrédient,Ingrédients,g,,0.0800,
+45,Sucre Glace ,Ingrédient,Ingrédients,g,,0.4000,
+35,Thon,Ingrédient,Ingrédients,g,,0.9000,
+36,Thym,Ingrédient,Ingrédients,g,,,
+59,Tofia Caramel,Ingrédient,Ingrédients,g,,0.3500,
+1,Tomate Conserve,Ingrédient,Ingrédients,g,,0.3200,
+31,Tomate Fraîche,Ingrédient,Ingrédients,g,,0.0500,
+47,Vanille ,Ingrédient,Ingrédients,g,,0.5700,
+34,Viande Hachée,Ingrédient,Ingrédients,g,,1.2000,
+70,Viande d'agneau,Ingrédient,Ingrédients,g,,,
+71,Viande de Veau,Ingrédient,Ingrédients,g,,,
+200,Épinard,Ingrédient,Ingrédients,pièce,,30.0000,

@@ -157,8 +157,13 @@ def new_purchase():
                 if not product:
                      raise ValueError(f"Produit avec l'ID {product_id} non trouvé.")
 
-                if product.product_type not in ['ingredient', 'consommable']:
-                    raise ValueError(f"Le produit '{product.name}' n'est pas un type achetable (ingrédient ou consommable).")
+                # Vérifier que le produit est achetable (ingrédient, consommable, ou produit fini avec can_be_purchased)
+                is_purchasable = (
+                    product.product_type in ['ingredient', 'consommable'] or
+                    (product.product_type == 'finished' and product.can_be_purchased == True)
+                )
+                if not is_purchasable:
+                    raise ValueError(f"Le produit '{product.name}' n'est pas achetable.")
 
                 quantity_ordered = Decimal(quantities[i])
                 price_per_unit_achat = Decimal(prices[i])
@@ -256,7 +261,12 @@ def new_purchase():
             current_app.logger.error(f"Erreur lors de la création de l'achat : {e}", exc_info=True)
             flash(f"ECHEC : Le bon d'achat n'a pas été créé. Une erreur est survenue. Veuillez vérifier toutes les lignes. ({e})", 'danger')
 
-    available_products = Product.query.filter(Product.product_type.in_(['ingredient', 'consommable'])).all()
+    available_products = Product.query.filter(
+        or_(
+            Product.product_type.in_(['ingredient', 'consommable']),
+            (Product.product_type == 'finished') & (Product.can_be_purchased == True)
+        )
+    ).all()
     available_units = Unit.query.filter_by(is_active=True).order_by(Unit.display_order).all()
 
     return render_template('purchases/new_purchase.html', form=form, title='Nouveau Bon d\'Achat',
@@ -486,8 +496,13 @@ def edit_purchase(id):
                 if not product:
                     raise ValueError(f"Produit avec l'ID {product_id} non trouvé.")
 
-                if product.product_type not in ['ingredient', 'consommable']:
-                    raise ValueError(f"Le produit '{product.name}' n'est pas un type achetable (ingrédient ou consommable).")
+                # Vérifier que le produit est achetable (ingrédient, consommable, ou produit fini avec can_be_purchased)
+                is_purchasable = (
+                    product.product_type in ['ingredient', 'consommable'] or
+                    (product.product_type == 'finished' and product.can_be_purchased == True)
+                )
+                if not is_purchasable:
+                    raise ValueError(f"Le produit '{product.name}' n'est pas achetable.")
 
                 quantity_ordered = Decimal(quantities[i])
                 price_per_unit_achat = Decimal(prices[i])
@@ -578,7 +593,10 @@ def edit_purchase(id):
             flash(f"ECHEC : Le bon d'achat n'a pas été modifié. Une erreur est survenue. Veuillez vérifier toutes les lignes. ({e})", 'danger')
 
     available_products = Product.query.filter(
-        Product.product_type.in_(['ingredient', 'consommable'])
+        or_(
+            Product.product_type.in_(['ingredient', 'consommable']),
+            (Product.product_type == 'finished') & (Product.can_be_purchased == True)
+        )
     ).all()
     available_units = Unit.query.filter_by(is_active=True).order_by(Unit.display_order).all()
     return render_template(
@@ -604,7 +622,10 @@ def api_products_search():
     products = Product.query.filter(
         and_(
             Product.name.ilike(f'%{search_term}%'),
-            Product.product_type.in_(['ingredient', 'consommable'])
+            or_(
+                Product.product_type.in_(['ingredient', 'consommable']),
+                (Product.product_type == 'finished') & (Product.can_be_purchased == True)
+            )
         )
     ).limit(20).all()
 

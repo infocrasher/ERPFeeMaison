@@ -89,6 +89,11 @@ def view_product(product_id):
 def new_product():
     form = ProductForm()
     if form.validate_on_submit():
+        # Validation : si can_be_sold est coché, le prix doit être renseigné
+        if form.can_be_sold.data and (not form.price.data or form.price.data <= 0):
+            flash('Si "Peut être vendu" est coché, le prix de vente doit être renseigné et supérieur à 0.', 'danger')
+            return render_template('products/product_form.html', form=form, title='Nouveau Produit', product=None)
+        
         product = Product()
         form.populate_obj(product)
         product.category = form.category.data
@@ -96,6 +101,10 @@ def new_product():
         # ✅ CORRECTION : Convertir SKU vide en None pour éviter les doublons
         if product.sku == '':
             product.sku = None
+        
+        # Convertir sale_unit vide en None (pour utiliser l'unité de base par défaut)
+        if hasattr(product, 'sale_unit') and product.sale_unit == '':
+            product.sale_unit = None
         
         # Gestion de l'image
         if form.image.data:
@@ -116,12 +125,21 @@ def edit_product(product_id):
     product = db.session.get(Product, product_id) or abort(404)
     form = ProductForm(obj=product)
     if form.validate_on_submit():
+        # Validation : si can_be_sold est coché, le prix doit être renseigné
+        if form.can_be_sold.data and (not form.price.data or form.price.data <= 0):
+            flash('Si "Peut être vendu" est coché, le prix de vente doit être renseigné et supérieur à 0.', 'danger')
+            return render_template('products/product_form.html', form=form, title=f'Modifier: {product.name}', product=product)
+        
         form.populate_obj(product)
         product.category = form.category.data
         
         # ✅ CORRECTION : Convertir SKU vide en None pour éviter les doublons
         if product.sku == '':
             product.sku = None
+        
+        # Convertir sale_unit vide en None (pour utiliser l'unité de base par défaut)
+        if hasattr(product, 'sale_unit') and product.sale_unit == '':
+            product.sale_unit = None
         
         # Gestion de l'image
         if form.image.data:

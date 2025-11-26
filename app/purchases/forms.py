@@ -32,8 +32,12 @@ def purchasable_products_query():
     try:
         # Import direct et sécurisé
         from models import Product
+        from sqlalchemy import or_
         return Product.query.filter(
-            Product.product_type.in_(['ingredient', 'consommable'])
+            or_(
+                Product.product_type.in_(['ingredient', 'consommable']),
+                (Product.product_type == 'finished') & (Product.can_be_purchased == True)
+            )
         ).order_by(Product.name)
     except Exception as e:
         print(f"Erreur dans purchasable_products_query: {e}")

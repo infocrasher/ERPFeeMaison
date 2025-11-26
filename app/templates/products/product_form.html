@@ -64,6 +64,17 @@
                             </div>
                         </div>
 
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.sale_unit.label(class="form-label fw-semibold") }}
+                                {{ form.sale_unit(class="form-select" + (" is-invalid" if form.sale_unit.errors else ""), id="sale_unit") }}
+                                {% if form.sale_unit.errors %}
+                                    <div class="invalid-feedback">{% for error in form.sale_unit.errors %}{{ error }}{% endfor %}</div>
+                                {% endif %}
+                                <div class="form-text">Unité utilisée pour la vente au POS. Si vide, utilise l'unité de base.</div>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             {{ form.description.label(class="form-label fw-semibold") }}
                             {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=3, placeholder="Description détaillée, ingrédients clés, notes spéciales...") }}
@@ -83,7 +94,7 @@
                                 {% if form.price.errors %}
                                     <div class="invalid-feedback d-block">{% for error in form.price.errors %}{{ error }}{% endfor %}</div>
                                 {% endif %}
-                                <div class="form-text price-form-text">Prix de vente au client.</div>
+                                <div class="form-text price-form-text" id="price_unit_text">Prix de vente au client.</div>
                             </div>
 
                             <div class="col-md-6 mb-3" id="cost_price_field_wrapper">
@@ -112,6 +123,24 @@
                                     <div class="invalid-feedback">{% for error in form.sku.errors %}{{ error }}{% endfor %}</div>
                                 {% endif %}
                                 <div class="form-text">Référence unique du produit / UGS (optionnel).</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Champ "Peut être vendu" (uniquement pour ingrédients et consommables) -->
+                        <div class="mb-3" id="can_be_sold_wrapper" style="display: none;">
+                            <div class="form-check">
+                                {{ form.can_be_sold(class="form-check-input", id="can_be_sold") }}
+                                {{ form.can_be_sold.label(class="form-check-label fw-semibold") }}
+                                <div class="form-text">Si coché, ce produit apparaîtra au Point de Vente et nécessitera un prix de vente.</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Champ "Peut être acheté" (uniquement pour produits finis) -->
+                        <div class="mb-3" id="can_be_purchased_wrapper" style="display: none;">
+                            <div class="form-check">
+                                {{ form.can_be_purchased(class="form-check-input", id="can_be_purchased") }}
+                                {{ form.can_be_purchased.label(class="form-check-label fw-semibold") }}
+                                <div class="form-text">Si coché, ce produit pourra être acheté directement dans les bons d'achat (ex: tartes préparées en interne mais parfois achetées).</div>
                             </div>
                         </div>
                         
@@ -200,7 +229,6 @@
 {% block scripts %}
 {{ super() }}
 <script>
-// Le JavaScript reste exactement le même, il n'est pas affecté par la suppression du champ.
 document.addEventListener('DOMContentLoaded', function() {
     const productTypeField = document.getElementById('product_type');
     const priceFieldWrapper = document.getElementById('price_field_wrapper');
@@ -209,42 +237,163 @@ document.addEventListener('DOMContentLoaded', function() {
     const costPriceInput = document.getElementById('cost_price');
     const priceRequiredIndicator = document.querySelector('.price-required-indicator');
     const costPriceRequiredIndicator = document.querySelector('.cost-price-required-indicator');
-    const priceFormText = document.querySelector('.price-form-text');
+    const priceFormText = document.getElementById('price_unit_text') || document.querySelector('.price-form-text');
     const costPriceFormText = document.querySelector('.cost-price-form-text');
+    const canBeSoldWrapper = document.getElementById('can_be_sold_wrapper');
+    const canBeSoldCheckbox = document.getElementById('can_be_sold');
+    const saleUnitField = document.getElementById('sale_unit');
+    const unitField = document.getElementById('unit');
 
     function updateFieldsBasedOnProductType() {
         if (!productTypeField || !priceFieldWrapper || !costPriceFieldWrapper || !priceInput || !costPriceInput || !priceRequiredIndicator || !costPriceRequiredIndicator) {
             return;
         }
         const productType = productTypeField.value;
+        
         if (productType === 'ingredient') {
-            priceFieldWrapper.style.display = 'none';
-            priceInput.value = ''; 
-            priceRequiredIndicator.style.display = 'none';
+            // Afficher la case "Peut être vendu"
+            if (canBeSoldWrapper) canBeSoldWrapper.style.display = 'block';
+            
+            // Masquer la case "Peut être acheté" (uniquement pour produits finis)
+            const canBePurchasedWrapper = document.getElementById('can_be_purchased_wrapper');
+            if (canBePurchasedWrapper) canBePurchasedWrapper.style.display = 'none';
+            const canBePurchasedCheckbox = document.getElementById('can_be_purchased');
+            if (canBePurchasedCheckbox) canBePurchasedCheckbox.checked = false;
+            
+            // Masquer le prix par défaut (sera affiché si can_be_sold est coché)
+            if (!canBeSoldCheckbox || !canBeSoldCheckbox.checked) {
+                priceFieldWrapper.style.display = 'none';
+                priceInput.value = '';
+                priceRequiredIndicator.style.display = 'none';
+            }
+            
             costPriceFieldWrapper.style.display = 'block';
             costPriceRequiredIndicator.style.display = 'inline';
             if (costPriceFormText) costPriceFormText.textContent = "Prix d'achat de la matière première (obligatoire).";
-            if (priceFormText) priceFormText.textContent = "Prix de vente au client (non applicable pour ingrédient).";
+            if (priceFormText) priceFormText.textContent = "Prix de vente au client (affiché si 'Peut être vendu' est coché).";
+            updatePriceUnitText();
+            
         } else if (productType === 'finished') {
+            // Masquer la case "Peut être vendu" (les produits finis sont toujours vendables)
+            if (canBeSoldWrapper) canBeSoldWrapper.style.display = 'none';
+            if (canBeSoldCheckbox) canBeSoldCheckbox.checked = false;
+            
+            // Afficher la case "Peut être acheté" pour produits finis
+            const canBePurchasedWrapper = document.getElementById('can_be_purchased_wrapper');
+            if (canBePurchasedWrapper) canBePurchasedWrapper.style.display = 'block';
+            
+            // Prix toujours visible et obligatoire pour produits finis
             priceFieldWrapper.style.display = 'block';
             priceRequiredIndicator.style.display = 'inline';
             costPriceFieldWrapper.style.display = 'block';
             costPriceRequiredIndicator.style.display = 'none';
             if (costPriceFormText) costPriceFormText.textContent = "Coût de revient direct ou prix d'achat (optionnel pour produit fini).";
             if (priceFormText) priceFormText.textContent = "Prix de vente au client (obligatoire pour produit fini).";
+            updatePriceUnitText();
+            
         } else { // Cas 'consommable' et autres
-            priceFieldWrapper.style.display = 'block';
+            // Afficher la case "Peut être vendu"
+            if (canBeSoldWrapper) canBeSoldWrapper.style.display = 'block';
+            
+            // Masquer la case "Peut être acheté" (uniquement pour produits finis)
+            const canBePurchasedWrapper = document.getElementById('can_be_purchased_wrapper');
+            if (canBePurchasedWrapper) canBePurchasedWrapper.style.display = 'none';
+            const canBePurchasedCheckbox = document.getElementById('can_be_purchased');
+            if (canBePurchasedCheckbox) canBePurchasedCheckbox.checked = false;
+            
+            // Masquer le prix par défaut (sera affiché si can_be_sold est coché)
+            if (!canBeSoldCheckbox || !canBeSoldCheckbox.checked) {
+                priceFieldWrapper.style.display = 'none';
+                priceInput.value = '';
+                priceRequiredIndicator.style.display = 'none';
+            }
+            
             costPriceFieldWrapper.style.display = 'block';
             priceRequiredIndicator.style.display = 'none';
             costPriceRequiredIndicator.style.display = 'none';
             if (costPriceFormText) costPriceFormText.textContent = "Prix d'achat ou coût de revient direct.";
-            if (priceFormText) priceFormText.textContent = "Prix de vente au client.";
+            if (priceFormText) priceFormText.textContent = "Prix de vente au client (affiché si 'Peut être vendu' est coché).";
+            updatePriceUnitText();
+        }
+        
+        // Mettre à jour l'affichage du prix selon l'état de can_be_sold
+        updatePriceFieldBasedOnCanBeSold();
+    }
+    
+    function updatePriceFieldBasedOnCanBeSold() {
+        if (!canBeSoldCheckbox || !priceFieldWrapper || !priceInput || !priceRequiredIndicator) {
+            return;
+        }
+        
+        const productType = productTypeField ? productTypeField.value : '';
+        const canBeSold = canBeSoldCheckbox.checked;
+        
+        // Si c'est un ingrédient ou consommable
+        if (productType === 'ingredient' || productType === 'consommable') {
+            if (canBeSold) {
+                // Afficher le champ prix et le rendre obligatoire
+                priceFieldWrapper.style.display = 'block';
+                priceRequiredIndicator.style.display = 'inline';
+                if (priceFormText) priceFormText.textContent = "Prix de vente au client (obligatoire si 'Peut être vendu' est coché).";
+                updatePriceUnitText();
+            } else {
+                // Masquer le champ prix et vider sa valeur
+                priceFieldWrapper.style.display = 'none';
+                priceInput.value = '';
+                priceRequiredIndicator.style.display = 'none';
+                if (priceFormText) priceFormText.textContent = "Prix de vente au client (affiché si 'Peut être vendu' est coché).";
+                updatePriceUnitText();
+            }
         }
     }
+    
+    // Initialiser les champs au chargement
     if (productTypeField) {
-        updateFieldsBasedOnProductType(); 
+        updateFieldsBasedOnProductType();
         productTypeField.addEventListener('change', updateFieldsBasedOnProductType);
     }
+    
+    // Écouter les changements de la case "Peut être vendu"
+    if (canBeSoldCheckbox) {
+        canBeSoldCheckbox.addEventListener('change', updatePriceFieldBasedOnCanBeSold);
+    }
+    
+    // Fonction pour mettre à jour le texte du prix selon l'unité de vente
+    function updatePriceUnitText() {
+        if (!priceFormText || !unitField) return;
+        
+        const baseUnit = unitField.value || '';
+        const saleUnit = saleUnitField ? saleUnitField.value : '';
+        const displayUnit = saleUnit || baseUnit;
+        
+        // Mettre à jour le texte seulement si le prix est visible
+        if (priceFieldWrapper && priceFieldWrapper.style.display !== 'none') {
+            if (displayUnit) {
+                const unitLabels = {
+                    'g': 'gramme',
+                    'kg': 'kilogramme',
+                    'ml': 'millilitre',
+                    'l': 'litre',
+                    'pièce': 'pièce'
+                };
+                const unitLabel = unitLabels[displayUnit] || displayUnit;
+                priceFormText.textContent = `Prix de vente au client (par ${unitLabel}).`;
+            } else {
+                priceFormText.textContent = "Prix de vente au client.";
+            }
+        }
+    }
+    
+    // Écouter les changements de l'unité de base et de l'unité de vente
+    if (unitField) {
+        unitField.addEventListener('change', updatePriceUnitText);
+    }
+    if (saleUnitField) {
+        saleUnitField.addEventListener('change', updatePriceUnitText);
+    }
+    
+    // Mettre à jour au chargement
+    updatePriceUnitText();
 });
 </script>
 {% endblock %}

@@ -45,6 +45,20 @@ class ProductForm(FlaskForm):
     )
     # ### FIN DE LA CORRECTION ###
 
+    sale_unit = SelectField(
+        'Unité de Vente (pour Point de Vente)', 
+        choices=[
+            ('', '-- Même que l\'unité de base --'),
+            ('g', 'Grammes (g)'),
+            ('kg', 'Kilogrammes (kg)'),
+            ('ml', 'Millilitres (ml)'),
+            ('l', 'Litres (l)'),
+            ('pièce', 'Pièce / Unité')
+        ], 
+        validators=[Optional()],
+        description="Unité utilisée pour la vente au POS. Si vide, utilise l'unité de base. Exemple: unité de base = 'g' mais vente en 'kg'"
+    )
+
     price = FloatField('Prix de vente (DA)', validators=[Optional(), NumberRange(min=0)])
     
     # On clarifie le label pour le coût
@@ -69,5 +83,18 @@ class ProductForm(FlaskForm):
     # Le stock initial sera géré par un "Ajustement de stock" ou un premier achat.
     
     category = QuerySelectField('Catégorie', query_factory=category_query_factory, get_label='name', allow_blank=False)
+    can_be_sold = BooleanField(
+        'Peut être vendu directement', 
+        validators=[Optional()], 
+        default=False,
+        description="Cocher pour permettre la vente directe de ce produit au Point de Vente (uniquement pour ingrédients et consommables)"
+    )
+    
+    can_be_purchased = BooleanField(
+        'Peut être acheté directement', 
+        validators=[Optional()], 
+        default=False,
+        description="Cocher pour permettre l'achat direct de ce produit fini (ex: tartes préparées en interne mais parfois achetées)"
+    )
     image = FileField('Photo du produit', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images uniquement !')])
     submit = SubmitField('Enregistrer le produit')
