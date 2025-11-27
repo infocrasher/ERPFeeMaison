@@ -186,9 +186,9 @@
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold">&nbsp;</label>
                                     <div class="d-grid">
-                                        <a href="{{ url_for('customers.new_customer') }}" target="_blank" class="btn btn-outline-primary">
+                                        <button type="button" class="btn btn-outline-primary" id="openNewCustomerModalBtn">
                                             <i class="bi bi-plus-circle me-1"></i>Nouveau Client
-                                        </a>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -382,6 +382,40 @@
                         </a>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🆕 Modal de création rapide de client -->
+<div class="modal fade" id="newCustomerModal" tabindex="-1" aria-labelledby="newCustomerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="newCustomerModalLabel">
+                    <i class="bi bi-person-plus me-2"></i>Nouveau Client
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quickCustomerForm">
+                    <div class="mb-3">
+                        <label for="newCustomerName" class="form-label fw-bold">Nom complet <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="newCustomerName" placeholder="Ex: Yasmine Saifi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newCustomerPhone" class="form-label fw-bold">Téléphone <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" id="newCustomerPhone" placeholder="Ex: 0556 00 00 00" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary" id="saveNewCustomerBtn">
+                    <i class="bi bi-check-circle me-1"></i>Créer et sélectionner
+                </button>
             </div>
         </div>
     </div>
@@ -839,7 +873,102 @@ function selectCustomer(customer) {
 function clearCustomerFields() {
     document.querySelector('input[name="customer_name"]').value = '';
     document.querySelector('input[name="customer_phone"]').value = '';
-    document.querySelector('textarea[name="customer_address"]').value = '';
+    const addressField = document.querySelector('textarea[name="customer_address"]');
+    if (addressField) addressField.value = '';
 }
+
+// 🆕 MODAL CRÉATION CLIENT
+const newCustomerModal = new bootstrap.Modal(document.getElementById('newCustomerModal'));
+
+document.getElementById('openNewCustomerModalBtn').addEventListener('click', function() {
+    // Pré-remplir avec les valeurs actuelles si elles existent
+    const currentName = document.querySelector('input[name="customer_name"]').value.trim();
+    const currentPhone = document.querySelector('input[name="customer_phone"]').value.trim();
+    
+    document.getElementById('newCustomerName').value = currentName;
+    document.getElementById('newCustomerPhone').value = currentPhone;
+    
+    newCustomerModal.show();
+});
+
+document.getElementById('saveNewCustomerBtn').addEventListener('click', async function() {
+    const nameValue = document.getElementById('newCustomerName').value.trim();
+    const phoneValue = document.getElementById('newCustomerPhone').value.trim();
+    
+    if (!nameValue || !phoneValue) {
+        alert('Veuillez remplir le nom et le téléphone.');
+        return;
+    }
+    
+    // Désactiver le bouton pendant l'envoi
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Création...';
+    
+    // Séparer nom et prénom
+    const nameParts = nameValue.split(' ').filter(Boolean);
+    const firstName = nameParts.shift() || nameValue;
+    const lastName = nameParts.join(' ') || firstName;
+    
+    const formData = new URLSearchParams();
+    formData.append('first_name', firstName);
+    formData.append('last_name', lastName);
+    formData.append('phone', phoneValue);
+    formData.append('address', '');
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    
+    try {
+        const response = await fetch('/admin/customers/api/quick-create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Erreur lors de la création');
+        }
+        
+        // Remplir les champs du formulaire principal
+        document.querySelector('input[name="customer_name"]').value = data.customer.full_name;
+        document.querySelector('input[name="customer_phone"]').value = data.customer.phone;
+        document.getElementById('customerSearch').value = data.customer.full_name;
+        
+        // Fermer le modal
+        newCustomerModal.hide();
+        
+        // Notification de succès
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show mt-2';
+        alertDiv.innerHTML = `
+            <i class="bi bi-check-circle me-2"></i>
+            Client <strong>${data.customer.full_name}</strong> créé et sélectionné !
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.getElementById('customerSearch').parentNode.parentNode.appendChild(alertDiv);
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) alertDiv.remove();
+        }, 4000);
+        
+    } catch (error) {
+        console.error('Erreur création client:', error);
+        alert('Erreur: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Créer et sélectionner';
+    }
+});
+
+// Permettre de valider avec Enter dans le modal
+document.getElementById('newCustomerPhone').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('saveNewCustomerBtn').click();
+    }
+});
 </script>
 {% endblock %}

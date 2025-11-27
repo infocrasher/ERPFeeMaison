@@ -36,6 +36,18 @@
                         </a>
                     </li>
                     
+                    <!-- 🆕 Raccourcis Dashboards Opérationnels -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard.production_dashboard') }}" title="Dashboard Production">
+                            <i class="bi bi-gear-wide-connected me-1"></i>Production
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard.shop_dashboard') }}" title="Dashboard Magasin">
+                            <i class="bi bi-shop me-1"></i>Magasin
+                        </a>
+                    </li>
+                    
                     {% if current_user.is_admin %}
                     <!-- Gestion -->
                     <li class="nav-item dropdown">

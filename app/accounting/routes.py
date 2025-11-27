@@ -919,7 +919,6 @@ def new_expense():
         entry = JournalEntry(
             journal_id=journal.id,
             entry_date=form.date.data,
-            accounting_date=form.date.data,
             description=description,
             reference_document=form.reference.data,
             created_by_id=current_user.id

@@ -436,11 +436,65 @@
         <button type="button" class="btn btn-outline" onclick="history.back()">
             <i class="bi bi-arrow-left"></i> Retour
         </button>
+        <button type="button" class="btn btn-drawer" id="openDrawerBtn" onclick="openCashDrawer()">
+            <i class="bi bi-box-arrow-up"></i> Ouvrir le tiroir
+        </button>
         <button type="submit" form="cashCloseForm" class="btn btn-primary">
             <i class="bi bi-safe2-fill"></i> Fermer la caisse
         </button>
     </div>
 </div>
+
+<style>
+    .btn-drawer {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+        color: white;
+        border: none;
+    }
+    .btn-drawer:hover {
+        background: linear-gradient(135deg, #138496, #117a8b);
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<script>
+function openCashDrawer() {
+    const btn = document.getElementById('openDrawerBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Ouverture...';
+    
+    fetch('{{ url_for("sales.open_drawer") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.innerHTML = '<i class="bi bi-check-circle"></i> Tiroir ouvert !';
+            btn.style.background = 'linear-gradient(135deg, #28a745, #218838)';
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-box-arrow-up"></i> Ouvrir le tiroir';
+                btn.style.background = '';
+            }, 2000);
+        } else {
+            alert('Erreur: ' + data.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-box-arrow-up"></i> Ouvrir le tiroir';
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur de communication avec le serveur');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-box-arrow-up"></i> Ouvrir le tiroir';
+    });
+}
+</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

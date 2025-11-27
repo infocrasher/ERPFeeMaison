@@ -15,6 +15,30 @@ def get_open_cash_session():
     """Récupérer la session de caisse ouverte actuelle"""
     return CashRegisterSession.query.filter_by(is_open=True).first()
 
+def get_reserved_stock_by_product():
+    """
+    Calcule les quantités réservées par produit pour les commandes client en attente.
+    Les produits des commandes 'waiting_for_pickup' ou 'ready_at_shop' sont réservés
+    et ne doivent pas apparaître au PDV.
+    """
+    reserved = {}
+    # Statuts où les produits sont réservés pour le client
+    reserved_statuses = ['waiting_for_pickup', 'ready_at_shop', 'ready_to_deliver']
+    
+    # Requête pour récupérer les quantités réservées par produit
+    reserved_items = db.session.query(
+        OrderItem.product_id,
+        func.sum(OrderItem.quantity).label('reserved_qty')
+    ).join(Order).filter(
+        Order.order_type == 'customer_order',
+        Order.status.in_(reserved_statuses)
+    ).group_by(OrderItem.product_id).all()
+    
+    for product_id, qty in reserved_items:
+        reserved[product_id] = float(qty)
+    
+    return reserved
+
 @sales.route('/pos')
 @login_required
 @require_open_cash_session
@@ -35,9 +59,20 @@ def pos_interface():
         Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
     
+    # 🆕 Calculer les quantités réservées pour les commandes client en attente
+    reserved_stock = get_reserved_stock_by_product()
+    
     # Préparer les données pour le JavaScript
     products_js = []
     for product in products:
+        # Calculer le stock disponible (stock réel - réservé pour commandes client)
+        reserved_qty = reserved_stock.get(product.id, 0)
+        available_stock = max(0, int(product.stock_comptoir or 0) - int(reserved_qty))
+        
+        # Ne pas afficher les produits entièrement réservés
+        if available_stock <= 0:
+            continue
+        
         # Utiliser le nom réel de la catégorie (slugifié pour le frontend)
         category_slug = 'autres'
         if product.category:
@@ -50,7 +85,7 @@ def pos_interface():
             'price': float(product.price or 0),
             'category': category_slug,
             'category_id': product.category_id,
-            'stock': int(product.stock_comptoir or 0),
+            'stock': available_stock,  # Stock disponible (moins les réservations)
             'unit': product.display_sale_unit  # Utiliser l'unité de vente
         })
     
@@ -81,8 +116,19 @@ def get_products():
         Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
     
+    # 🆕 Calculer les quantités réservées pour les commandes client en attente
+    reserved_stock = get_reserved_stock_by_product()
+    
     products_data = []
     for product in products:
+        # Calculer le stock disponible (stock réel - réservé pour commandes client)
+        reserved_qty = reserved_stock.get(product.id, 0)
+        available_stock = max(0, int(product.stock_comptoir or 0) - int(reserved_qty))
+        
+        # Ne pas inclure les produits entièrement réservés
+        if available_stock <= 0:
+            continue
+        
         # Utiliser le slug de la catégorie réelle
         category_slug = 'autres'
         if product.category:
@@ -92,7 +138,7 @@ def get_products():
             'id': product.id,
             'name': product.name,
             'price': float(product.price or 0),
-            'stock': int(product.stock_comptoir or 0),
+            'stock': available_stock,  # Stock disponible (moins les réservations)
             'category': category_slug,
             'category_id': product.category_id,
             'unit': product.display_sale_unit,  # Utiliser l'unité de vente
@@ -504,6 +550,25 @@ def close_cash_register():
                          session=session,
                          total_cash_in=total_cash_in,
                          total_cash_out=total_cash_out)
+
+@sales.route('/api/open-drawer', methods=['POST'])
+@login_required
+def open_drawer():
+    """API pour ouvrir le tiroir-caisse (utilisé lors du comptage/fermeture)"""
+    try:
+        from app.services.printer_service import get_printer_service
+        printer_service = get_printer_service()
+        
+        success = printer_service.open_cash_drawer(priority=1)
+        
+        if success:
+            print(f"💰 Ouverture tiroir-caisse demandée par {current_user.username}")
+            return jsonify({'success': True, 'message': 'Tiroir-caisse ouvert'})
+        else:
+            return jsonify({'success': False, 'message': 'Impossible d\'ouvrir le tiroir-caisse'}), 500
+    except Exception as e:
+        print(f"⚠️ Erreur ouverture tiroir: {e}")
+        return jsonify({'success': False, 'message': f'Erreur: {str(e)}'}), 500
 
 @sales.route('/cash/movements/new', methods=['GET', 'POST'])
 @login_required

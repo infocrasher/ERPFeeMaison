@@ -48,7 +48,6 @@ class AccountingIntegrationService:
             entry = JournalEntry(
                 journal_id=journal.id,
                 entry_date=date.today(),
-                accounting_date=date.today(),
                 description=description or f"Vente commande #{order_id}",
                 reference_document=f"CMD-{order_id}",
                 order_id=order_id if order_id and order_id != 999 else None,  # Éviter les IDs de test
@@ -126,7 +125,6 @@ class AccountingIntegrationService:
             entry = JournalEntry(
                 journal_id=journal.id,
                 entry_date=date.today(),
-                accounting_date=date.today(),
                 description=description or f"Achat #{purchase_id}",
                 reference_document=f"ACH-{purchase_id}",
                 purchase_id=purchase_id if purchase_id and purchase_id != 999 else None,  # Éviter les IDs de test
@@ -189,7 +187,6 @@ class AccountingIntegrationService:
             entry = JournalEntry(
                 journal_id=cash_journal.id,
                 entry_date=date.today(),
-                accounting_date=date.today(),
                 description=description,
                 reference_document=f"CASH-{cash_movement_id}",
                 cash_movement_id=cash_movement_id,
@@ -280,7 +277,6 @@ class AccountingIntegrationService:
             entry = JournalEntry(
                 journal_id=bank_journal.id,
                 entry_date=date.today(),
-                accounting_date=date.today(),
                 description=description,
                 reference_document=f"DEPOSIT-{cash_movement_id}",
                 cash_movement_id=cash_movement_id,
@@ -355,7 +351,6 @@ class AccountingIntegrationService:
             entry = JournalEntry(
                 journal_id=journal.id,
                 entry_date=date.today(),
-                accounting_date=date.today(),
                 description=description or f"Ajustement stock #{adjustment_id}",
                 reference_document=f"STK-{adjustment_id}",
                 created_by_id=current_user.id if current_user.is_authenticated else 1
@@ -425,7 +420,6 @@ class AccountingIntegrationService:
             entry = JournalEntry(
                 journal_id=journal.id,
                 entry_date=date.today(),
-                accounting_date=date.today(),
                 description=description or f"Calcul salaire #{payroll_id}",
                 reference_document=f"PAY-{payroll_id}",
                 created_by_id=current_user.id if current_user.is_authenticated else 1
@@ -507,7 +501,6 @@ class AccountingIntegrationService:
             entry = JournalEntry(
                 journal_id=journal.id,
                 entry_date=date.today(),
-                accounting_date=date.today(),
                 description=description or f"Paiement salaire #{payroll_id} - Employé #{employee_id}",
                 reference_document=f"PAY-{payroll_id}",
                 created_by_id=current_user.id if current_user.is_authenticated else 1

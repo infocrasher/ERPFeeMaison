@@ -41,30 +41,55 @@ def production_dashboard():
             quantity_label = f"{int(total_qty)} pcs"
         else:
             quantity_label = f"{total_qty:.1f} pcs"
-        primary_product = None
-        if order_items:
-            first_item = order_items[0]
-            if first_item.product:
-                primary_product = first_item.product.name
-        primary_product = primary_product or order.customer_name or f"Commande #{order.id}"
+        
+        # Afficher TOUS les produits de la commande (pas seulement le premier)
+        products_list = []
+        for item in order_items:
+            if item.product:
+                qty = int(item.quantity) if float(item.quantity).is_integer() else item.quantity
+                products_list.append(f"{item.product.name} (x{qty})")
+        
+        if products_list:
+            primary_product = ", ".join(products_list)
+        else:
+            primary_product = order.customer_name or f"Commande #{order.id}"
+        
         if order.due_date:
-            diff_minutes = int((order.due_date - now).total_seconds() // 60)
-            diff_hours = diff_minutes / 60.0
-
-            if diff_minutes < 0:
-                hours_late = int(abs(diff_hours))
-                time_label = f"Retard {hours_late}h"
+            diff_seconds = int((order.due_date - now).total_seconds())
+            diff_minutes = diff_seconds // 60
+            
+            if diff_seconds < 0:
+                # En retard - afficher en jours/heures/minutes
+                abs_seconds = abs(diff_seconds)
+                days_late = abs_seconds // 86400
+                hours_late = (abs_seconds % 86400) // 3600
+                mins_late = (abs_seconds % 3600) // 60
+                
+                if days_late > 0:
+                    time_label = f"Retard {days_late}j {hours_late}h"
+                elif hours_late > 0:
+                    time_label = f"Retard {hours_late}h {mins_late}min"
+                else:
+                    time_label = f"Retard {mins_late}min"
                 priority = 'overdue'
             elif diff_minutes <= 30:
-                time_label = "0h"
+                time_label = f"{diff_minutes}min"
                 priority = 'urgent'
             elif diff_minutes <= 120:
-                hours = diff_minutes / 60.0
-                time_label = f"{hours:.1f}h"
+                hours = diff_minutes // 60
+                mins = diff_minutes % 60
+                time_label = f"{hours}h {mins}min"
                 priority = 'urgent'
             else:
-                hours = int(round(diff_hours))
-                time_label = f"{hours}h"
+                # Plus de 2h - afficher en jours/heures/minutes
+                days = diff_seconds // 86400
+                hours = (diff_seconds % 86400) // 3600
+                mins = (diff_seconds % 3600) // 60
+                
+                if days > 0:
+                    time_label = f"{days}j {hours}h"
+                else:
+                    time_label = f"{hours}h {mins}min"
                 priority = 'normal'
         else:
             diff_minutes = 0
