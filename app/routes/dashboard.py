@@ -21,7 +21,8 @@ from app.reports.services import (
 from app.employees.models import Employee, AttendanceSummary
 from decorators import admin_required
 from app.orders.dashboard_routes import dashboard_bp
-from app.ai import AIManager
+# ⏸️ AI désactivé temporairement pour performance
+# from app.ai import AIManager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -80,8 +81,9 @@ def build_dashboard_context(target_date, period):
         attendance_block,
         alerts_block
     )
-    # Générer les analyses IA (avec cache pour optimiser les coûts)
-    ai_insights = build_ai_insights_block(today, sales_report, stock_summary, production_block)
+    # ⏸️ AI désactivé temporairement pour performance
+    # ai_insights = build_ai_insights_block(today, sales_report, stock_summary, production_block)
+    ai_insights = {'available': False, 'sales': None, 'stock': None, 'production': None, 'forecast': None}
     
     insights_block = build_insights_block(
         sales_report,
