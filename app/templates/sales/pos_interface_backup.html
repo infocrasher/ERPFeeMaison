@@ -216,87 +216,6 @@
         display: flex;
         flex-direction: column;
         gap: 24px;
-        transition: transform 0.3s ease, opacity 0.3s ease, width 0.3s ease;
-        z-index: 100;
-    }
-    
-    /* Sidebar collapsed state */
-    .sidebar-nav.collapsed {
-        transform: translateX(-240px);
-        opacity: 0;
-        pointer-events: none;
-        position: absolute;
-        left: 24px;
-        top: 24px;
-        bottom: 16px;
-    }
-    
-    .sidebar-nav.collapsed.hover-visible {
-        transform: translateX(0);
-        opacity: 1;
-        pointer-events: auto;
-    }
-    
-    /* Hover trigger zone */
-    .sidebar-hover-zone {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 30px;
-        height: 100%;
-        z-index: 99;
-        display: none;
-    }
-    
-    .sidebar-hover-zone.active {
-        display: block;
-    }
-    
-    /* Toggle button */
-    .sidebar-toggle-btn {
-        position: fixed;
-        left: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 101;
-        background: var(--mint-500);
-        color: white;
-        border: none;
-        width: 28px;
-        height: 60px;
-        border-radius: 0 8px 8px 0;
-        cursor: pointer;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        box-shadow: 2px 0 8px rgba(0,0,0,0.15);
-        transition: background 0.2s;
-    }
-    
-    .sidebar-toggle-btn:hover {
-        background: var(--mint-600);
-    }
-    
-    .sidebar-toggle-btn.visible {
-        display: flex;
-    }
-    
-    .sidebar-toggle-hint {
-        position: fixed;
-        bottom: 10px;
-        left: 10px;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        z-index: 102;
-        display: none;
-    }
-    
-    .sidebar-toggle-hint.visible {
-        display: block;
     }
 
     .sidebar-brand {
@@ -605,28 +524,18 @@
 
     .products-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 12px;
-    }
-    
-    /* Mode compact avec sidebar visible */
-    .pos-shell:not(.sidebar-hidden) .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    }
-    
-    /* Mode compact avec sidebar cachée = plus d'espace = 5 colonnes */
-    .pos-shell.sidebar-hidden .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 18px;
     }
 
     .product-card {
         background: var(--card-bg);
-        border-radius: var(--radius-sm);
-        padding: 10px;
-        box-shadow: 0 4px 12px rgba(28, 99, 71, 0.08);
+        border-radius: var(--radius-md);
+        padding: 18px;
+        box-shadow: var(--shadow-soft);
         display: flex;
         flex-direction: column;
-        min-height: 180px;
+        min-height: 280px;
         transition: transform 0.2s, box-shadow 0.2s;
         position: relative;
     }
@@ -643,13 +552,13 @@
 
     .card-badge {
         position: absolute;
-        top: 8px;
-        right: 8px;
+        top: 18px;
+        right: 18px;
         background: var(--mint-600);
         color: white;
-        font-size: 0.65rem;
+        font-size: 0.75rem;
         font-weight: 600;
-        padding: 2px 6px;
+        padding: 4px 10px;
         border-radius: 999px;
         letter-spacing: 0.02em;
     }
@@ -659,14 +568,13 @@
     }
 
     .card-image {
-        height: 80px;
-        border-radius: var(--radius-sm);
+        height: 140px;
+        border-radius: var(--radius-md);
         background: var(--mint-50);
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 8px;
-        overflow: hidden;
+        margin-bottom: 14px;
     }
 
     .card-image img {
@@ -676,7 +584,7 @@
     }
 
     .card-placeholder {
-        font-size: 1.4rem;
+        font-size: 2rem;
         font-weight: 700;
         color: var(--mint-600);
     }
@@ -685,17 +593,13 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 6px;
     }
 
     .card-title {
-        font-size: 0.85rem;
+        font-size: 1.05rem;
         font-weight: 600;
         color: var(--teal-900);
-        line-height: 1.2;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
     }
 
     .card-meta {
@@ -704,21 +608,20 @@
         justify-content: space-between;
         margin-top: auto;
         font-weight: 600;
-        font-size: 0.8rem;
         color: var(--mint-600);
     }
 
     .card-meta .stock {
-        font-size: 0.7rem;
+        font-size: 0.85rem;
         color: var(--slate-600);
     }
 
     .card-actions {
-        margin-top: 8px;
+        margin-top: 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 6px;
+        gap: 12px;
     }
 
     .card-add-btn {
@@ -726,12 +629,11 @@
         border: none;
         background: linear-gradient(135deg, var(--mint-500), var(--mint-300));
         color: white;
-        padding: 8px;
+        padding: 12px;
         border-radius: var(--radius-sm);
         font-weight: 600;
-        font-size: 0.8rem;
         cursor: pointer;
-        box-shadow: 0 6px 12px rgba(43, 196, 138, 0.2);
+        box-shadow: 0 12px 24px rgba(43, 196, 138, 0.25);
         transition: transform 0.18s, box-shadow 0.18s;
     }
 
@@ -747,19 +649,19 @@
         justify-content: space-between;
         background: var(--mint-100);
         border-radius: var(--radius-sm);
-        padding: 4px 6px;
-        gap: 4px;
+        padding: 8px 10px;
+        gap: 8px;
     }
 
     .qty-btn {
         border: none;
         background: var(--card-bg);
         color: var(--mint-600);
-        width: 26px;
-        height: 26px;
-        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
         font-weight: 700;
-        font-size: 0.9rem;
+        font-size: 1.05rem;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -776,7 +678,7 @@
     .qty-display {
         font-weight: 600;
         color: var(--mint-700);
-        font-size: 0.85rem;
+        font-size: 1.05rem;
     }
 
     .loading,
@@ -1203,15 +1105,8 @@
 {% if categories_js %}{{ categories_js|tojson|safe }}{% else %}[]{% endif %}
 </script>
 <div class="pos-wrapper">
-    <!-- Hover zone pour afficher le menu -->
-    <div class="sidebar-hover-zone" id="sidebarHoverZone"></div>
-    <!-- Bouton toggle visible quand sidebar cachée -->
-    <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Afficher le menu (F6)">☰</button>
-    <!-- Hint F6 -->
-    <div class="sidebar-toggle-hint" id="sidebarHint">Appuyez sur F6 pour basculer le menu</div>
-    
-    <div class="pos-shell" id="posShell">
-        <aside class="sidebar-nav" id="sidebarNav">
+    <div class="pos-shell">
+        <aside class="sidebar-nav">
             <div class="sidebar-brand">
                 <div class="brand-logo">FM</div>
                 Fée Maison POS
@@ -2405,82 +2300,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setNumpadMode('quantity');
         renderSelectedCustomer();
     })();
-
-    // ========== SIDEBAR TOGGLE (F6 + Hover) ==========
-    const sidebarNav = document.getElementById('sidebarNav');
-    const posShell = document.getElementById('posShell');
-    const sidebarHoverZone = document.getElementById('sidebarHoverZone');
-    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
-    const sidebarHint = document.getElementById('sidebarHint');
-    let sidebarCollapsed = false;
-    let hoverTimeout = null;
-
-    function toggleSidebar() {
-        sidebarCollapsed = !sidebarCollapsed;
-        
-        if (sidebarCollapsed) {
-            sidebarNav.classList.add('collapsed');
-            posShell.classList.add('sidebar-hidden');
-            sidebarHoverZone.classList.add('active');
-            sidebarToggleBtn.classList.add('visible');
-        } else {
-            sidebarNav.classList.remove('collapsed', 'hover-visible');
-            posShell.classList.remove('sidebar-hidden');
-            sidebarHoverZone.classList.remove('active');
-            sidebarToggleBtn.classList.remove('visible');
-        }
-        
-        // Refresh products pour ajuster la grille
-        setTimeout(() => refreshProductsView(), 100);
-    }
-
-    // F6 keyboard toggle
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'F6') {
-            e.preventDefault();
-            toggleSidebar();
-        }
-    });
-
-    // Click on toggle button
-    if (sidebarToggleBtn) {
-        sidebarToggleBtn.addEventListener('click', toggleSidebar);
-    }
-
-    // Hover zone - show sidebar temporarily
-    if (sidebarHoverZone) {
-        sidebarHoverZone.addEventListener('mouseenter', () => {
-            if (sidebarCollapsed) {
-                clearTimeout(hoverTimeout);
-                sidebarNav.classList.add('hover-visible');
-            }
-        });
-    }
-
-    // Sidebar - keep visible while hovering
-    if (sidebarNav) {
-        sidebarNav.addEventListener('mouseenter', () => {
-            if (sidebarCollapsed) {
-                clearTimeout(hoverTimeout);
-            }
-        });
-
-        sidebarNav.addEventListener('mouseleave', () => {
-            if (sidebarCollapsed) {
-                hoverTimeout = setTimeout(() => {
-                    sidebarNav.classList.remove('hover-visible');
-                }, 300);
-            }
-        });
-    }
-
-    // Show hint briefly
-    if (sidebarHint) {
-        sidebarHint.classList.add('visible');
-        setTimeout(() => {
-            sidebarHint.classList.remove('visible');
-        }, 5000);
-    }
 });
 </script>
 {% endblock %}
