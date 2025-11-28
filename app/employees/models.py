@@ -221,15 +221,35 @@ class Employee(db.Model):
         """Calcule les heures travaillées pour une date donnée"""
         records = self.get_attendance_for_date(target_date)
         total_hours = 0
-        in_time = None
+        
+        # Mapping pour normaliser les punch_type (ZKTeco envoie parfois 0/1 au lieu de in/out)
+        def normalize_punch_type(pt):
+            if pt in ('in', 0, '0'):
+                return 'in'
+            elif pt in ('out', 1, '1'):
+                return 'out'
+            return pt
+        
+        # Séparer les pointages IN et OUT
+        in_times = []
+        out_times = []
         
         for record in records:
-            if record.punch_type == 'in':
-                in_time = record.timestamp
-            elif record.punch_type == 'out' and in_time:
-                duration = record.timestamp - in_time
-                total_hours += duration.total_seconds() / 3600
-                in_time = None
+            punch = normalize_punch_type(record.punch_type)
+            if punch == 'in':
+                in_times.append(record.timestamp)
+            elif punch == 'out':
+                out_times.append(record.timestamp)
+        
+        # Méthode robuste: Premier IN + Dernier OUT
+        if in_times and out_times:
+            first_in = min(in_times)
+            last_out = max(out_times)
+            
+            # S'assurer que la sortie est après l'entrée
+            if last_out > first_in:
+                duration = last_out - first_in
+                total_hours = duration.total_seconds() / 3600
         
         return round(total_hours, 2)
     
@@ -373,15 +393,35 @@ class AttendanceRecord(db.Model):
         for emp_id, data in summary.items():
             records = data['records']
             total_hours = 0
-            in_time = None
+            
+            # Mapping pour normaliser les punch_type (ZKTeco envoie parfois 0/1 au lieu de in/out)
+            def normalize_punch_type(pt):
+                if pt in ('in', 0, '0'):
+                    return 'in'
+                elif pt in ('out', 1, '1'):
+                    return 'out'
+                return pt
+            
+            # Séparer les pointages IN et OUT
+            in_times = []
+            out_times = []
             
             for record in records:
-                if record.punch_type == 'in':
-                    in_time = record.timestamp
-                elif record.punch_type == 'out' and in_time:
-                    duration = record.timestamp - in_time
-                    total_hours += duration.total_seconds() / 3600
-                    in_time = None
+                punch = normalize_punch_type(record.punch_type)
+                if punch == 'in':
+                    in_times.append(record.timestamp)
+                elif punch == 'out':
+                    out_times.append(record.timestamp)
+            
+            # Méthode robuste: Premier IN + Dernier OUT
+            if in_times and out_times:
+                first_in = min(in_times)
+                last_out = max(out_times)
+                
+                # S'assurer que la sortie est après l'entrée
+                if last_out > first_in:
+                    duration = last_out - first_in
+                    total_hours = duration.total_seconds() / 3600
             
             data['total_hours'] = round(total_hours, 2)
         

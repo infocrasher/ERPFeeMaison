@@ -101,6 +101,33 @@ def attendance():
             'status': 'error'
         }), 500
 
+def determine_auto_punch_type(employee_id, punch_date):
+    """
+    Détermine automatiquement si le pointage est une entrée ou sortie
+    basé sur le dernier pointage de l'employé pour la journée.
+    
+    Règles:
+    - Pas de pointage aujourd'hui → IN
+    - Dernier pointage = IN → OUT
+    - Dernier pointage = OUT → IN
+    """
+    # Récupérer le dernier pointage de l'employé pour cette journée
+    last_record = AttendanceRecord.query.filter(
+        AttendanceRecord.employee_id == employee_id,
+        db.func.date(AttendanceRecord.timestamp) == punch_date
+    ).order_by(AttendanceRecord.timestamp.desc()).first()
+    
+    if not last_record:
+        # Pas de pointage aujourd'hui → c'est une entrée
+        return 'in'
+    
+    # Alterner: si dernier = in → out, si dernier = out → in
+    if last_record.punch_type == 'in':
+        return 'out'
+    else:
+        return 'in'
+
+
 def process_attendance_data(data):
     """Traite et sauvegarde les données de pointage"""
     try:
@@ -109,12 +136,12 @@ def process_attendance_data(data):
         
         user_id = data.get('user_id') or data.get('zk_user_id')
         timestamp_str = data.get('timestamp') or data.get('time')
-        punch_type = data.get('punch_type', 'in')  # 'in' ou 'out'
         
         if not user_id or not timestamp_str:
             raise ValueError("Données manquantes: user_id et timestamp requis")
         
         # Convertir le timestamp
+        timestamp = None
         if isinstance(timestamp_str, str):
             # Essayer différents formats de date
             for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%d/%m/%Y %H:%M:%S']:
@@ -123,11 +150,11 @@ def process_attendance_data(data):
                     break
                 except ValueError:
                     continue
-            else:
+            if not timestamp:
                 # Si aucun format ne fonctionne, utiliser l'heure actuelle
-                timestamp = datetime.utcnow()
+                timestamp = datetime.now()
         else:
-            timestamp = datetime.utcnow()
+            timestamp = datetime.now()
         
         # Trouver l'employé par zk_user_id ou par id
         employee = Employee.query.filter_by(zk_user_id=user_id, is_active=True).first()
@@ -142,6 +169,11 @@ def process_attendance_data(data):
                 'success': False,
                 'message': f'Employé non trouvé pour ID: {user_id}'
             }
+        
+        # DÉTECTION AUTOMATIQUE IN/OUT basée sur le dernier pointage
+        punch_type = determine_auto_punch_type(employee.id, timestamp.date())
+        
+        current_app.logger.info(f"Auto-détection punch_type pour {employee.name}: {punch_type}")
         
         # Créer l'enregistrement de pointage
         attendance_record = AttendanceRecord(
@@ -160,7 +192,8 @@ def process_attendance_data(data):
             'success': True,
             'employee_name': employee.name,
             'timestamp': timestamp.isoformat(),
-            'punch_type': punch_type
+            'punch_type': punch_type,
+            'auto_detected': True
         }
         
     except Exception as e:
