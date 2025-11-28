@@ -310,8 +310,17 @@ def complete_sale():
             from app.services.printer_service import get_printer_service
             printer_service = get_printer_service()
             
-            # Imprimer le ticket et ouvrir le tiroir
-            printer_service.print_ticket(order.id, priority=1)
+            # Calculer la monnaie à rendre
+            change_amount = float(amount_received - total_amount) if amount_received > total_amount else 0
+            
+            # Imprimer le ticket avec les infos de paiement
+            printer_service.print_ticket(
+                order.id, 
+                priority=1,
+                employee_name=current_user.name if hasattr(current_user, 'name') else current_user.username,
+                amount_received=float(amount_received),
+                change_amount=change_amount
+            )
             printer_service.open_cash_drawer(priority=1)
             
             print(f"🖨️ Impression ticket et ouverture tiroir déclenchées pour vente #{order.id}")
@@ -323,7 +332,8 @@ def complete_sale():
             'success': True, 
             'message': 'Vente finalisée avec succès',
             'order_id': order.id,
-            'total': float(total_amount)
+            'total': float(total_amount),
+            'change': float(amount_received - total_amount) if amount_received > total_amount else 0
         })
         
     except Exception as e:
@@ -458,13 +468,26 @@ def process_sale():
         
         db.session.commit()
         
+        # Calculer le total
+        total = sum(item['price'] * item['quantity'] for item in items)
+        
+        # Récupérer les infos de paiement si disponibles
+        amount_received = float(data.get('amount_received', total))
+        change_amount = max(0, amount_received - total)
+        
         # Intégration POS : Impression ticket + ouverture tiroir pour vente POS
         try:
             from app.services.printer_service import get_printer_service
             printer_service = get_printer_service()
             
-            # Imprimer le ticket et ouvrir le tiroir
-            printer_service.print_ticket(temp_order.id, priority=1)
+            # Imprimer le ticket avec les infos de paiement
+            printer_service.print_ticket(
+                temp_order.id, 
+                priority=1,
+                employee_name=current_user.name if hasattr(current_user, 'name') else current_user.username,
+                amount_received=amount_received,
+                change_amount=change_amount
+            )
             printer_service.open_cash_drawer(priority=1)
             
             print(f"🖨️ Impression ticket et ouverture tiroir déclenchées pour vente POS #{temp_order.id}")
@@ -472,13 +495,11 @@ def process_sale():
             print(f"⚠️ Erreur intégration POS: {e}")
             # Ne pas faire échouer la vente si l'impression échoue
         
-        # Calculer le total
-        total = sum(item['price'] * item['quantity'] for item in items)
-        
         return jsonify({
             'success': True,
             'message': 'Vente enregistrée avec succès',
             'total': total,
+            'change': change_amount,
             'items_count': len(items)
         })
         

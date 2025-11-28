@@ -565,13 +565,18 @@ class PrinterService:
             return False
     
     # API publique
-    def print_ticket(self, order_id: int, priority: int = 1) -> bool:
+    def print_ticket(self, order_id: int, priority: int = 1, 
+                     employee_name: str = None, amount_received: float = None, 
+                     change_amount: float = None) -> bool:
         """
         Imprimer un ticket de caisse (non bloquant)
         
         Args:
             order_id: ID de la commande
             priority: Priorité du job (1=haute, 2=normale, 3=basse)
+            employee_name: Nom de l'employé/vendeur (optionnel)
+            amount_received: Montant reçu en espèces (optionnel)
+            change_amount: Monnaie à rendre (optionnel)
         
         Returns:
             bool: True si le job a été ajouté à la queue
@@ -584,6 +589,7 @@ class PrinterService:
         try:
             from models import Order
             from flask import current_app
+            from flask_login import current_user
             
             if not current_app:
                 logger.error("❌ Contexte d'application non disponible")
@@ -594,12 +600,23 @@ class PrinterService:
                 logger.error(f"❌ Commande {order_id} non trouvée")
                 return False
             
+            # Récupérer le nom de l'employé si non fourni
+            if not employee_name:
+                try:
+                    if current_user and current_user.is_authenticated:
+                        employee_name = getattr(current_user, 'name', None) or getattr(current_user, 'username', 'Vendeur')
+                except:
+                    employee_name = 'Vendeur'
+            
             # Préparer les données pour l'impression
             order_data = {
                 'order_id': order.id,
                 'customer_name': order.customer_name,
                 'delivery_option': getattr(order, 'delivery_option', None),
                 'total_amount': float(order.total_amount) if order.total_amount else 0,
+                'employee_name': employee_name or 'Vendeur',
+                'amount_received': float(amount_received) if amount_received else 0,
+                'change_amount': float(change_amount) if change_amount else 0,
                 'items': []
             }
             
@@ -616,7 +633,7 @@ class PrinterService:
                 }
                 order_data['items'].append(item_data)
             
-            logger.info(f"📦 Données préparées pour commande #{order_id}: {len(order_data['items'])} articles, total={order_data['total_amount']}")
+            logger.info(f"📦 Données préparées pour commande #{order_id}: {len(order_data['items'])} articles, total={order_data['total_amount']}, vendeur={employee_name}")
             
         except Exception as e:
             logger.error(f"❌ Erreur préparation données commande: {e}")

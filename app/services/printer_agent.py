@@ -283,6 +283,9 @@ class RemotePrinterService:
             'total': order_data.get('total_amount', 0),
             'total_amount': order_data.get('total_amount', 0),
             'items': order_data.get('items', []),
+            'employee_name': order_data.get('employee_name', ''),
+            'amount_received': order_data.get('amount_received', 0),
+            'change_amount': order_data.get('change_amount', 0),
             'priority': priority
         }
         
