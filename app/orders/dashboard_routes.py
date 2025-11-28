@@ -12,7 +12,7 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @login_required
 @admin_required
 def production_dashboard():
-    """Dashboard de production pour Rayan"""
+    """Dashboard de production - Groupé par heure avec remarques"""
     
     # Récupérer les commandes normales
     orders_to_produce = Order.query.filter(
@@ -24,42 +24,35 @@ def production_dashboard():
     orders_on_time = 0
     orders_soon = 0
     orders_overdue = 0
-    orders_wall = []
+    
+    # Structure : {heure: [commandes]}
+    orders_by_hour = {}
     
     for order in orders_to_produce:
         order_items = order.items.all() if hasattr(order.items, 'all') else (order.items or [])
+        
+        # Calculer la priorité
         if order.due_date:
             time_diff_hours = (order.due_date - now).total_seconds() / 3600
             if time_diff_hours < 0:
                 orders_overdue += 1
+                priority = 'overdue'
             elif time_diff_hours < 2:
                 orders_soon += 1
+                priority = 'urgent'
             else:
                 orders_on_time += 1
-        total_qty = sum(float(item.quantity) for item in order_items)
-        if total_qty.is_integer():
-            quantity_label = f"{int(total_qty)} pcs"
-        else:
-            quantity_label = f"{total_qty:.1f} pcs"
-        
-        # Afficher TOUS les produits de la commande (pas seulement le premier)
-        products_list = []
-        for item in order_items:
-            if item.product:
-                qty = int(item.quantity) if float(item.quantity).is_integer() else item.quantity
-                products_list.append(f"{item.product.name} (x{qty})")
-        
-        if products_list:
-            primary_product = ", ".join(products_list)
-        else:
-            primary_product = order.customer_name or f"Commande #{order.id}"
-        
-        if order.due_date:
+                priority = 'normal'
+            
+            # Grouper par heure
+            hour_key = order.due_date.strftime('%Hh')
+            hour_value = order.due_date.hour
+            
+            # Calculer le temps restant
             diff_seconds = int((order.due_date - now).total_seconds())
             diff_minutes = diff_seconds // 60
             
             if diff_seconds < 0:
-                # En retard - afficher en jours/heures/minutes
                 abs_seconds = abs(diff_seconds)
                 days_late = abs_seconds // 86400
                 hours_late = (abs_seconds % 86400) // 3600
@@ -71,17 +64,13 @@ def production_dashboard():
                     time_label = f"Retard {hours_late}h {mins_late}min"
                 else:
                     time_label = f"Retard {mins_late}min"
-                priority = 'overdue'
             elif diff_minutes <= 30:
                 time_label = f"{diff_minutes}min"
-                priority = 'urgent'
             elif diff_minutes <= 120:
                 hours = diff_minutes // 60
                 mins = diff_minutes % 60
                 time_label = f"{hours}h {mins}min"
-                priority = 'urgent'
             else:
-                # Plus de 2h - afficher en jours/heures/minutes
                 days = diff_seconds // 86400
                 hours = (diff_seconds % 86400) // 3600
                 mins = (diff_seconds % 3600) // 60
@@ -90,26 +79,46 @@ def production_dashboard():
                     time_label = f"{days}j {hours}h"
                 else:
                     time_label = f"{hours}h {mins}min"
-                priority = 'normal'
         else:
-            diff_minutes = 0
+            hour_key = 'Sans horaire'
+            hour_value = 99  # Pour mettre à la fin
             time_label = 'Sans horaire'
             priority = 'normal'
-        orders_wall.append({
+        
+        # Construire la liste des produits avec quantités
+        products_list = []
+        for item in order_items:
+            if item.product:
+                qty = int(item.quantity) if float(item.quantity).is_integer() else float(item.quantity)
+                products_list.append({
+                    'name': item.product.name,
+                    'quantity': qty
+                })
+        
+        # Créer l'entrée de commande
+        order_entry = {
             'id': order.id,
-            'primary_product': primary_product,
-            'quantity_label': quantity_label,
+            'customer': order.customer_name or '-',
+            'notes': order.notes or '',  # Remarques de la commande
+            'products': products_list,
             'time_label': time_label,
             'priority': priority,
-            'customer': order.customer_name or '-',
-            'due_time': order.due_date.strftime('%H:%M') if order.due_date else '--'
-        })
+            'due_time': order.due_date.strftime('%H:%M') if order.due_date else '--',  # Heure de livraison/retrait prévue
+            'hour_value': hour_value  # Pour trier
+        }
+        
+        # Ajouter à la structure groupée par heure
+        if hour_key not in orders_by_hour:
+            orders_by_hour[hour_key] = []
+        orders_by_hour[hour_key].append(order_entry)
+    
+    # Trier les heures et les commandes dans chaque heure
+    sorted_hours = sorted(orders_by_hour.items(), key=lambda x: x[1][0]['hour_value'] if x[1] else 99)
     
     total_orders = len(orders_to_produce)
     
     return render_template('dashboards/production_dashboard.html',
-                         orders=orders_to_produce,
-                         orders_wall=orders_wall,
+                         orders_by_hour=sorted_hours,
                          orders_on_time=orders_on_time,
                          orders_soon=orders_soon,
                          orders_overdue=orders_overdue,
