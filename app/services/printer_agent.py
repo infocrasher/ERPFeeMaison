@@ -266,11 +266,27 @@ class RemotePrinterService:
             return None
     
     def print_ticket(self, order_id: int, priority: int = 1) -> bool:
-        """Imprimer un ticket via l'agent distant"""
+        """Imprimer un ticket via l'agent distant (deprecated - utiliser print_ticket_with_data)"""
         result = self._make_request('/print/ticket', 'POST', {
             'order_id': order_id,
             'priority': priority
         })
+        
+        return result is not None and result.get('success', False)
+    
+    def print_ticket_with_data(self, order_data: Dict, priority: int = 1) -> bool:
+        """Imprimer un ticket via l'agent distant avec les données complètes"""
+        # Construire le payload avec toutes les données nécessaires
+        payload = {
+            'order_id': order_data.get('order_id'),
+            'customer_name': order_data.get('customer_name', ''),
+            'total': order_data.get('total_amount', 0),
+            'total_amount': order_data.get('total_amount', 0),
+            'items': order_data.get('items', []),
+            'priority': priority
+        }
+        
+        result = self._make_request('/print/ticket', 'POST', payload)
         
         return result is not None and result.get('success', False)
     

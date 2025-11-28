@@ -580,12 +580,54 @@ class PrinterService:
             logger.info("🖨️ Impression désactivée par configuration")
             return True
         
-        # Mode réseau : déléguer à l'agent distant
+        # Préparer les données de la commande (utilisé par mode réseau ET local)
+        try:
+            from models import Order
+            from flask import current_app
+            
+            if not current_app:
+                logger.error("❌ Contexte d'application non disponible")
+                return False
+            
+            order = Order.query.get(order_id)
+            if not order:
+                logger.error(f"❌ Commande {order_id} non trouvée")
+                return False
+            
+            # Préparer les données pour l'impression
+            order_data = {
+                'order_id': order.id,
+                'customer_name': order.customer_name,
+                'delivery_option': getattr(order, 'delivery_option', None),
+                'total_amount': float(order.total_amount) if order.total_amount else 0,
+                'items': []
+            }
+            
+            # Récupérer les items (forcer l'évaluation de la relation)
+            items_list = order.items.all()  # Convertir AppenderQuery en liste
+            for item in items_list:
+                # OrderItem n'a pas d'attribut description, contrairement à B2BOrderItem
+                product_name = item.product.name if item.product else "Article"
+                item_data = {
+                    'product_name': product_name,
+                    'quantity': float(item.quantity),
+                    'unit_price': float(item.unit_price),
+                    'description': getattr(item, 'description', None)
+                }
+                order_data['items'].append(item_data)
+            
+            logger.info(f"📦 Données préparées pour commande #{order_id}: {len(order_data['items'])} articles, total={order_data['total_amount']}")
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur préparation données commande: {e}")
+            return False
+        
+        # Mode réseau : envoyer les données complètes à l'agent distant
         if self.config.network_enabled and self.remote_service:
             try:
-                success = self.remote_service.print_ticket(order_id, priority)
+                success = self.remote_service.print_ticket_with_data(order_data, priority)
                 if success:
-                    logger.info(f"📄 Impression ticket #{order_id} envoyée à l'agent distant")
+                    logger.info(f"📄 Impression ticket #{order_id} envoyée à l'agent distant (avec {len(order_data['items'])} articles)")
                 else:
                     logger.error(f"❌ Échec impression ticket #{order_id} via agent distant")
                 return success
@@ -593,46 +635,12 @@ class PrinterService:
                 logger.error(f"❌ Erreur communication agent distant: {e}")
                 return False
         
-        # Mode local : récupérer les données dans le contexte actuel
+        # Mode local : ajouter à la queue d'impression
         try:
-            from models import Order
-            from flask import current_app
-            
-            if current_app:
-                order = Order.query.get(order_id)
-                if not order:
-                    logger.error(f"❌ Commande {order_id} non trouvée")
-                    return False
-                
-                # Préparer les données pour le thread d'impression
-                order_data = {
-                    'order_id': order.id,
-                    'customer_name': order.customer_name,
-                    'delivery_option': getattr(order, 'delivery_option', None),
-                    'total_amount': float(order.total_amount) if order.total_amount else 0,
-                    'items': []
-                }
-                
-                # Récupérer les items (forcer l'évaluation de la relation)
-                items_list = order.items.all()  # Convertir AppenderQuery en liste
-                for item in items_list:
-                    # OrderItem n'a pas d'attribut description, contrairement à B2BOrderItem
-                    product_name = item.product.name if item.product else "Article"
-                    item_data = {
-                        'product_name': product_name,
-                        'quantity': float(item.quantity),
-                        'unit_price': float(item.unit_price),
-                        'description': getattr(item, 'description', None)  # Sécurisé pour les deux types
-                    }
-                    order_data['items'].append(item_data)
-                
-                job = PrintJob('ticket', order_data, priority)
-                self.print_queue.put((priority, job))
-                logger.info(f"📄 Job d'impression ajouté pour commande #{order_id}")
-                return True
-            else:
-                logger.error("❌ Contexte d'application non disponible")
-                return False
+            job = PrintJob('ticket', order_data, priority)
+            self.print_queue.put((priority, job))
+            logger.info(f"📄 Job d'impression ajouté pour commande #{order_id}")
+            return True
                 
         except Exception as e:
             logger.error(f"❌ Erreur ajout job impression: {e}")
