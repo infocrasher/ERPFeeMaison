@@ -202,8 +202,8 @@
         flex: 1;
         display: flex;
         min-height: 0;
-        padding: 24px 24px 16px;
-        gap: 24px;
+        padding: 16px 20px;
+        gap: 20px;
     }
 
     /* --- Sidebar --- */
@@ -1144,47 +1144,7 @@
         cursor: not-allowed;
     }
 
-    /* --- Footer --- */
-    .pos-footer {
-        padding: 16px 24px 24px;
-    }
-
-    .footer-strip {
-        background: var(--card-bg);
-        padding: 16px 20px;
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-soft);
-        display: flex;
-        gap: 16px;
-        overflow-x: auto;
-    }
-
-    .footer-strip::-webkit-scrollbar {
-        height: 6px;
-    }
-
-    .footer-strip::-webkit-scrollbar-thumb {
-        background: var(--mint-300);
-        border-radius: 999px;
-    }
-
-    .footer-card {
-        min-width: 180px;
-        background: var(--mint-100);
-        color: var(--mint-700);
-        border-radius: var(--radius-md);
-        padding: 14px 16px;
-        font-weight: 600;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .footer-card .status {
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: var(--slate-600);
-    }
+    /* Footer supprimé pour plus d'espace */
 
     @media (max-width: 1400px) {
         .sidebar-nav {
@@ -1416,22 +1376,7 @@
         </div>
     </div>
 
-<div class="pos-footer">
-    <div class="footer-strip">
-        <div class="footer-card">
-            <span>Commande 1</span>
-            <span class="status">En préparation</span>
-        </div>
-        <div class="footer-card">
-            <span>Commande 2</span>
-            <span class="status">Prête à livrer</span>
-        </div>
-        <div class="footer-card">
-            <span>Table 3</span>
-            <span class="status">Addition demandée</span>
-        </div>
-    </div>
-</div>
+<!-- Footer supprimé - cartes statiques inutiles -->
 
 <div class="pos-modal" id="posCustomerModal" aria-hidden="true">
     <div class="pos-modal__backdrop" data-modal-dismiss></div>
