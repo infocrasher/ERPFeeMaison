@@ -758,48 +758,128 @@ def list_expenses():
 @login_required
 @admin_required
 def set_initial_balances():
-    """Définir les soldes initiaux de caisse et banque"""
-    from app.accounting.models import Account
+    """Définir les soldes initiaux de caisse et banque via écritures comptables d'ouverture"""
+    from app.accounting.models import Account, Journal, JournalEntry, JournalEntryLine, JournalType
+    from decimal import Decimal
     
     if request.method == 'POST':
-        initial_cash = float(request.form.get('initial_cash', 0))
-        initial_bank = float(request.form.get('initial_bank', 0))
+        initial_cash = Decimal(str(request.form.get('initial_cash', 0)))
+        initial_bank = Decimal(str(request.form.get('initial_bank', 0)))
         
-        # Mettre à jour le compte caisse (530)
+        # Vérifier si des écritures d'ouverture existent déjà
+        existing_opening = JournalEntry.query.filter(
+            JournalEntry.reference.like('OUVERTURE-%')
+        ).first()
+        
+        if existing_opening:
+            flash('Des soldes initiaux ont déjà été définis. Supprimez d\'abord l\'écriture d\'ouverture existante.', 'warning')
+            return redirect(url_for('accounting.set_initial_balances'))
+        
+        # Récupérer ou créer les comptes
         cash_account = Account.query.filter_by(code='530').first()
-        if cash_account:
-            cash_account.balance = initial_cash
-        else:
-            # Créer le compte caisse s'il n'existe pas
+        if not cash_account:
             cash_account = Account(
                 code='530',
                 name='Caisse',
-                account_type='5',
-                account_nature='ACTIF',
-                balance=initial_cash
+                account_type=AccountType.CLASSE_5,
+                account_nature=AccountNature.DEBIT
             )
             db.session.add(cash_account)
+            db.session.flush()
         
-        # Mettre à jour le compte banque (512)
         bank_account = Account.query.filter_by(code='512').first()
-        if bank_account:
-            bank_account.balance = initial_bank
-        else:
-            # Créer le compte banque s'il n'existe pas
+        if not bank_account:
             bank_account = Account(
                 code='512',
                 name='Banque',
-                account_type='5',
-                account_nature='ACTIF',
-                balance=initial_bank
+                account_type=AccountType.CLASSE_5,
+                account_nature=AccountNature.DEBIT
             )
             db.session.add(bank_account)
+            db.session.flush()
+        
+        # Récupérer ou créer le compte Capital/Réserves pour équilibrer (compte 101)
+        capital_account = Account.query.filter_by(code='101').first()
+        if not capital_account:
+            capital_account = Account(
+                code='101',
+                name='Capital',
+                account_type=AccountType.CLASSE_1,
+                account_nature=AccountNature.CREDIT
+            )
+            db.session.add(capital_account)
+            db.session.flush()
+        
+        # Récupérer ou créer le journal des opérations diverses
+        journal = Journal.query.filter_by(journal_type=JournalType.OPERATIONS_DIVERSES).first()
+        if not journal:
+            journal = Journal(
+                code='OD',
+                name='Opérations Diverses',
+                journal_type=JournalType.OPERATIONS_DIVERSES
+            )
+            db.session.add(journal)
+            db.session.flush()
+        
+        # Créer l'écriture d'ouverture
+        total_initial = initial_cash + initial_bank
+        
+        if total_initial > 0:
+            entry = JournalEntry(
+                journal_id=journal.id,
+                entry_date=date.today(),
+                description='Écriture d\'ouverture - Soldes initiaux caisse et banque',
+                reference=f'OUVERTURE-{datetime.now().strftime("%Y%m%d%H%M%S")}',
+                created_by_id=current_user.id,
+                is_validated=True
+            )
+            entry.generate_reference()
+            db.session.add(entry)
+            db.session.flush()
+            
+            # Ligne 1: Débit Caisse
+            if initial_cash > 0:
+                cash_line = JournalEntryLine(
+                    entry_id=entry.id,
+                    account_id=cash_account.id,
+                    debit_amount=initial_cash,
+                    credit_amount=0,
+                    description='Solde initial caisse',
+                    line_number=1
+                )
+                db.session.add(cash_line)
+            
+            # Ligne 2: Débit Banque
+            if initial_bank > 0:
+                bank_line = JournalEntryLine(
+                    entry_id=entry.id,
+                    account_id=bank_account.id,
+                    debit_amount=initial_bank,
+                    credit_amount=0,
+                    description='Solde initial banque',
+                    line_number=2 if initial_cash > 0 else 1
+                )
+                db.session.add(bank_line)
+            
+            # Ligne 3: Crédit Capital (pour équilibrer)
+            capital_line = JournalEntryLine(
+                entry_id=entry.id,
+                account_id=capital_account.id,
+                debit_amount=0,
+                credit_amount=total_initial,
+                description='Solde initial - Capital',
+                line_number=3 if (initial_cash > 0 and initial_bank > 0) else 2
+            )
+            db.session.add(capital_line)
+            
+            entry.validated_at = datetime.utcnow()
+            entry.validated_by_id = current_user.id
         
         db.session.commit()
         flash(f'Soldes initiaux définis : Caisse {initial_cash} DZD, Banque {initial_bank} DZD', 'success')
         return redirect(url_for('accounting.dashboard'))
     
-    # Récupérer les soldes actuels
+    # Récupérer les soldes actuels (calculés depuis les écritures)
     cash_account = Account.query.filter_by(code='530').first()
     bank_account = Account.query.filter_by(code='512').first()
     
