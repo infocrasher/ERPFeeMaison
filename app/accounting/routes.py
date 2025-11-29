@@ -844,14 +844,20 @@ def adjust_cash():
     flash(f'{"Ajout" if operation == "add" else "Retrait"} de {amount} DZD en caisse effectué', 'success')
     return redirect(url_for('accounting.dashboard'))
 
-@bp.route('/treasury/adjust-bank', methods=['POST'])
+@bp.route('/treasury/adjust-bank', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def adjust_bank():
     """Ajuster le solde bancaire (ajout ou retrait)"""
-    from app.accounting.models import Account
+    # Si GET, rediriger vers le dashboard avec un message
+    if request.method == 'GET':
+        flash('Veuillez utiliser le bouton "Ajuster Banque" depuis le dashboard.', 'info')
+        return redirect(url_for('accounting.dashboard'))
     
-    amount = float(request.form.get('amount', 0))
+    from app.accounting.models import Account, Journal, JournalEntry, JournalEntryLine, JournalType
+    from decimal import Decimal
+    
+    amount = Decimal(str(request.form.get('amount', 0)))
     operation = request.form.get('operation', 'add')  # 'add' ou 'remove'
     reason = request.form.get('reason', 'Ajustement manuel')
     
@@ -860,12 +866,88 @@ def adjust_bank():
         flash('Compte banque non trouvé', 'error')
         return redirect(url_for('accounting.dashboard'))
     
-    # Ajuster le solde bancaire
-    if operation == 'add':
-        bank_account.balance = (bank_account.balance or 0) + amount
-    else:
-        bank_account.balance = (bank_account.balance or 0) - amount
+    # Récupérer le journal de banque
+    journal = Journal.query.filter_by(journal_type=JournalType.BANQUE).first()
+    if not journal:
+        # Créer le journal BQ s'il n'existe pas
+        journal = Journal(
+            code='BQ',
+            name='Journal de Banque',
+            journal_type=JournalType.BANQUE
+        )
+        db.session.add(journal)
+        db.session.flush()
     
+    # Compte d'ajustement (Produits divers pour ajout, Charges diverses pour retrait)
+    if operation == 'add':
+        adjustment_account = Account.query.filter_by(code='758').first()  # Produits divers
+        if not adjustment_account:
+            flash('Compte "Produits divers" (758) non trouvé', 'error')
+            return redirect(url_for('accounting.dashboard'))
+    else:
+        adjustment_account = Account.query.filter_by(code='658').first()  # Charges diverses
+        if not adjustment_account:
+            flash('Compte "Charges diverses" (658) non trouvé', 'error')
+            return redirect(url_for('accounting.dashboard'))
+    
+    # Créer l'écriture comptable d'ajustement
+    entry = JournalEntry(
+        journal_id=journal.id,
+        entry_date=date.today(),
+        description=f'Ajustement bancaire - {reason}',
+        reference=f'AJUST-BANK-{datetime.now().strftime("%Y%m%d%H%M%S")}',
+        created_by_id=current_user.id,
+        is_validated=True  # Valider automatiquement les ajustements
+    )
+    
+    # Générer la référence
+    entry.generate_reference()
+    
+    db.session.add(entry)
+    db.session.flush()
+    
+    if operation == 'add':
+        # Ajout : Débiter banque (512), Créditer produits divers (758)
+        debit_line = JournalEntryLine(
+            entry_id=entry.id,
+            account_id=bank_account.id,
+            debit_amount=amount,
+            credit_amount=0,
+            description=f'Ajout bancaire - {reason}',
+            line_number=1
+        )
+        credit_line = JournalEntryLine(
+            entry_id=entry.id,
+            account_id=adjustment_account.id,
+            debit_amount=0,
+            credit_amount=amount,
+            description=f'Ajustement bancaire - {reason}',
+            line_number=2
+        )
+    else:
+        # Retrait : Débiter charges diverses (658), Créditer banque (512)
+        debit_line = JournalEntryLine(
+            entry_id=entry.id,
+            account_id=adjustment_account.id,
+            debit_amount=amount,
+            credit_amount=0,
+            description=f'Ajustement bancaire - {reason}',
+            line_number=1
+        )
+        credit_line = JournalEntryLine(
+            entry_id=entry.id,
+            account_id=bank_account.id,
+            debit_amount=0,
+            credit_amount=amount,
+            description=f'Retrait bancaire - {reason}',
+            line_number=2
+        )
+    
+    entry.validated_at = datetime.utcnow()
+    entry.validated_by_id = current_user.id
+    
+    db.session.add(debit_line)
+    db.session.add(credit_line)
     db.session.commit()
     
     flash(f'{"Ajout" if operation == "add" else "Retrait"} de {amount} DZD en banque effectué', 'success')
@@ -920,7 +1002,7 @@ def new_expense():
             journal_id=journal.id,
             entry_date=form.date.data,
             description=description,
-            reference_document=form.reference.data,
+            reference=form.reference.data,
             created_by_id=current_user.id
         )
         
@@ -932,23 +1014,21 @@ def new_expense():
         
         # Ligne débit (charge)
         debit_line = JournalEntryLine(
-            journal_entry_id=entry.id,
+            entry_id=entry.id,
             account_id=expense_account.id,
             debit_amount=form.amount.data,
             credit_amount=0,
             description=description,
-            reference=form.reference.data,
             line_number=1
         )
         
         # Ligne crédit (paiement)
         credit_line = JournalEntryLine(
-            journal_entry_id=entry.id,
+            entry_id=entry.id,
             account_id=payment_account.id,
             debit_amount=0,
             credit_amount=form.amount.data,
             description=f"Paiement {form.payment_method.data}",
-            reference=form.reference.data,
             line_number=2
         )
         
@@ -993,11 +1073,23 @@ def bank_statement():
         flash('Compte bancaire (512) non trouvé. Veuillez créer le compte bancaire.', 'error')
         return redirect(url_for('accounting.dashboard'))
     
-    # Récupérer toutes les lignes d'écriture du compte banque
-    bank_movements = JournalEntryLine.query.filter_by(account_id=bank_account.id)\
-                                          .join(JournalEntry)\
+    # Récupérer toutes les lignes d'écriture du compte banque avec la relation entry chargée
+    # Le backref 'entry' est défini dans JournalEntry.lines avec backref='entry'
+    # Utiliser une jointure explicite pour charger les données de JournalEntry
+    bank_movements = db.session.query(JournalEntryLine, JournalEntry)\
+                                          .join(JournalEntry, JournalEntryLine.entry_id == JournalEntry.id)\
+                                          .filter(JournalEntryLine.account_id == bank_account.id)\
                                           .order_by(desc(JournalEntry.entry_date), desc(JournalEntry.id))\
                                           .all()
+    
+    # Extraire seulement les lignes (movements) et associer les entries
+    movements_list = []
+    for line, entry in bank_movements:
+        # Attacher l'entry à la ligne pour que movement.entry fonctionne
+        line.entry = entry
+        movements_list.append(line)
+    
+    bank_movements = movements_list
     
     # Calculer le solde cumulé pour chaque mouvement
     movements_with_balance = []
@@ -1018,7 +1110,9 @@ def bank_statement():
         amount = float(movement.debit_amount or movement.credit_amount)
         
         # Catégoriser le mouvement
-        description = movement.journal_entry.description.lower()
+        # Utiliser 'entry' (backref défini dans le modèle JournalEntry.lines avec backref='entry')
+        entry = movement.entry
+        description = (entry.description or '').lower() if entry and entry.description else ''
         if 'salaire' in description or 'paiement salaire' in description:
             category = "Salaire"
             icon = "bi-person-check"
@@ -1048,9 +1142,9 @@ def bank_statement():
             'icon': icon,
             'color': color,
             'balance': current_balance,
-            'date': movement.journal_entry.entry_date,
-            'reference': movement.journal_entry.reference,
-            'description': movement.journal_entry.description
+            'date': entry.entry_date,
+            'reference': entry.reference or '',
+            'description': entry.description or ''
         })
         
         # Ajuster le solde pour le mouvement précédent

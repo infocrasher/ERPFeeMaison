@@ -49,7 +49,7 @@ class AccountingIntegrationService:
                 journal_id=journal.id,
                 entry_date=date.today(),
                 description=description or f"Vente commande #{order_id}",
-                reference_document=f"CMD-{order_id}",
+                reference=f"CMD-{order_id}",
                 order_id=order_id if order_id and order_id != 999 else None,  # Éviter les IDs de test
                 created_by_id=current_user.id if current_user.is_authenticated else 1,
                 is_validated=True  # Valider automatiquement les écritures de vente
@@ -63,7 +63,7 @@ class AccountingIntegrationService:
             
             # Ligne de débit (encaissement)
             debit_line = JournalEntryLine(
-                journal_entry_id=entry.id,
+                entry_id=entry.id,
                 account_id=debit_account.id,
                 debit_amount=sale_amount,
                 credit_amount=0,
@@ -73,7 +73,7 @@ class AccountingIntegrationService:
             
             # Ligne de crédit (vente)
             credit_line = JournalEntryLine(
-                journal_entry_id=entry.id,
+                entry_id=entry.id,
                 account_id=credit_account.id,
                 debit_amount=0,
                 credit_amount=sale_amount,
@@ -126,7 +126,7 @@ class AccountingIntegrationService:
                 journal_id=journal.id,
                 entry_date=date.today(),
                 description=description or f"Achat #{purchase_id}",
-                reference_document=f"ACH-{purchase_id}",
+                reference=f"ACH-{purchase_id}",
                 purchase_id=purchase_id if purchase_id and purchase_id != 999 else None,  # Éviter les IDs de test
                 created_by_id=current_user.id if current_user.is_authenticated else 1,
                 is_validated=True  # Valider automatiquement les écritures d'achat
@@ -140,7 +140,7 @@ class AccountingIntegrationService:
             
             # Ligne de débit (achat)
             debit_line = JournalEntryLine(
-                journal_entry_id=entry.id,
+                entry_id=entry.id,
                 account_id=debit_account.id,
                 debit_amount=purchase_amount,
                 credit_amount=0,
@@ -150,7 +150,7 @@ class AccountingIntegrationService:
             
             # Ligne de crédit (paiement)
             credit_line = JournalEntryLine(
-                journal_entry_id=entry.id,
+                entry_id=entry.id,
                 account_id=credit_account.id,
                 debit_amount=0,
                 credit_amount=purchase_amount,
@@ -188,7 +188,7 @@ class AccountingIntegrationService:
                 journal_id=cash_journal.id,
                 entry_date=date.today(),
                 description=description,
-                reference_document=f"CASH-{cash_movement_id}",
+                reference=f"CASH-{cash_movement_id}",
                 cash_movement_id=cash_movement_id,
                 created_by_id=current_user.id if current_user else 1
             )
@@ -278,7 +278,7 @@ class AccountingIntegrationService:
                 journal_id=bank_journal.id,
                 entry_date=date.today(),
                 description=description,
-                reference_document=f"DEPOSIT-{cash_movement_id}",
+                reference=f"DEPOSIT-{cash_movement_id}",
                 cash_movement_id=cash_movement_id,
                 created_by_id=current_user.id if current_user else 1
             )
@@ -352,7 +352,7 @@ class AccountingIntegrationService:
                 journal_id=journal.id,
                 entry_date=date.today(),
                 description=description or f"Ajustement stock #{adjustment_id}",
-                reference_document=f"STK-{adjustment_id}",
+                reference=f"STK-{adjustment_id}",
                 created_by_id=current_user.id if current_user.is_authenticated else 1
             )
             
@@ -364,7 +364,7 @@ class AccountingIntegrationService:
             
             # Ligne de débit
             debit_line = JournalEntryLine(
-                journal_entry_id=entry.id,
+                entry_id=entry.id,
                 account_id=debit_account.id,
                 debit_amount=amount,
                 credit_amount=0,
@@ -374,7 +374,7 @@ class AccountingIntegrationService:
             
             # Ligne de crédit
             credit_line = JournalEntryLine(
-                journal_entry_id=entry.id,
+                entry_id=entry.id,
                 account_id=credit_account.id,
                 debit_amount=0,
                 credit_amount=amount,
@@ -421,7 +421,7 @@ class AccountingIntegrationService:
                 journal_id=journal.id,
                 entry_date=date.today(),
                 description=description or f"Calcul salaire #{payroll_id}",
-                reference_document=f"PAY-{payroll_id}",
+                reference=f"PAY-{payroll_id}",
                 created_by_id=current_user.id if current_user.is_authenticated else 1
             )
             
@@ -433,7 +433,7 @@ class AccountingIntegrationService:
             
             # Ligne 1: Débit Rémunérations du personnel (641)
             salary_line = JournalEntryLine(
-                journal_entry_id=entry.id,
+                entry_id=entry.id,
                 account_id=salary_account.id,
                 debit_amount=gross_salary,
                 credit_amount=0,
@@ -443,7 +443,7 @@ class AccountingIntegrationService:
             
             # Ligne 2: Crédit Personnel - Rémunérations dues (421)
             payable_line = JournalEntryLine(
-                journal_entry_id=entry.id,
+                entry_id=entry.id,
                 account_id=payable_account.id,
                 debit_amount=0,
                 credit_amount=net_salary,
@@ -502,7 +502,7 @@ class AccountingIntegrationService:
                 journal_id=journal.id,
                 entry_date=date.today(),
                 description=description or f"Paiement salaire #{payroll_id} - Employé #{employee_id}",
-                reference_document=f"PAY-{payroll_id}",
+                reference=f"PAY-{payroll_id}",
                 created_by_id=current_user.id if current_user.is_authenticated else 1
             )
             
@@ -514,7 +514,7 @@ class AccountingIntegrationService:
             
             # Ligne 1: Débit Personnel - Rémunérations dues (421)
             payable_line = JournalEntryLine(
-                journal_entry_id=entry.id,
+                entry_id=entry.id,
                 account_id=payable_account.id,
                 debit_amount=net_salary,
                 credit_amount=0,
@@ -524,7 +524,7 @@ class AccountingIntegrationService:
             
             # Ligne 2: Crédit Caisse/Banque (530/512)
             payment_line = JournalEntryLine(
-                journal_entry_id=entry.id,
+                entry_id=entry.id,
                 account_id=payment_account.id,
                 debit_amount=0,
                 credit_amount=net_salary,
@@ -578,8 +578,8 @@ class AccountingIntegrationService:
                 validated_count += 1
                 
                 # Essayer de lier à un PayrollCalculation
-                if 'PAY-' in entry.reference_document:
-                    payroll_id = entry.reference_document.replace('PAY-', '')
+                if 'PAY-' in entry.reference:
+                    payroll_id = entry.reference.replace('PAY-', '')
                     try:
                         payroll = PayrollCalculation.query.get(int(payroll_id))
                         if payroll and not payroll.payroll_entry_id:
@@ -595,8 +595,8 @@ class AccountingIntegrationService:
                 validated_count += 1
                 
                 # Essayer de lier à un PayrollCalculation
-                if 'PAY-' in entry.reference_document:
-                    payroll_id = entry.reference_document.replace('PAY-', '')
+                if 'PAY-' in entry.reference:
+                    payroll_id = entry.reference.replace('PAY-', '')
                     try:
                         payroll = PayrollCalculation.query.get(int(payroll_id))
                         if payroll and not payroll.payment_entry_id:

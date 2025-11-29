@@ -147,6 +147,33 @@ class JournalEntry(db.Model):
     def __repr__(self):
         return f'<JournalEntry {self.entry_number}>'
     
+    def generate_reference(self):
+        """Génère un numéro d'écriture unique basé sur le journal et la date"""
+        from sqlalchemy import func
+        
+        if not self.journal_id:
+            raise ValueError("Le journal doit être défini avant de générer la référence")
+        
+        # Récupérer le code du journal
+        journal = self.journal or db.session.query(Journal).get(self.journal_id)
+        if not journal:
+            raise ValueError("Journal non trouvé")
+        
+        journal_code = journal.code
+        
+        # Utiliser l'année de la date d'écriture
+        year = self.entry_date.year if self.entry_date else datetime.now().year
+        
+        # Compter les écritures existantes pour ce journal et cette année
+        count = JournalEntry.query.filter(
+            JournalEntry.journal_id == self.journal_id,
+            func.extract('year', JournalEntry.entry_date) == year,
+            JournalEntry.entry_number.like(f'{journal_code}-{year}-%')
+        ).count()
+        
+        # Générer le numéro : VT-2024-001, AC-2024-001, etc.
+        self.entry_number = f'{journal_code}-{year}-{count + 1:03d}'
+    
     @property
     def total_debit(self):
         return sum(line.debit_amount or 0 for line in self.lines)

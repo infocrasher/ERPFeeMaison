@@ -159,11 +159,7 @@
                                             <strong>{{ "{:,.2f}".format(payroll.gross_salary) }} DZD</strong>
                                         </td>
                                         <td class="text-end">
-                                            {% if payroll.work_hours %}
-                                                <span class="text-warning">{{ "{:,.2f}".format(payroll.work_hours.get_total_deductions()) }} DZD</span>
-                                            {% else %}
-                                                <span class="text-muted">0,00 DZD</span>
-                                            {% endif %}
+                                            <span class="text-warning">{{ "{:,.2f}".format(payroll.total_deductions) }} DZD</span>
                                         </td>
                                         <td class="text-end">
                                             {% if payroll.work_hours %}

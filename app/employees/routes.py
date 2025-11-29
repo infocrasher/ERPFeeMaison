@@ -4,7 +4,7 @@ app/employees/routes.py
 Routes pour la gestion des employés
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from app.employees.models import Employee, AttendanceRecord
@@ -1045,6 +1045,524 @@ def manage_work_hours():
                          recent_hours=recent_hours,
                          title='Gestion des Heures de Travail')
 
+
+@employees_bp.route('/api/consolidate-hours')
+@login_required
+@admin_required
+def api_consolidate_hours():
+    """API pour consolider les heures depuis les pointages (AJAX)
+    
+    Logique de comptage des jours payés :
+    - Chaque semaine = 1 jour off payé de base (seulement si >= 6 jours travaillés)
+    - Jours travaillés normaux = 1 jour payé chacun
+    - Vendredi travaillé (si pas jour off) = 2 jours payés (double)
+    - Jour off travaillé = 2 jours payés (double)
+    """
+    from flask import jsonify
+    import traceback
+    
+    try:
+        employee_id = request.args.get('employee_id', type=int)
+        month = request.args.get('month', type=int)
+        year = request.args.get('year', type=int)
+        
+        if not all([employee_id, month, year]):
+            return jsonify({'success': False, 'message': 'Paramètres manquants'})
+        
+        employee = Employee.query.get(employee_id)
+        if not employee:
+            return jsonify({'success': False, 'message': 'Employé non trouvé'})
+        
+        # Récupérer le schedule pour déterminer le jour off
+        schedule = employee.get_work_schedule()
+        day_off = None  # Jour de la semaine (0=Lundi, 1=Mardi, ..., 6=Dimanche)
+        if schedule:
+            # Trouver le jour avec active=False (jour off)
+            day_names = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
+            for day_name, config in schedule.items():
+                if not config.get('active', True):
+                    try:
+                        day_off = day_names.index(day_name.lower())
+                    except ValueError:
+                        pass
+        
+        # Calculer les heures depuis les pointages
+        total_regular = 0
+        total_overtime = 0
+        days_worked = 0
+        
+        from calendar import monthrange
+        _, last_day = monthrange(year, month)
+        start_date = date(year, month, 1)
+        end_date = date(year, month, last_day)
+        
+        # Récupérer les pointages pour ce mois
+        records = AttendanceRecord.query.filter(
+            AttendanceRecord.employee_id == employee_id,
+            db.func.date(AttendanceRecord.timestamp) >= start_date,
+            db.func.date(AttendanceRecord.timestamp) <= end_date
+        ).order_by(AttendanceRecord.timestamp).all()
+        
+        # Grouper par jour
+        daily_records = {}
+        for record in records:
+            day_key = record.timestamp.date()
+            if day_key not in daily_records:
+                daily_records[day_key] = {'in': [], 'out': []}
+            if record.punch_type == 'in':
+                daily_records[day_key]['in'].append(record.timestamp)
+            elif record.punch_type == 'out':
+                daily_records[day_key]['out'].append(record.timestamp)
+        
+        # Calculer les heures par jour et compter les jours payés PAR SEMAINE
+        paid_days = 0  # Total jours payés (avec doubles)
+        days_by_week = {}  # {week_num: [dates travaillées]}
+        paid_days_by_week = {}  # {week_num: jours payés pour cette semaine}
+        
+        for day_key, punches in daily_records.items():
+            if punches['in'] and punches['out']:
+                first_in = min(punches['in'])
+                last_out = max(punches['out'])
+                
+                if last_out > first_in:
+                    hours = (last_out - first_in).total_seconds() / 3600
+                    days_worked += 1
+                    
+                    # Ajouter au compteur par semaine
+                    week_num = day_key.isocalendar()[1]
+                    if week_num not in days_by_week:
+                        days_by_week[week_num] = []
+                        paid_days_by_week[week_num] = 0
+                    days_by_week[week_num].append(day_key)
+                    
+                    weekday = day_key.weekday()  # 0=Lundi, 4=Vendredi, 5=Samedi
+                    is_friday = weekday == 4
+                    is_day_off = (day_off is not None) and (weekday == day_off)
+                    
+                    # Calculer les jours payés pour ce jour
+                    if is_day_off:
+                        # Jour off travaillé = 2 jours payés
+                        paid_days_by_week[week_num] += 2
+                    elif is_friday:
+                        # Vendredi travaillé (si pas jour off) = 2 jours payés
+                        paid_days_by_week[week_num] += 2
+                    else:
+                        # Jour normal travaillé = 1 jour payé
+                        paid_days_by_week[week_num] += 1
+                    
+                    # Calculer les heures (vendredi et jour off travaillé = double heures)
+                    if is_friday or is_day_off:
+                        hours = hours * 2
+                    
+                    # Heures régulières (max 16h si double, sinon 8h) et supplémentaires
+                    daily_max = 16 if (is_friday or is_day_off) else 8
+                    if hours <= daily_max:
+                        total_regular += hours
+                    else:
+                        total_regular += daily_max
+                        total_overtime += (hours - daily_max)
+        
+        # Calculer les absences par semaine et ajouter jour off payé si >= 6 jours travaillés
+        weeks_in_month = set()
+        current_day = start_date
+        while current_day <= end_date:
+            weeks_in_month.add(current_day.isocalendar()[1])
+            current_day += timedelta(days=1)
+        
+        # Pour chaque semaine : ajouter jour off payé seulement si >= 6 jours travaillés
+        for week_num in weeks_in_month:
+            days_worked_this_week = len(days_by_week.get(week_num, []))
+            if days_worked_this_week >= 6:
+                # Ajouter 1 jour off payé de base
+                paid_days_by_week[week_num] = paid_days_by_week.get(week_num, 0) + 1
+            
+            # Ajouter au total
+            paid_days += paid_days_by_week.get(week_num, 0)
+        
+        # Calculer les absences (jours attendus - jours travaillés)
+        expected_days_per_week = 6 if day_off is not None else 7  # 6 si jour off défini, sinon 7
+        other_absences = 0
+        for week_num in weeks_in_month:
+            days_worked_this_week = len(days_by_week.get(week_num, []))
+            if days_worked_this_week < expected_days_per_week:
+                other_absences += (expected_days_per_week - days_worked_this_week)
+        
+        # Vérifier inactivité automatique : 4 jours consécutifs d'absence sur les 7 derniers jours seulement
+        today = date.today()
+        check_start = today - timedelta(days=7)  # Vérifier seulement les 7 derniers jours
+        
+        # Récupérer les pointages des 7 derniers jours (pas seulement du mois sélectionné)
+        recent_records = AttendanceRecord.query.filter(
+            AttendanceRecord.employee_id == employee_id,
+            db.func.date(AttendanceRecord.timestamp) >= check_start,
+            db.func.date(AttendanceRecord.timestamp) <= today
+        ).all()
+        
+        # Grouper par jour pour les 7 derniers jours
+        recent_daily_records = set()
+        for record in recent_records:
+            if record.punch_type == 'in':
+                recent_daily_records.add(record.timestamp.date())
+        
+        consecutive_absences = 0
+        max_consecutive = 0
+        check_day = check_start
+        while check_day <= today:
+            if check_day in recent_daily_records:
+                # Jour travaillé, réinitialiser le compteur
+                consecutive_absences = 0
+            else:
+                # Jour absent
+                consecutive_absences += 1
+                max_consecutive = max(max_consecutive, consecutive_absences)
+            check_day += timedelta(days=1)
+        
+        # Désactiver l'employé si >= 4 jours consécutifs d'absence sur les 7 derniers jours
+        if max_consecutive >= 4 and employee.is_active:
+            employee.is_active = False
+            db.session.commit()
+            current_app.logger.warning(
+                f"Employé {employee.name} désactivé automatiquement: {max_consecutive} jours consécutifs d'absence (sur les 7 derniers jours)"
+            )
+        
+        return jsonify({
+            'success': True,
+            'regular_hours': round(total_regular, 2),
+            'overtime_hours': round(total_overtime, 2),
+            'days_worked': days_worked,
+            'paid_days': paid_days,
+            'expected_days_per_week': expected_days_per_week,
+            'other_absences': other_absences
+        })
+    
+    except Exception as e:
+        current_app.logger.error(f"Erreur dans api_consolidate_hours: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'message': f'Erreur lors de la consolidation: {str(e)}'
+        }), 500
+
+
+@employees_bp.route('/payroll/consolidate-hours', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def consolidate_hours():
+    """Consolider les heures depuis les pointages vers WorkHours"""
+    from app.employees.forms import ConsolidateHoursForm
+    from app.employees.models import WorkHours, SalaryAdvance
+    
+    form = ConsolidateHoursForm()
+    
+    # Remplir les choix d'employés
+    active_employees = Employee.query.filter_by(is_active=True).all()
+    form.employee_id.choices = [('', '-- Sélectionner --')] + [(str(emp.id), emp.name) for emp in active_employees]
+    
+    results = []
+    
+    if form.validate_on_submit():
+        month = int(form.period_month.data)
+        year = int(form.period_year.data)
+        
+        # Déterminer quels employés traiter
+        if form.consolidate_all.data:
+            employees_to_process = active_employees
+        else:
+            emp = Employee.query.get(form.employee_id.data)
+            employees_to_process = [emp] if emp else []
+        
+        for employee in employees_to_process:
+            # Utiliser la même logique que l'API
+            schedule = employee.get_work_schedule()
+            day_off = None
+            if schedule:
+                day_names = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
+                for day_name, config in schedule.items():
+                    if not config.get('active', True):
+                        try:
+                            day_off = day_names.index(day_name.lower())
+                        except ValueError:
+                            pass
+            
+            total_regular = 0
+            total_overtime = 0
+            days_worked = 0
+            
+            from calendar import monthrange
+            _, last_day = monthrange(year, month)
+            start_date = date(year, month, 1)
+            end_date = date(year, month, last_day)
+            
+            records = AttendanceRecord.query.filter(
+                AttendanceRecord.employee_id == employee.id,
+                db.func.date(AttendanceRecord.timestamp) >= start_date,
+                db.func.date(AttendanceRecord.timestamp) <= end_date
+            ).order_by(AttendanceRecord.timestamp).all()
+            
+            daily_records = {}
+            for record in records:
+                day_key = record.timestamp.date()
+                if day_key not in daily_records:
+                    daily_records[day_key] = {'in': [], 'out': []}
+                if record.punch_type == 'in':
+                    daily_records[day_key]['in'].append(record.timestamp)
+                elif record.punch_type == 'out':
+                    daily_records[day_key]['out'].append(record.timestamp)
+            
+            days_by_week = {}
+            for day_key, punches in daily_records.items():
+                if punches['in'] and punches['out']:
+                    first_in = min(punches['in'])
+                    last_out = max(punches['out'])
+                    
+                    if last_out > first_in:
+                        hours = (last_out - first_in).total_seconds() / 3600
+                        days_worked += 1
+                        
+                        week_num = day_key.isocalendar()[1]
+                        if week_num not in days_by_week:
+                            days_by_week[week_num] = []
+                        days_by_week[week_num].append(day_key)
+                        
+                        weekday = day_key.weekday()
+                        is_friday = weekday == 4
+                        is_day_off = (day_off is not None) and (weekday == day_off)
+                        
+                        if is_friday or is_day_off:
+                            hours = hours * 2
+                        
+                        daily_max = 16 if (is_friday or is_day_off) else 8
+                        if hours <= daily_max:
+                            total_regular += hours
+                        else:
+                            total_regular += daily_max
+                            total_overtime += (hours - daily_max)
+            
+            weeks_in_month = set()
+            current_day = start_date
+            while current_day <= end_date:
+                weeks_in_month.add(current_day.isocalendar()[1])
+                current_day += timedelta(days=1)
+            
+            expected_days_per_week = 6 if day_off is not None else 7
+            other_absences = 0
+            for week_num in weeks_in_month:
+                days_worked_this_week = len(days_by_week.get(week_num, []))
+                if days_worked_this_week < expected_days_per_week:
+                    other_absences += (expected_days_per_week - days_worked_this_week)
+            
+            # Vérifier inactivité automatique : 4 jours consécutifs d'absence sur les 7 derniers jours seulement
+            today = date.today()
+            check_start = today - timedelta(days=7)  # Vérifier seulement les 7 derniers jours
+            
+            # Récupérer les pointages des 7 derniers jours (pas seulement du mois sélectionné)
+            recent_records = AttendanceRecord.query.filter(
+                AttendanceRecord.employee_id == employee.id,
+                db.func.date(AttendanceRecord.timestamp) >= check_start,
+                db.func.date(AttendanceRecord.timestamp) <= today
+            ).all()
+            
+            # Grouper par jour pour les 7 derniers jours
+            recent_daily_records = set()
+            for record in recent_records:
+                if record.punch_type == 'in':
+                    recent_daily_records.add(record.timestamp.date())
+            
+            consecutive_absences = 0
+            max_consecutive = 0
+            check_day = check_start
+            while check_day <= today:
+                if check_day in recent_daily_records:
+                    # Jour travaillé, réinitialiser le compteur
+                    consecutive_absences = 0
+                else:
+                    # Jour absent
+                    consecutive_absences += 1
+                    max_consecutive = max(max_consecutive, consecutive_absences)
+                check_day += timedelta(days=1)
+            
+            # Désactiver l'employé si >= 4 jours consécutifs d'absence sur les 7 derniers jours
+            if max_consecutive >= 4 and employee.is_active:
+                employee.is_active = False
+                db.session.commit()
+                current_app.logger.warning(
+                    f"Employé {employee.name} désactivé automatiquement: {max_consecutive} jours consécutifs d'absence (sur les 7 derniers jours)"
+                )
+            
+            total_advances = SalaryAdvance.get_total_for_period(employee.id, month, year)
+            
+            existing = WorkHours.query.filter_by(
+                employee_id=employee.id,
+                period_month=month,
+                period_year=year
+            ).first()
+            
+            if existing:
+                existing.regular_hours = round(total_regular, 2)
+                existing.overtime_hours = round(total_overtime, 2)
+                existing.other_absences = other_absences
+                existing.advance_deduction = total_advances
+                existing.updated_at = datetime.utcnow()
+                action = "mis à jour"
+            else:
+                work_hours = WorkHours(
+                    employee_id=employee.id,
+                    period_month=month,
+                    period_year=year,
+                    regular_hours=round(total_regular, 2),
+                    overtime_hours=round(total_overtime, 2),
+                    other_absences=other_absences,
+                    advance_deduction=total_advances,
+                    created_by=current_user.id
+                )
+                db.session.add(work_hours)
+                action = "créé"
+            
+            results.append({
+                'employee': employee.name,
+                'regular_hours': round(total_regular, 2),
+                'overtime_hours': round(total_overtime, 2),
+                'days_worked': days_worked,
+                'advances': total_advances,
+                'action': action
+            })
+        
+        db.session.commit()
+        
+        if results:
+            flash(f'Consolidation terminée pour {len(results)} employé(s)!', 'success')
+        else:
+            flash('Aucun employé à consolider.', 'warning')
+    
+    return render_template('employees/consolidate_hours.html',
+                         form=form,
+                         results=results,
+                         title='Consolider les Heures')
+
+
+@employees_bp.route('/api/get-advances')
+@login_required
+@admin_required
+def api_get_advances():
+    """API pour récupérer le total des avances (AJAX)"""
+    from flask import jsonify
+    from app.employees.models import SalaryAdvance
+    
+    employee_id = request.args.get('employee_id', type=int)
+    month = request.args.get('month', type=int)
+    year = request.args.get('year', type=int)
+    
+    if not all([employee_id, month, year]):
+        return jsonify({'success': False, 'message': 'Paramètres manquants'})
+    
+    # Récupérer les avances
+    advances = SalaryAdvance.get_advances_for_period(employee_id, month, year)
+    total = SalaryAdvance.get_total_for_period(employee_id, month, year)
+    
+    return jsonify({
+        'success': True,
+        'total': round(total, 2),
+        'count': len(advances)
+    })
+
+
+@employees_bp.route('/payroll/advances', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_advances():
+    """Gestion des avances sur salaire"""
+    from app.employees.forms import SalaryAdvanceForm
+    from app.employees.models import SalaryAdvance
+    
+    form = SalaryAdvanceForm()
+    
+    # Remplir les choix d'employés
+    active_employees = Employee.query.filter_by(is_active=True).all()
+    form.employee_id.choices = [(str(emp.id), emp.name) for emp in active_employees]
+    
+    # Valeurs par défaut
+    if not form.advance_date.data:
+        form.advance_date.data = date.today()
+    if not form.period_month.data:
+        form.period_month.data = str(date.today().month)
+    if not form.period_year.data:
+        form.period_year.data = date.today().year
+    
+    if form.validate_on_submit():
+        advance = SalaryAdvance(
+            employee_id=form.employee_id.data,
+            amount=form.amount.data,
+            advance_date=form.advance_date.data,
+            period_month=int(form.period_month.data),
+            period_year=form.period_year.data,
+            reason=form.reason.data,
+            notes=form.notes.data,
+            created_by=current_user.id
+        )
+        
+        db.session.add(advance)
+        db.session.commit()
+        
+        employee = Employee.query.get(form.employee_id.data)
+        flash(f'Avance de {form.amount.data} DA enregistrée pour {employee.name}!', 'success')
+        return redirect(url_for('employees.manage_advances'))
+    
+    # Filtres pour affichage
+    filter_month = request.args.get('month', date.today().month, type=int)
+    filter_year = request.args.get('year', date.today().year, type=int)
+    filter_employee = request.args.get('employee_id', type=int)
+    
+    # Requête des avances
+    query = SalaryAdvance.query.filter_by(
+        period_month=filter_month,
+        period_year=filter_year
+    )
+    
+    if filter_employee:
+        query = query.filter_by(employee_id=filter_employee)
+    
+    advances = query.order_by(SalaryAdvance.advance_date.desc()).all()
+    
+    # Calculer les totaux par employé
+    totals_by_employee = {}
+    for adv in advances:
+        if adv.employee_id not in totals_by_employee:
+            totals_by_employee[adv.employee_id] = {
+                'employee': adv.employee,
+                'total': 0,
+                'count': 0
+            }
+        totals_by_employee[adv.employee_id]['total'] += float(adv.amount)
+        totals_by_employee[adv.employee_id]['count'] += 1
+    
+    return render_template('employees/salary_advances.html',
+                         form=form,
+                         advances=advances,
+                         totals_by_employee=totals_by_employee,
+                         filter_month=filter_month,
+                         filter_year=filter_year,
+                         filter_employee=filter_employee,
+                         employees=active_employees,
+                         title='Avances sur Salaire')
+
+
+@employees_bp.route('/payroll/advances/<int:advance_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_advance(advance_id):
+    """Supprimer une avance sur salaire"""
+    from app.employees.models import SalaryAdvance
+    
+    advance = SalaryAdvance.query.get_or_404(advance_id)
+    employee_name = advance.employee.name
+    amount = advance.amount
+    
+    db.session.delete(advance)
+    db.session.commit()
+    
+    flash(f'Avance de {amount} DA pour {employee_name} supprimée!', 'success')
+    return redirect(url_for('employees.manage_advances'))
+
+
 @employees_bp.route('/payroll/calculate', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -1056,8 +1574,25 @@ def calculate_payroll():
     form = PayrollCalculationForm()
     
     # Remplir les choix d'employés
+    # Inclure les employés actifs + les employés inactifs qui ont des heures de travail
+    # (pour permettre le calcul de paie même si l'employé a été désactivé récemment)
     active_employees = Employee.query.filter_by(is_active=True).all()
-    form.employee_id.choices = [(str(emp.id), emp.name) for emp in active_employees]
+    
+    # Récupérer aussi les employés inactifs qui ont des heures de travail enregistrées
+    # (pour les périodes passées)
+    inactive_with_hours = db.session.query(Employee).join(
+        WorkHours, Employee.id == WorkHours.employee_id
+    ).filter(Employee.is_active == False).distinct().all()
+    
+    # Combiner les deux listes et éviter les doublons
+    all_employees = {emp.id: emp for emp in active_employees}
+    for emp in inactive_with_hours:
+        if emp.id not in all_employees:
+            all_employees[emp.id] = emp
+    
+    # Trier par nom et créer les choix
+    sorted_employees = sorted(all_employees.values(), key=lambda e: e.name)
+    form.employee_id.choices = [(str(emp.id), f"{emp.name} {'(inactif)' if not emp.is_active else ''}") for emp in sorted_employees]
     
     if form.validate_on_submit():
         employee = Employee.query.get(form.employee_id.data)
@@ -1094,7 +1629,7 @@ def calculate_payroll():
             )
         
         # Calculer le taux horaire (basé sur 173.33 heures par mois)
-        monthly_hours = 173.33
+        monthly_hours = 240  # 30 jours × 8h/jour
         payroll.hourly_rate = float(employee.salaire_fixe) / monthly_hours
         payroll.overtime_rate = payroll.hourly_rate * 1.5  # Majoration 50%
         
@@ -1258,6 +1793,17 @@ def salaries_dashboard():
         PayrollCalculation.period_month == selected_month,
         PayrollCalculation.period_year == selected_year
     ).join(Employee).order_by(Employee.name).all()
+    
+    # Recalculer les avances en temps réel pour chaque payroll
+    # (car les avances peuvent avoir changé depuis le calcul initial)
+    for payroll in payrolls:
+        try:
+            payroll.calculate_all()
+        except Exception as e:
+            current_app.logger.warning(f"Erreur lors du recalcul de la paie {payroll.id}: {str(e)}")
+    
+    # Sauvegarder les recalculs
+    db.session.commit()
     
     # Séparer les payés et non payés
     paid_payrolls = [p for p in payrolls if p.is_paid]

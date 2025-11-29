@@ -11,9 +11,14 @@
                     <i class="bi bi-clock-history text-primary me-2"></i>
                     Gestion des Heures de Travail
                 </h1>
-                <a href="{{ url_for('employees.payroll_dashboard') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-arrow-left me-2"></i>Retour Dashboard
-                </a>
+                <div>
+                    <a href="{{ url_for('employees.manage_advances') }}" class="btn btn-outline-danger me-2">
+                        <i class="bi bi-cash-stack me-1"></i>Gérer les Avances
+                    </a>
+                    <a href="{{ url_for('employees.payroll_dashboard') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left me-2"></i>Retour Dashboard
+                    </a>
+                </div>
             </div>
 
             <!-- Formulaire de saisie -->
@@ -72,15 +77,18 @@
 
                         <!-- Heures de travail -->
                         <div class="row">
-                            <div class="col-12 mb-3">
-                                <h6 class="text-primary fw-bold">
+                            <div class="col-12 mb-3 d-flex justify-content-between align-items-center">
+                                <h6 class="text-primary fw-bold mb-0">
                                     <i class="bi bi-clock me-2"></i>Heures de Travail
                                 </h6>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="btnConsolidate">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Consolider depuis pointages
+                                </button>
                             </div>
                             
                             <div class="col-md-6 mb-3">
                                 {{ form.regular_hours.label(class="form-label") }}
-                                {{ form.regular_hours(class="form-control", step="0.5") }}
+                                {{ form.regular_hours(class="form-control", step="0.5", id="regular_hours") }}
                                 {% if form.regular_hours.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in form.regular_hours.errors %}
@@ -92,7 +100,7 @@
                             
                             <div class="col-md-6 mb-3">
                                 {{ form.overtime_hours.label(class="form-label") }}
-                                {{ form.overtime_hours(class="form-control", step="0.5") }}
+                                {{ form.overtime_hours(class="form-control", step="0.5", id="overtime_hours") }}
                                 {% if form.overtime_hours.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in form.overtime_hours.errors %}
@@ -100,6 +108,15 @@
                                         {% endfor %}
                                     </div>
                                 {% endif %}
+                            </div>
+                            
+                            <!-- Info consolidation -->
+                            <div class="col-12" id="consolidateInfo" style="display: none;">
+                                <div class="alert alert-info alert-dismissible fade show py-2">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <span id="consolidateMessage"></span>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
                             </div>
                         </div>
 
@@ -114,6 +131,7 @@
                             <div class="col-md-4 mb-3">
                                 {{ form.sick_days.label(class="form-label") }}
                                 {{ form.sick_days(class="form-control", step="0.5") }}
+                                <small class="text-muted">Non payés (pris en charge par l'assurance)</small>
                                 {% if form.sick_days.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in form.sick_days.errors %}
@@ -126,6 +144,7 @@
                             <div class="col-md-4 mb-3">
                                 {{ form.vacation_days.label(class="form-label") }}
                                 {{ form.vacation_days(class="form-control", step="0.5") }}
+                                <small class="text-success">Payés (15j/an après 1 an d'ancienneté)</small>
                                 {% if form.vacation_days.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in form.vacation_days.errors %}
@@ -137,7 +156,8 @@
                             
                             <div class="col-md-4 mb-3">
                                 {{ form.other_absences.label(class="form-label") }}
-                                {{ form.other_absences(class="form-control", step="0.5") }}
+                                {{ form.other_absences(class="form-control", step="0.5", id="other_absences") }}
+                                <small class="text-muted">Non payés (statistiques taux d'absentéisme)</small>
                                 {% if form.other_absences.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in form.other_absences.errors %}
@@ -202,8 +222,14 @@
                             </div>
                             
                             <div class="col-md-6 mb-3">
-                                {{ form.advance_deduction.label(class="form-label") }}
-                                {{ form.advance_deduction(class="form-control", step="0.01") }}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    {{ form.advance_deduction.label(class="form-label mb-0") }}
+                                    <button type="button" class="btn btn-outline-danger btn-sm" id="btnGetAdvances">
+                                        <i class="bi bi-arrow-down-circle me-1"></i>Récupérer
+                                    </button>
+                                </div>
+                                {{ form.advance_deduction(class="form-control mt-1", step="0.01", id="advance_deduction") }}
+                                <small class="text-muted" id="advancesDetail"></small>
                                 {% if form.advance_deduction.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in form.advance_deduction.errors %}
@@ -319,5 +345,95 @@
         });
     }, false);
 })();
+
+// Bouton Consolider depuis pointages
+document.getElementById('btnConsolidate').addEventListener('click', function() {
+    const employeeId = document.getElementById('employee_id').value;
+    const month = document.getElementById('period_month').value;
+    const year = document.getElementById('period_year').value;
+    
+    if (!employeeId) {
+        alert('Veuillez sélectionner un employé');
+        return;
+    }
+    
+    this.disabled = true;
+    this.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Calcul...';
+    
+    fetch(`/employees/api/consolidate-hours?employee_id=${employeeId}&month=${month}&year=${year}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('regular_hours').value = data.regular_hours;
+                document.getElementById('overtime_hours').value = data.overtime_hours;
+                
+                // Remplir les absences automatiquement
+                if (data.other_absences !== undefined) {
+                    document.getElementById('other_absences').value = data.other_absences;
+                }
+                
+                const infoDiv = document.getElementById('consolidateInfo');
+                const msgSpan = document.getElementById('consolidateMessage');
+                let msg = `${data.days_worked} jours travaillés - ${data.regular_hours}h normales + ${data.overtime_hours}h sup.`;
+                if (data.paid_days !== undefined) {
+                    msg += ` | ${data.paid_days} jours payés`;
+                }
+                if (data.other_absences > 0) {
+                    msg += ` | ${data.other_absences} jour(s) d'absence`;
+                }
+                msgSpan.textContent = msg;
+                infoDiv.style.display = 'block';
+            } else {
+                alert(data.message || 'Erreur lors de la consolidation');
+            }
+        })
+        .catch(error => {
+            alert('Erreur: ' + error);
+        })
+        .finally(() => {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Consolider depuis pointages';
+        });
+});
+
+// Bouton Récupérer avances
+document.getElementById('btnGetAdvances').addEventListener('click', function() {
+    const employeeId = document.getElementById('employee_id').value;
+    const month = document.getElementById('period_month').value;
+    const year = document.getElementById('period_year').value;
+    
+    if (!employeeId) {
+        alert('Veuillez sélectionner un employé');
+        return;
+    }
+    
+    this.disabled = true;
+    this.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>...';
+    
+    fetch(`/employees/api/get-advances?employee_id=${employeeId}&month=${month}&year=${year}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('advance_deduction').value = data.total;
+                const detail = document.getElementById('advancesDetail');
+                if (data.count > 0) {
+                    detail.textContent = `${data.count} avance(s) - Total: ${data.total} DA`;
+                    detail.className = 'text-danger';
+                } else {
+                    detail.textContent = 'Aucune avance enregistrée';
+                    detail.className = 'text-muted';
+                }
+            } else {
+                alert(data.message || 'Erreur lors de la récupération');
+            }
+        })
+        .catch(error => {
+            alert('Erreur: ' + error);
+        })
+        .finally(() => {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-arrow-down-circle me-1"></i>Récupérer';
+        });
+});
 </script>
 {% endblock %} 

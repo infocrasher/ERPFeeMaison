@@ -784,11 +784,25 @@ class PayrollCalculation(db.Model):
         # Montant des heures supplémentaires
         self.overtime_amount = float(work_hours.overtime_hours) * float(self.overtime_rate)
         
-        # Total des primes et déductions
-        self.total_bonuses = work_hours.get_total_bonuses()
-        self.total_deductions = work_hours.get_total_deductions()
+        # Montant des congés payés (vacation_days × 8h × taux horaire)
+        vacation_amount = float(work_hours.vacation_days or 0) * 8 * float(self.hourly_rate)
         
-        # Salaire brut = heures + primes
+        # Total des primes (congés payés inclus dans les primes)
+        self.total_bonuses = work_hours.get_total_bonuses() + vacation_amount
+        
+        # IMPORTANT: Récupérer les avances directement depuis SalaryAdvance (toujours à jour)
+        # au lieu d'utiliser work_hours.advance_deduction qui peut être obsolète
+        # SalaryAdvance est dans le même fichier, pas besoin d'importer
+        current_advances = SalaryAdvance.get_total_for_period(
+            self.employee_id, 
+            self.period_month, 
+            self.period_year
+        )
+        
+        # Total des déductions = avances actuelles + autres déductions
+        self.total_deductions = current_advances + float(work_hours.other_deductions or 0)
+        
+        # Salaire brut = heures + primes (congés inclus dans primes)
         self.gross_salary = self.regular_amount + self.overtime_amount + self.total_bonuses
         
         # Pas de charges sociales automatiques (gérées manuellement en charges trimestrielles)
@@ -890,6 +904,61 @@ def employee_get_work_hours_for_period(self, year, month):
     ).first()
     
     return work_hours
+
+class SalaryAdvance(db.Model):
+    """Modèle pour les avances sur salaire avec historique"""
+    __tablename__ = 'salary_advances'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=False)
+    
+    # Montant et date
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    advance_date = db.Column(db.Date, nullable=False)
+    
+    # Période concernée (pour le calcul de paie)
+    period_month = db.Column(db.Integer, nullable=False)  # 1-12
+    period_year = db.Column(db.Integer, nullable=False)   # 2024, 2025, etc.
+    
+    # Informations supplémentaires
+    reason = db.Column(db.String(255))  # Motif de l'avance
+    notes = db.Column(db.Text)
+    
+    # Métadonnées
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    
+    # Relations
+    employee = db.relationship('Employee', backref='salary_advances')
+    
+    # Index pour optimiser les requêtes par période
+    __table_args__ = (
+        db.Index('idx_salary_advance_period', 'employee_id', 'period_month', 'period_year'),
+    )
+    
+    def __repr__(self):
+        return f'<SalaryAdvance {self.employee.name if self.employee else "?"} - {self.amount} DA le {self.advance_date}>'
+    
+    @staticmethod
+    def get_total_for_period(employee_id, month, year):
+        """Calcule le total des avances pour une période donnée"""
+        from sqlalchemy import func
+        total = db.session.query(func.sum(SalaryAdvance.amount)).filter(
+            SalaryAdvance.employee_id == employee_id,
+            SalaryAdvance.period_month == month,
+            SalaryAdvance.period_year == year
+        ).scalar()
+        return float(total or 0)
+    
+    @staticmethod
+    def get_advances_for_period(employee_id, month, year):
+        """Récupère toutes les avances pour une période donnée"""
+        return SalaryAdvance.query.filter_by(
+            employee_id=employee_id,
+            period_month=month,
+            period_year=year
+        ).order_by(SalaryAdvance.advance_date).all()
+
 
 # Ajouter les méthodes à la classe Employee
 Employee.get_payroll_summary = employee_get_payroll_summary

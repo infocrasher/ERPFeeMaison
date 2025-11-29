@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-sync-alt"></i> {{ title }}</h1>
+                <div>
+                    <a href="{{ url_for('employees.manage_work_hours') }}" class="btn btn-secondary">
+                        <i class="fas fa-clock"></i> Heures de travail
+                    </a>
+                    <a href="{{ url_for('employees.manage_advances') }}" class="btn btn-info">
+                        <i class="fas fa-money-bill-wave"></i> Avances
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulaire de consolidation -->
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-calculator"></i> Consolider les heures depuis les pointages</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Cette fonction calcule automatiquement les heures travaillées depuis les pointages 
+                        et les enregistre dans les heures de travail mensuelles.
+                    </div>
+                    
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label">{{ form.period_month.label.text }}</label>
+                            {{ form.period_month(class="form-control") }}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label">{{ form.period_year.label.text }}</label>
+                            {{ form.period_year(class="form-control", value=2025) }}
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="form-check mb-3">
+                            {{ form.consolidate_all(class="form-check-input") }}
+                            <label class="form-check-label" for="consolidate_all">
+                                <strong>{{ form.consolidate_all.label.text }}</strong>
+                            </label>
+                        </div>
+                        
+                        <div class="form-group mb-3" id="employee-select">
+                            <label class="form-label">{{ form.employee_id.label.text }}</label>
+                            {{ form.employee_id(class="form-control") }}
+                            <small class="text-muted">Sélectionner un employé ou cocher "Tous les employés"</small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-sync-alt"></i> {{ form.submit.label.text }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Résultats -->
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Résultats de la consolidation</h5>
+                </div>
+                <div class="card-body">
+                    {% if results %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Employé</th>
+                                        <th class="text-center">Jours</th>
+                                        <th class="text-center">Heures Normales</th>
+                                        <th class="text-center">Heures Sup.</th>
+                                        <th class="text-center">Avances</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for r in results %}
+                                    <tr>
+                                        <td><strong>{{ r.employee }}</strong></td>
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary">{{ r.days_worked }} jours</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary">{{ "%.1f"|format(r.regular_hours) }}h</span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if r.overtime_hours > 0 %}
+                                                <span class="badge bg-warning text-dark">{{ "%.1f"|format(r.overtime_hours) }}h</span>
+                                            {% else %}
+                                                <span class="badge bg-light text-dark">0h</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if r.advances > 0 %}
+                                                <span class="badge bg-danger">{{ "%.0f"|format(r.advances) }} DA</span>
+                                            {% else %}
+                                                <span class="badge bg-light text-dark">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if r.action == 'créé' %}
+                                                <span class="badge bg-success"><i class="fas fa-plus"></i> Créé</span>
+                                            {% else %}
+                                                <span class="badge bg-info"><i class="fas fa-edit"></i> Mis à jour</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-clock fa-4x text-muted mb-3"></i>
+                            <h5 class="text-muted">Sélectionnez une période et cliquez sur "Consolider"</h5>
+                            <p class="text-muted">Les heures seront calculées automatiquement depuis les pointages.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const consolidateAll = document.getElementById('consolidate_all');
+    const employeeSelect = document.getElementById('employee-select');
+    
+    function toggleEmployeeSelect() {
+        if (consolidateAll.checked) {
+            employeeSelect.style.display = 'none';
+        } else {
+            employeeSelect.style.display = 'block';
+        }
+    }
+    
+    consolidateAll.addEventListener('change', toggleEmployeeSelect);
+    toggleEmployeeSelect();
+});
+</script>
+{% endblock %}
+

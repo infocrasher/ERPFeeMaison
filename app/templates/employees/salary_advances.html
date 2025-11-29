@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-money-bill-wave"></i> {{ title }}</h1>
+                <div>
+                    <a href="{{ url_for('employees.consolidate_hours') }}" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Consolider heures
+                    </a>
+                    <a href="{{ url_for('employees.manage_work_hours') }}" class="btn btn-secondary">
+                        <i class="fas fa-clock"></i> Heures de travail
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulaire d'ajout -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus"></i> Nouvelle avance</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label">{{ form.employee_id.label.text }} *</label>
+                            {{ form.employee_id(class="form-control") }}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label">{{ form.amount.label.text }} *</label>
+                            {{ form.amount(class="form-control", placeholder="Ex: 5000") }}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label">{{ form.advance_date.label.text }} *</label>
+                            {{ form.advance_date(class="form-control") }}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">{{ form.period_month.label.text }}</label>
+                                    {{ form.period_month(class="form-control") }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">{{ form.period_year.label.text }}</label>
+                                    {{ form.period_year(class="form-control") }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label">{{ form.reason.label.text }}</label>
+                            {{ form.reason(class="form-control", placeholder="Ex: Avance urgente") }}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label">{{ form.notes.label.text }}</label>
+                            {{ form.notes(class="form-control", rows="2") }}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success btn-lg w-100">
+                            <i class="fas fa-save"></i> {{ form.submit.label.text }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Résumé par employé -->
+            {% if totals_by_employee %}
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Résumé du mois</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Employé</th>
+                                <th class="text-center">Nb</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for emp_id, data in totals_by_employee.items() %}
+                            <tr>
+                                <td>{{ data.employee.name }}</td>
+                                <td class="text-center"><span class="badge bg-secondary">{{ data.count }}</span></td>
+                                <td class="text-end"><strong>{{ "%.0f"|format(data.total) }} DA</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <td><strong>TOTAL</strong></td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark">
+                                        {{ totals_by_employee.values()|sum(attribute='count') }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <strong>{{ "%.0f"|format(totals_by_employee.values()|sum(attribute='total')) }} DA</strong>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Liste des avances -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list"></i> Historique des avances</h5>
+                        
+                        <!-- Filtres -->
+                        <form method="GET" class="d-flex gap-2">
+                            <select name="month" class="form-select form-select-sm" style="width: 130px;">
+                                {% for m in range(1, 13) %}
+                                <option value="{{ m }}" {% if filter_month == m %}selected{% endif %}>
+                                    {{ ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                                        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][m-1] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" name="year" class="form-control form-control-sm" 
+                                   value="{{ filter_year }}" style="width: 80px;">
+                            <select name="employee_id" class="form-select form-select-sm" style="width: 150px;">
+                                <option value="">Tous</option>
+                                {% for emp in employees %}
+                                <option value="{{ emp.id }}" {% if filter_employee == emp.id %}selected{% endif %}>
+                                    {{ emp.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-light btn-sm">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if advances %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Employé</th>
+                                        <th class="text-end">Montant</th>
+                                        <th>Motif</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for advance in advances %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                {{ advance.advance_date.strftime('%d/%m/%Y') }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ advance.employee.name }}</strong>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="badge bg-danger fs-6">
+                                                {{ "%.0f"|format(advance.amount) }} DA
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if advance.reason %}
+                                                {{ advance.reason }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <form method="POST" 
+                                                  action="{{ url_for('employees.delete_advance', advance_id=advance.id) }}"
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Supprimer cette avance de {{ advance.amount }} DA ?');">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-money-bill-wave fa-4x text-muted mb-3"></i>
+                            <h5 class="text-muted">Aucune avance pour cette période</h5>
+                            <p class="text-muted">Utilisez le formulaire pour enregistrer une avance.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
