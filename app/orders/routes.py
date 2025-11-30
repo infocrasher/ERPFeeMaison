@@ -425,6 +425,77 @@ def edit_customer_order(order_id):
                          title=f'Modifier Commande #{order.id}',
                          edit_mode=True)
 
+@orders.route('/production/<int:order_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_production_order(order_id):
+    """Modifier un ordre de production (produits, date, etc.)"""
+    order = db.session.get(Order, order_id) or abort(404)
+    
+    # Vérifier que c'est bien un ordre de production
+    if order.order_type != 'counter_production_request':
+        flash('Cette route est uniquement pour les ordres de production.', 'error')
+        return redirect(url_for('orders.view_order', order_id=order.id))
+    
+    form = ProductionOrderForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Vérifier les stocks avant de modifier
+            stock_is_sufficient = check_stock_availability(form.items.data)
+            
+            # Supprimer les anciens items
+            for item in order.items:
+                db.session.delete(item)
+            db.session.flush()
+            
+            # Mettre à jour les informations de base
+            order.due_date = form.production_date.data  # Modifier la date
+            order.notes = form.production_notes.data
+            
+            # Ajouter les nouveaux items
+            for item_data in form.items.data:
+                if item_data.get('product') and item_data.get('quantity', 0) > 0:
+                    product = Product.query.get(int(item_data['product']))
+                    if product:
+                        order_item = OrderItem(
+                            order_id=order.id,
+                            product_id=product.id,
+                            quantity=item_data['quantity'],
+                            unit_price=Decimal('0.00')
+                        )
+                        db.session.add(order_item)
+            
+            # Mettre à jour le statut si stock insuffisant
+            if not stock_is_sufficient and order.status != 'pending':
+                order.status = 'pending'
+                flash('Stock insuffisant. L\'ordre a été mis en attente.', 'warning')
+            
+            db.session.commit()
+            flash('Ordre de production modifié avec succès.', 'success')
+            return redirect(url_for('orders.view_order', order_id=order.id))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Erreur lors de la modification de l'ordre de production: {str(e)}")
+            flash(f"Une erreur est survenue lors de la modification: {str(e)}", "danger")
+    
+    # Pré-remplir le formulaire avec les données existantes
+    if request.method == 'GET':
+        form.production_date.data = order.due_date
+        form.production_notes.data = order.notes
+        form.items.entries = []
+        for item in order.items:
+            form.items.append_entry({
+                'product': str(item.product_id),
+                'quantity': item.quantity
+            })
+    
+    return render_template('orders/production_order_form.html', 
+                         form=form, 
+                         order=order,
+                         title=f'Modifier Ordre de Production #{order.id}',
+                         edit_mode=True)
+
 @orders.route('/<int:order_id>/edit_status', methods=['GET', 'POST'])
 @login_required
 @admin_required

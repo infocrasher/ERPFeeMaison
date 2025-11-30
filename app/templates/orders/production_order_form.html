@@ -105,7 +105,8 @@
                 <!-- En-tête -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1 class="h3 mb-0 text-dark">
-                        <i class="bi bi-gear me-2 text-success"></i>Nouvel Ordre de Production
+                        <i class="bi bi-gear me-2 text-success"></i>
+                        {% if edit_mode %}Modifier Ordre de Production #{{ order.id }}{% else %}Nouvel Ordre de Production{% endif %}
                     </h1>
                     <a href="{{ url_for('orders.list_production_orders') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-list me-1"></i>Ordres de Production
@@ -122,7 +123,7 @@
                     {% endfor %}
                 {% endfor %}
 
-                <form method="POST" id="production-order-form">
+                <form method="POST" id="production-order-form" action="{% if edit_mode %}{{ url_for('orders.edit_production_order', order_id=order.id) }}{% else %}{{ url_for('orders.new_production_order') }}{% endif %}">
                     {{ form.hidden_tag() }}
 
                     <!-- Paramètres Production -->
@@ -237,7 +238,7 @@
                     <!-- Boutons -->
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-check-circle me-2"></i>Créer l'Ordre de Production
+                            <i class="bi bi-check-circle me-2"></i>{% if edit_mode %}Modifier l'Ordre{% else %}Créer l'Ordre de Production{% endif %}
                         </button>
                         <a href="{{ url_for('orders.list_production_orders') }}" class="btn btn-secondary btn-lg">
                             <i class="bi bi-arrow-left me-1"></i>Annuler
