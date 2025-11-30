@@ -604,10 +604,15 @@ def employee_analytics(employee_id):
         # Taux de présence
         attendance_rate = (days_present / total_work_days * 100) if total_work_days > 0 else 0
         
-        # Calculer la ponctualité
+        # Calculer la ponctualité selon le schedule
         late_arrivals = 0
+        total_late_minutes = 0
         actual_hours_period = 0
         overtime_hours = 0
+        
+        # Récupérer le schedule de l'employé
+        schedule = employee.get_work_schedule()
+        day_names_fr = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
         
         # Regrouper les pointages par date pour calculer les heures travaillées
         daily_records = {}
@@ -617,7 +622,7 @@ def employee_analytics(employee_id):
                 daily_records[date_key] = {'in': [], 'out': []}
             daily_records[date_key][record.punch_type].append(record.timestamp)
         
-        # Calculer les heures travaillées par jour
+        # Calculer les heures travaillées par jour et vérifier les retards
         for date_key, records in daily_records.items():
             if records['in'] and records['out']:
                 # Prendre le premier pointage d'entrée et le dernier de sortie
@@ -627,15 +632,44 @@ def employee_analytics(employee_id):
                 work_duration = (last_out - first_in).total_seconds() / 3600
                 actual_hours_period += work_duration
                 
-                # Vérifier si en retard (après 8h00)
-                if first_in.time() > datetime.strptime('08:00', '%H:%M').time():
-                    late_arrivals += 1
+                # Vérifier le retard selon le schedule
+                weekday = date_key.weekday()  # 0=Lundi, 6=Dimanche
+                day_name_fr = day_names_fr[weekday]
+                
+                if schedule and day_name_fr in schedule:
+                    day_schedule = schedule[day_name_fr]
+                    if day_schedule.get('active', False) and 'start' in day_schedule:
+                        # Heure d'arrivée attendue selon le schedule
+                        expected_start_str = day_schedule['start']
+                        try:
+                            expected_hour, expected_min = map(int, expected_start_str.split(':'))
+                            expected_time = datetime.combine(date_key, datetime.min.time().replace(hour=expected_hour, minute=expected_min))
+                            actual_time = first_in
+                            
+                            # Calculer le retard en minutes
+                            if actual_time > expected_time:
+                                delay_minutes = (actual_time - expected_time).total_seconds() / 60
+                                if delay_minutes > 0:  # Seulement si retard > 0 (pas d'avance)
+                                    late_arrivals += 1
+                                    total_late_minutes += delay_minutes
+                        except (ValueError, AttributeError):
+                            # Si erreur de parsing, utiliser l'ancienne méthode (8h00)
+                            if first_in.time() > datetime.strptime('08:00', '%H:%M').time():
+                                late_arrivals += 1
+                else:
+                    # Pas de schedule défini, utiliser l'ancienne méthode (8h00)
+                    if first_in.time() > datetime.strptime('08:00', '%H:%M').time():
+                        late_arrivals += 1
                 
                 # Calculer les heures supplémentaires (plus de 8h par jour)
                 if work_duration > 8:
                     overtime_hours += (work_duration - 8)
         
+        # Taux de ponctualité (pourcentage de jours sans retard)
         punctuality_rate = ((days_present - late_arrivals) / days_present * 100) if days_present > 0 else 0
+        
+        # Taux de retard (pourcentage de jours avec retard)
+        tardiness_rate = (late_arrivals / days_present * 100) if days_present > 0 else 0
         
         # Si pas de données réelles, utiliser les estimations
         if not attendance_records:
@@ -649,6 +683,9 @@ def employee_analytics(employee_id):
             days_present = int(total_work_days * 0.9)
             days_absent = total_work_days - days_present
             late_arrivals = int(days_present * 0.15)
+            tardiness_rate = 15.0  # Estimation
+            total_late_minutes = 0
+            average_late_minutes = 0
         
         kpis = {
             'can_be_evaluated': employee.can_be_evaluated() and ORDER_AVAILABLE,
@@ -665,6 +702,9 @@ def employee_analytics(employee_id):
             'days_present': days_present,
             'days_absent': days_absent,
             'late_arrivals': late_arrivals,
+            'tardiness_rate': tardiness_rate,
+            'total_late_minutes': total_late_minutes,
+            'average_late_minutes': (total_late_minutes / late_arrivals) if late_arrivals > 0 else 0,
             'attendance_details': len(attendance_records) > 0,
         }
         return render_template('employees/employee_analytics.html',
@@ -782,10 +822,15 @@ def employee_analytics(employee_id):
     # Taux de présence
     attendance_rate = (days_present / total_work_days * 100) if total_work_days > 0 else 0
     
-    # Calculer la ponctualité (arrivées à l'heure)
+    # Calculer la ponctualité (arrivées à l'heure) selon le schedule
     late_arrivals = 0
+    total_late_minutes = 0
     actual_hours_period = 0
     overtime_hours = 0
+    
+    # Récupérer le schedule de l'employé
+    schedule = employee.get_work_schedule()
+    day_names_fr = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
     
     # Regrouper les pointages par date pour calculer les heures travaillées
     daily_records = {}
@@ -795,7 +840,7 @@ def employee_analytics(employee_id):
             daily_records[date_key] = {'in': [], 'out': []}
         daily_records[date_key][record.punch_type].append(record.timestamp)
     
-    # Calculer les heures travaillées par jour
+    # Calculer les heures travaillées par jour et vérifier les retards
     for date_key, records in daily_records.items():
         if records['in'] and records['out']:
             # Prendre le premier pointage d'entrée et le dernier de sortie
@@ -805,16 +850,44 @@ def employee_analytics(employee_id):
             work_duration = (last_out - first_in).total_seconds() / 3600
             actual_hours_period += work_duration
             
-            # Vérifier si en retard (après 8h00)
-            if first_in.time() > datetime.strptime('08:00', '%H:%M').time():
-                late_arrivals += 1
+            # Vérifier le retard selon le schedule
+            weekday = date_key.weekday()  # 0=Lundi, 6=Dimanche
+            day_name_fr = day_names_fr[weekday]
+            
+            if schedule and day_name_fr in schedule:
+                day_schedule = schedule[day_name_fr]
+                if day_schedule.get('active', False) and 'start' in day_schedule:
+                    # Heure d'arrivée attendue selon le schedule
+                    expected_start_str = day_schedule['start']
+                    try:
+                        expected_hour, expected_min = map(int, expected_start_str.split(':'))
+                        expected_time = datetime.combine(date_key, datetime.min.time().replace(hour=expected_hour, minute=expected_min))
+                        actual_time = first_in
+                        
+                        # Calculer le retard en minutes
+                        if actual_time > expected_time:
+                            delay_minutes = (actual_time - expected_time).total_seconds() / 60
+                            if delay_minutes > 0:  # Seulement si retard > 0 (pas d'avance)
+                                late_arrivals += 1
+                                total_late_minutes += delay_minutes
+                    except (ValueError, AttributeError):
+                        # Si erreur de parsing, utiliser l'ancienne méthode (8h00)
+                        if first_in.time() > datetime.strptime('08:00', '%H:%M').time():
+                            late_arrivals += 1
+            else:
+                # Pas de schedule défini, utiliser l'ancienne méthode (8h00)
+                if first_in.time() > datetime.strptime('08:00', '%H:%M').time():
+                    late_arrivals += 1
             
             # Calculer les heures supplémentaires (plus de 8h par jour)
             if work_duration > 8:
                 overtime_hours += (work_duration - 8)
     
-    # Taux de ponctualité
+    # Taux de ponctualité (pourcentage de jours sans retard)
     punctuality_rate = ((days_present - late_arrivals) / days_present * 100) if days_present > 0 else 0
+    
+    # Taux de retard (pourcentage de jours avec retard)
+    tardiness_rate = (late_arrivals / days_present * 100) if days_present > 0 else 0
     
     # Si pas de données réelles, utiliser les estimations
     if not attendance_records:

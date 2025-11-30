@@ -380,6 +380,30 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="stat-card text-center">
+                                    <div class="stat-value {% if kpis.tardiness_rate <= 10 %}text-success{% elif kpis.tardiness_rate <= 20 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ "%.1f"|format(kpis.tardiness_rate) }}%
+                                    </div>
+                                    <div class="stat-label">Taux de Retard</div>
+                                    <small class="text-muted">({{ kpis.late_arrivals }} jours sur {{ kpis.days_present }})</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="stat-card text-center">
+                                    <div class="stat-value text-info">
+                                        {% if kpis.late_arrivals > 0 %}
+                                            {{ "%.0f"|format(kpis.average_late_minutes) }} min
+                                        {% else %}
+                                            0 min
+                                        {% endif %}
+                                    </div>
+                                    <div class="stat-label">Retard Moyen</div>
+                                    <small class="text-muted">par jour en retard</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {% endif %}
                 </div>
