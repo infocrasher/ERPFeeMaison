@@ -412,12 +412,33 @@ def edit_customer_order(order_id):
     
     # Pré-remplir le formulaire avec les données existantes
     if request.method == 'GET':
+        # S'assurer que les champs de base sont pré-remplis
+        form.customer_name.data = order.customer_name
+        form.customer_phone.data = order.customer_phone
+        form.customer_address.data = order.customer_address
+        form.delivery_zone.data = order.delivery_zone
+        form.delivery_option.data = order.delivery_option
+        form.due_date.data = order.due_date
+        form.delivery_cost.data = order.delivery_cost or Decimal('0.00')
+        form.notes.data = order.notes
+        
+        # Pré-remplir les items
         form.items.entries = []
+        # Récupérer les choix de produits une seule fois
+        products = Product.query.filter_by(can_be_sold=True).all()
+        product_choices = [('', '-- Choisir un produit --')]
+        for product in products:
+            price = product.price or 0.0
+            label = f"{product.name} ({price:.2f} DA / {product.unit})"
+            product_choices.append((str(product.id), label))
+        
         for item in order.items:
-            form.items.append_entry({
+            item_entry = form.items.append_entry({
                 'product': str(item.product_id),
                 'quantity': item.quantity
             })
+            # Réinitialiser les choix de produits pour cet item
+            item_entry.product.choices = product_choices
     
     return render_template('orders/customer_order_form.html', 
                          form=form, 
