@@ -422,21 +422,24 @@ def edit_customer_order(order_id):
         form.delivery_cost.data = order.delivery_cost or Decimal('0.00')
         form.notes.data = order.notes
         
-        # Pré-remplir les items
+        # Pré-remplir les items - IMPORTANT: vider d'abord puis reconstruire
         form.items.entries = []
+        
         # Récupérer les choix de produits une seule fois
-        products = Product.query.filter_by(can_be_sold=True).all()
+        from .forms import get_sellable_products
+        products = get_sellable_products()
         product_choices = [('', '-- Choisir un produit --')]
         for product in products:
             price = product.price or 0.0
             label = f"{product.name} ({price:.2f} DA / {product.unit})"
             product_choices.append((str(product.id), label))
         
+        # Ajouter chaque item de la commande
         for item in order.items:
-            item_entry = form.items.append_entry({
-                'product': str(item.product_id),
-                'quantity': item.quantity
-            })
+            item_entry = form.items.append_entry()
+            # Définir les valeurs après avoir créé l'entrée
+            item_entry.product.data = str(item.product_id)
+            item_entry.quantity.data = item.quantity
             # Réinitialiser les choix de produits pour cet item
             item_entry.product.choices = product_choices
     
@@ -508,17 +511,19 @@ def edit_production_order(order_id):
         # Pré-remplir les items avec les choix de produits
         form.items.entries = []
         # Récupérer les choix de produits une seule fois
-        products = Product.query.filter_by(can_be_sold=True).all()
+        from .forms import get_sellable_products
+        products = get_sellable_products()
         product_choices = [('', '-- Choisir un produit --')]
         for product in products:
             label = f"{product.name} (Unité: {product.unit})"
             product_choices.append((str(product.id), label))
         
+        # Ajouter chaque item de l'ordre
         for item in order.items:
-            item_entry = form.items.append_entry({
-                'product': str(item.product_id),
-                'quantity': item.quantity
-            })
+            item_entry = form.items.append_entry()
+            # Définir les valeurs après avoir créé l'entrée
+            item_entry.product.data = str(item.product_id)
+            item_entry.quantity.data = item.quantity
             # Réinitialiser les choix de produits pour cet item
             item_entry.product.choices = product_choices
     
