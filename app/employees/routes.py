@@ -1056,7 +1056,7 @@ def api_consolidate_hours():
     - Chaque semaine = 1 jour off payé de base (seulement si >= 6 jours travaillés)
     - Jours travaillés normaux = 1 jour payé chacun
     - Vendredi travaillé (si pas jour off) = 2 jours payés (double)
-    - Jour off travaillé = 2 jours payés (double)
+    - Jour off travaillé = 1 jour payé (les heures supplémentaires sont saisies manuellement)
     """
     from flask import jsonify
     import traceback
@@ -1141,21 +1141,22 @@ def api_consolidate_hours():
                     
                     # Calculer les jours payés pour ce jour
                     if is_day_off:
-                        # Jour off travaillé = 2 jours payés
-                        paid_days_by_week[week_num] += 2
+                        # Jour off travaillé = 1 jour payé (heures supplémentaires saisies manuellement)
+                        paid_days_by_week[week_num] += 1
                     elif is_friday:
-                        # Vendredi travaillé (si pas jour off) = 2 jours payés
+                        # Vendredi travaillé (si pas jour off) = 2 jours payés (double)
                         paid_days_by_week[week_num] += 2
                     else:
                         # Jour normal travaillé = 1 jour payé
                         paid_days_by_week[week_num] += 1
                     
-                    # Calculer les heures (vendredi et jour off travaillé = double heures)
-                    if is_friday or is_day_off:
+                    # Calculer les heures (vendredi = double heures, jour off = heures normales)
+                    if is_friday:
                         hours = hours * 2
+                    # Jour off travaillé : heures normales (heures supplémentaires saisies manuellement)
                     
-                    # Heures régulières (max 16h si double, sinon 8h) et supplémentaires
-                    daily_max = 16 if (is_friday or is_day_off) else 8
+                    # Heures régulières (max 16h si vendredi, sinon 8h) et supplémentaires
+                    daily_max = 16 if is_friday else 8
                     if hours <= daily_max:
                         total_regular += hours
                     else:
@@ -1327,10 +1328,13 @@ def consolidate_hours():
                         is_friday = weekday == 4
                         is_day_off = (day_off is not None) and (weekday == day_off)
                         
-                        if is_friday or is_day_off:
+                        # Calculer les heures (vendredi = double heures, jour off = heures normales)
+                        if is_friday:
                             hours = hours * 2
+                        # Jour off travaillé : heures normales (heures supplémentaires saisies manuellement)
                         
-                        daily_max = 16 if (is_friday or is_day_off) else 8
+                        # Heures régulières (max 16h si vendredi, sinon 8h) et supplémentaires
+                        daily_max = 16 if is_friday else 8
                         if hours <= daily_max:
                             total_regular += hours
                         else:
