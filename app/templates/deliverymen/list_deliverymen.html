@@ -6,9 +6,14 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Liste des Livreurs</h2>
-        <a href="{{ url_for('deliverymen.new_deliveryman') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Nouveau Livreur
-        </a>
+        <div>
+            <a href="{{ url_for('deliverymen.deliverymen_dashboard') }}" class="btn btn-success me-2">
+                <i class="bi bi-graph-up"></i> Dashboard Livreurs
+            </a>
+            <a href="{{ url_for('deliverymen.new_deliveryman') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nouveau Livreur
+            </a>
+        </div>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -44,8 +49,12 @@
                                 <td>{{ deliveryman.phone or 'Non renseigné' }}</td>
                                 <td>{{ deliveryman.orders|length }}</td>
                                 <td>
+                                    <a href="{{ url_for('deliverymen.deliverymen_dashboard', deliveryman_id=deliveryman.id) }}" 
+                                       class="btn btn-sm btn-outline-info me-1">
+                                        <i class="bi bi-graph-up"></i> Analytique
+                                    </a>
                                     <a href="{{ url_for('deliverymen.edit_deliveryman', id=deliveryman.id) }}" 
-                                       class="btn btn-sm btn-outline-primary">
+                                       class="btn btn-sm btn-outline-primary me-1">
                                         <i class="fas fa-edit"></i> Modifier
                                     </a>
                                     <button type="button" class="btn btn-sm btn-outline-danger" 
