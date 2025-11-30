@@ -406,3 +406,40 @@ class PayslipGenerationForm(FlaskForm):
             self.period_year.data = str(current_year)
     
     submit = SubmitField('Générer les Bulletins')
+
+
+class SalaryAdvanceForm(FlaskForm):
+    """Formulaire pour enregistrer une avance sur salaire"""
+    
+    employee_id = SelectField('Employé', choices=[], validators=[DataRequired()])
+    amount = DecimalField('Montant (DA)', validators=[DataRequired(), NumberRange(min=1)], places=2)
+    advance_date = DateField('Date de l\'avance', validators=[DataRequired()])
+    
+    period_month = SelectField('Mois concerné', choices=[
+        ('1', 'Janvier'), ('2', 'Février'), ('3', 'Mars'), ('4', 'Avril'),
+        ('5', 'Mai'), ('6', 'Juin'), ('7', 'Juillet'), ('8', 'Août'),
+        ('9', 'Septembre'), ('10', 'Octobre'), ('11', 'Novembre'), ('12', 'Décembre')
+    ], validators=[DataRequired()])
+    period_year = IntegerField('Année', validators=[DataRequired(), NumberRange(min=2020, max=2030)])
+    
+    reason = StringField('Motif', validators=[Optional(), Length(max=255)])
+    notes = TextAreaField('Notes', validators=[Optional()])
+    
+    submit = SubmitField('Enregistrer l\'avance')
+
+
+class ConsolidateHoursForm(FlaskForm):
+    """Formulaire pour consolider les heures depuis les pointages"""
+    
+    employee_id = SelectField('Employé', choices=[], validators=[DataRequired()])
+    period_month = SelectField('Mois', choices=[
+        ('1', 'Janvier'), ('2', 'Février'), ('3', 'Mars'), ('4', 'Avril'),
+        ('5', 'Mai'), ('6', 'Juin'), ('7', 'Juillet'), ('8', 'Août'),
+        ('9', 'Septembre'), ('10', 'Octobre'), ('11', 'Novembre'), ('12', 'Décembre')
+    ], validators=[DataRequired()])
+    period_year = IntegerField('Année', validators=[DataRequired(), NumberRange(min=2020, max=2030)])
+    
+    # Option pour consolider tous les employés
+    consolidate_all = BooleanField('Consolider tous les employés actifs', default=False)
+    
+    submit = SubmitField('Consolider les heures')
