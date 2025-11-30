@@ -29,12 +29,30 @@ ls -lh $BACKUP_DIR/*.sql 2>/dev/null | tail -10 || echo "Aucun backup .sql trouv
 echo ""
 
 read -p "📁 Entrez le nom du fichier de backup SQL (ex: backup_20251126_011209.sql) : " BACKUP_FILE
-BACKUP_PATH="$BACKUP_DIR/$BACKUP_FILE"
 
-if [ ! -f "$BACKUP_PATH" ]; then
-    echo "❌ Le fichier $BACKUP_PATH n'existe pas"
+# Chercher le fichier dans plusieurs emplacements possibles
+BACKUP_PATH=""
+if [ -f "$BACKUP_DIR/$BACKUP_FILE" ]; then
+    BACKUP_PATH="$BACKUP_DIR/$BACKUP_FILE"
+elif [ -f "/opt/erp/app/$BACKUP_FILE" ]; then
+    BACKUP_PATH="/opt/erp/app/$BACKUP_FILE"
+elif [ -f "$BACKUP_FILE" ]; then
+    BACKUP_PATH="$BACKUP_FILE"
+elif [ -f "$(pwd)/$BACKUP_FILE" ]; then
+    BACKUP_PATH="$(pwd)/$BACKUP_FILE"
+fi
+
+if [ -z "$BACKUP_PATH" ] || [ ! -f "$BACKUP_PATH" ]; then
+    echo "❌ Le fichier $BACKUP_FILE n'a pas été trouvé dans :"
+    echo "   - $BACKUP_DIR/"
+    echo "   - /opt/erp/app/"
+    echo "   - Répertoire courant"
+    echo ""
+    echo "💡 Vérifiez le nom du fichier ou entrez le chemin complet"
     exit 1
 fi
+
+echo "✅ Fichier trouvé : $BACKUP_PATH"
 
 # Demander pour les images
 read -p "🖼️  Restaurer aussi les images ? (o/N) : " RESTORE_IMAGES
