@@ -7,8 +7,9 @@ TEL;TYPE=WORK,VOICE:+213556250370
 TEL;TYPE=MOBILE:+213556250370
 EMAIL;TYPE=WORK:feemaison.dz@gmail.com
 URL;TYPE=INSTAGRAM:https://instagram.com/feemaison.dz
+URL;TYPE=MAP:https://maps.app.goo.gl/N3WWixfiGdFPSAFa8
 PHOTO;VALUE=URI;TYPE=PNG:https://erp.declaimers.com/static/img/logo-feemaison.png
-ADR;TYPE=WORK:;;Delybrahim;;;Algérie
+ADR;TYPE=WORK:;;Delybrahim, Alger;;;Algérie
 NOTE:Gourmandises Traditionelles / Traiteur
 X-SOCIALPROFILE;TYPE=instagram:https://instagram.com/feemaison.dz
 END:VCARD
