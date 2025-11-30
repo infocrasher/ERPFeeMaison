@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Contact - Fée Maison{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Carte de contact -->
+            <div class="card shadow-lg border-0 mb-4" style="border-radius: 20px; overflow: hidden;">
+                <!-- En-tête avec logo -->
+                <div class="card-header bg-gradient text-white text-center py-4" style="background: linear-gradient(135deg, #2E4057 0%, #D4AF37 100%);">
+                    <img src="{{ url_for('static', filename='img/logo-feemaison.png') }}" 
+                         alt="Fée Maison" 
+                         class="mb-3" 
+                         style="max-width: 120px; height: auto;">
+                    <h2 class="mb-0 text-white">Fée Maison</h2>
+                    <p class="mb-0 mt-2 opacity-75">Gourmandises Traditionelles / Traiteur</p>
+                </div>
+                
+                <!-- Corps de la carte -->
+                <div class="card-body p-4">
+                    <!-- Informations de contact -->
+                    <div class="contact-info">
+                        <!-- Téléphone -->
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="contact-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="bi bi-telephone-fill fs-5"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 text-muted small">Téléphone</h6>
+                                <a href="tel:+213556250370" class="text-decoration-none text-dark fw-bold">
+                                    +213 556 250 370
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="contact-icon bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="bi bi-envelope-fill fs-5"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 text-muted small">Email</h6>
+                                <a href="mailto:feemaison.dz@gmail.com" class="text-decoration-none text-dark fw-bold">
+                                    feemaison.dz@gmail.com
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Adresse -->
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="contact-icon bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="bi bi-geo-alt-fill fs-5"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 text-muted small">Adresse</h6>
+                                <p class="mb-0 fw-bold">Delybrahim, Algérie</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Instagram -->
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="contact-icon bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px; background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%) !important;">
+                                <i class="bi bi-instagram fs-5"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 text-muted small">Instagram</h6>
+                                <a href="https://instagram.com/feemaison.dz" 
+                                   target="_blank" 
+                                   class="text-decoration-none text-dark fw-bold">
+                                    @feemaison.dz
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bouton de téléchargement -->
+                    <div class="text-center mt-4 pt-3 border-top">
+                        <a href="{{ url_for('static', filename='contact.vcf') }}" 
+                           download="Fee_Maison.vcf"
+                           class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-download me-2"></i>
+                            Ajouter aux contacts
+                        </a>
+                        <p class="text-muted small mt-3 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Scannez avec votre téléphone ou téléchargez le fichier de contact
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Instructions NFC -->
+            <div class="card border-0 bg-light mb-4" style="border-radius: 15px;">
+                <div class="card-body p-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-nfc me-2 text-primary"></i>
+                        Comment utiliser avec une carte NFC ?
+                    </h5>
+                    <ol class="mb-0">
+                        <li class="mb-2">Téléchargez une app NFC sur votre téléphone (ex: NFC Tools)</li>
+                        <li class="mb-2">Ouvrez l'app et sélectionnez "Écrire"</li>
+                        <li class="mb-2">Choisissez "URL" et entrez : <code class="bg-white px-2 py-1 rounded">https://erp.declaimers.com/static/contact.vcf</code></li>
+                        <li class="mb-2">Approchez votre carte NFC et appuyez sur "Écrire"</li>
+                        <li>Quand quelqu'un scanne la carte, le contact s'ajoute automatiquement !</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.contact-icon {
+    flex-shrink: 0;
+}
+
+.card {
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #2E4057 0%, #D4AF37 100%);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(46, 64, 87, 0.3);
+}
+</style>
+{% endblock %}
+

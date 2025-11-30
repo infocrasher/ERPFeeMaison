@@ -13,6 +13,11 @@ main = Blueprint('main', __name__)
 def hello_world():
     return render_template('main/home.html', title="Accueil")
 
+@main.route('/contact')
+def contact():
+    """Page de contact avec carte vCard téléchargeable"""
+    return render_template('main/contact.html', title="Contact - Fée Maison")
+
 @main.route('/dashboard')
 @login_required
 def dashboard():
