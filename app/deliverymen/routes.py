@@ -2,6 +2,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from app.deliverymen.models import Deliveryman
 from extensions import db
+from models import Order
+from datetime import datetime, date, timedelta
+from sqlalchemy import func
+from decorators import admin_required
 
 deliverymen_bp = Blueprint('deliverymen', __name__)
 
@@ -71,4 +75,93 @@ def delete_deliveryman(id):
     db.session.commit()
     
     flash('Livreur supprimé avec succès', 'success')
-    return redirect(url_for('deliverymen.list_deliverymen')) 
+    return redirect(url_for('deliverymen.list_deliverymen'))
+
+
+@deliverymen_bp.route('/deliverymen/dashboard', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def deliverymen_dashboard():
+    """Dashboard de gestion complète des livreurs avec statistiques"""
+    
+    # Récupérer les paramètres de filtrage
+    filter_date = request.args.get('date', None)
+    filter_deliveryman_id = request.args.get('deliveryman_id', None, type=int)
+    
+    # Valeurs par défaut : aujourd'hui si pas de date spécifiée
+    if filter_date:
+        try:
+            target_date = datetime.strptime(filter_date, '%Y-%m-%d').date()
+        except ValueError:
+            target_date = date.today()
+    else:
+        target_date = date.today()
+    
+    # Requête de base : commandes avec livreur assigné
+    query = Order.query.filter(
+        Order.deliveryman_id.isnot(None),
+        Order.delivery_option == 'delivery'
+    )
+    
+    # Filtrer par date (sur due_date qui est la date de livraison)
+    query = query.filter(func.date(Order.due_date) == target_date)
+    
+    # Filtrer par livreur si spécifié
+    if filter_deliveryman_id:
+        query = query.filter(Order.deliveryman_id == filter_deliveryman_id)
+    
+    # Récupérer toutes les commandes
+    orders = query.order_by(Order.due_date.desc()).all()
+    
+    # Grouper par livreur et calculer les statistiques
+    stats_by_deliveryman = {}
+    
+    for order in orders:
+        deliveryman_id = order.deliveryman_id
+        if deliveryman_id not in stats_by_deliveryman:
+            deliveryman = order.deliveryman
+            stats_by_deliveryman[deliveryman_id] = {
+                'deliveryman': deliveryman,
+                'orders': [],
+                'orders_count': 0,
+                'total_ca': 0.0,
+                'zones': set(),  # Utiliser un set pour éviter les doublons
+                'delivery_costs': 0.0  # Frais de livraison totaux
+            }
+        
+        stats = stats_by_deliveryman[deliveryman_id]
+        stats['orders'].append(order)
+        stats['orders_count'] += 1
+        stats['total_ca'] += float(order.total_amount or 0)
+        stats['delivery_costs'] += float(order.delivery_cost or 0)
+        
+        # Ajouter la zone de livraison si elle existe
+        if order.delivery_zone:
+            stats['zones'].add(order.delivery_zone)
+        elif order.customer_address:
+            # Extraire une zone approximative de l'adresse si possible
+            address_parts = order.customer_address.split(',')
+            if len(address_parts) > 0:
+                stats['zones'].add(address_parts[-1].strip())
+    
+    # Convertir les sets en listes triées pour l'affichage
+    for stats in stats_by_deliveryman.values():
+        stats['zones'] = sorted(list(stats['zones']))
+    
+    # Calculer les totaux globaux
+    total_orders = len(orders)
+    total_ca = sum(float(order.total_amount or 0) for order in orders)
+    total_delivery_costs = sum(float(order.delivery_cost or 0) for order in orders)
+    
+    # Récupérer tous les livreurs pour le filtre
+    all_deliverymen = Deliveryman.query.order_by(Deliveryman.name).all()
+    
+    return render_template('deliverymen/dashboard.html',
+                         stats_by_deliveryman=stats_by_deliveryman,
+                         target_date=target_date,
+                         filter_deliveryman_id=filter_deliveryman_id,
+                         all_deliverymen=all_deliverymen,
+                         total_orders=total_orders,
+                         total_ca=total_ca,
+                         total_delivery_costs=total_delivery_costs,
+                         title='Gestion Livreurs') 

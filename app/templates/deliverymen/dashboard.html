@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="bi bi-truck"></i> {{ title }}</h1>
+                <div>
+                    <a href="{{ url_for('deliverymen.list_deliverymen') }}" class="btn btn-secondary">
+                        <i class="bi bi-list"></i> Liste des Livreurs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire de filtrage -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-funnel"></i> Filtres</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('deliverymen.deliverymen_dashboard') }}" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="date" class="form-label">Date</label>
+                            <input type="date" 
+                                   class="form-control" 
+                                   id="date" 
+                                   name="date" 
+                                   value="{{ target_date.strftime('%Y-%m-%d') }}"
+                                   required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="deliveryman_id" class="form-label">Livreur</label>
+                            <select class="form-select" id="deliveryman_id" name="deliveryman_id">
+                                <option value="">Tous les livreurs</option>
+                                {% for dm in all_deliverymen %}
+                                <option value="{{ dm.id }}" {% if filter_deliveryman_id == dm.id %}selected{% endif %}>
+                                    {{ dm.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search"></i> Filtrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Date</h5>
+                    <h3 class="text-primary">{{ target_date.strftime('%d/%m/%Y') }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Total Commandes</h5>
+                    <h3 class="text-info">{{ total_orders }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Chiffre d'Affaires</h5>
+                    <h3 class="text-success">{{ "{:,.0f}".format(total_ca) }} DA</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Frais Livraison</h5>
+                    <h3 class="text-warning">{{ "{:,.0f}".format(total_delivery_costs) }} DA</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des statistiques par livreur -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-table"></i> Statistiques par Livreur</h5>
+                </div>
+                <div class="card-body">
+                    {% if stats_by_deliveryman %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Livreur</th>
+                                    <th class="text-center">Nombre de Commandes</th>
+                                    <th>Lieux</th>
+                                    <th class="text-end">CA (DA)</th>
+                                    <th class="text-end">Frais Livraison (DA)</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for deliveryman_id, stats in stats_by_deliveryman.items() %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ stats.deliveryman.name }}</strong>
+                                        {% if stats.deliveryman.phone %}
+                                        <br><small class="text-muted"><i class="bi bi-telephone"></i> {{ stats.deliveryman.phone }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary fs-6">{{ stats.orders_count }}</span>
+                                    </td>
+                                    <td>
+                                        {% if stats.zones %}
+                                            {% for zone in stats.zones %}
+                                                <span class="badge bg-secondary me-1">{{ zone }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="text-success">{{ "{:,.0f}".format(stats.total_ca) }}</strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="text-warning">{{ "{:,.0f}".format(stats.delivery_costs) }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-info" 
+                                                type="button" 
+                                                data-bs-toggle="collapse" 
+                                                data-bs-target="#orders-{{ deliveryman_id }}"
+                                                aria-expanded="false">
+                                            <i class="bi bi-eye"></i> Voir détails
+                                        </button>
+                                    </td>
+                                </tr>
+                                <!-- Détails des commandes (collapsible) -->
+                                <tr>
+                                    <td colspan="6" class="p-0">
+                                        <div class="collapse" id="orders-{{ deliveryman_id }}">
+                                            <div class="card card-body m-2">
+                                                <h6 class="mb-3">Commandes de {{ stats.deliveryman.name }} ({{ stats.orders_count }})</h6>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-bordered">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>#</th>
+                                                                <th>Client</th>
+                                                                <th>Lieu</th>
+                                                                <th class="text-end">Montant</th>
+                                                                <th class="text-end">Frais Livraison</th>
+                                                                <th>Statut</th>
+                                                                <th>Heure</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for order in stats.orders %}
+                                                            <tr>
+                                                                <td>
+                                                                    <a href="{{ url_for('orders.view_order', order_id=order.id) }}" 
+                                                                       class="text-decoration-none">
+                                                                        #{{ order.id }}
+                                                                    </a>
+                                                                </td>
+                                                                <td>
+                                                                    {{ order.customer_name or (order.customer.name if order.customer else 'N/A') }}
+                                                                    {% if order.customer_phone %}
+                                                                    <br><small class="text-muted">{{ order.customer_phone }}</small>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {% if order.delivery_zone %}
+                                                                        <span class="badge bg-secondary">{{ order.delivery_zone }}</span>
+                                                                    {% elif order.customer_address %}
+                                                                        <small>{{ order.customer_address[:30] }}...</small>
+                                                                    {% else %}
+                                                                        <span class="text-muted">-</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td class="text-end">{{ "{:,.0f}".format(order.total_amount or 0) }}</td>
+                                                                <td class="text-end">{{ "{:,.0f}".format(order.delivery_cost or 0) }}</td>
+                                                                <td>
+                                                                    <span class="badge 
+                                                                        {% if order.status == 'delivered' %}bg-success
+                                                                        {% elif order.status == 'ready_at_shop' %}bg-warning
+                                                                        {% else %}bg-secondary{% endif %}">
+                                                                        {{ order.status }}
+                                                                    </span>
+                                                                </td>
+                                                                <td>
+                                                                    <small>{{ order.due_date.strftime('%H:%M') }}</small>
+                                                                </td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle"></i> Aucune commande trouvée pour cette date et ce livreur.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
