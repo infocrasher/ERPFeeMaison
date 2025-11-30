@@ -239,9 +239,37 @@ def list_orders():
 @login_required
 @admin_required
 def list_customer_orders():
+    from sqlalchemy import or_
+    from models import OrderItem
+    
     page = request.args.get('page', 1, type=int)
-    pagination = Order.query.filter_by(order_type='customer_order').order_by(Order.due_date.desc()).paginate(page=page, per_page=current_app.config.get('ORDERS_PER_PAGE', 10))
-    return render_template('orders/list_orders.html', orders_pagination=pagination, title='Commandes Client')
+    search_query = request.args.get('search', '').strip()
+    
+    # Requête de base : commandes client uniquement
+    query = Order.query.filter_by(order_type='customer_order')
+    
+    # Recherche par nom client, téléphone ou produit
+    if search_query:
+        # Recherche dans les noms de clients
+        name_filter = Order.customer_name.ilike(f'%{search_query}%')
+        
+        # Recherche dans les téléphones
+        phone_filter = Order.customer_phone.ilike(f'%{search_query}%')
+        
+        # Recherche dans les produits (via OrderItem)
+        product_ids = db.session.query(OrderItem.order_id).join(Product).filter(
+            Product.name.ilike(f'%{search_query}%')
+        ).subquery()
+        product_filter = Order.id.in_(db.session.query(product_ids.c.order_id))
+        
+        # Combiner les filtres avec OR
+        query = query.filter(or_(name_filter, phone_filter, product_filter))
+    
+    pagination = query.order_by(Order.due_date.desc()).paginate(page=page, per_page=current_app.config.get('ORDERS_PER_PAGE', 10))
+    return render_template('orders/list_orders.html', 
+                         orders_pagination=pagination, 
+                         title='Commandes Client',
+                         search_query=search_query)
 
 @orders.route('/production')
 @login_required
@@ -318,6 +346,84 @@ def edit_order(order_id):
         for item in order.items:
             form.items.append_entry({'product': str(item.product_id), 'quantity': item.quantity})
     return render_template('orders/order_form_multifield.html', form=form, title=f'Modifier Commande #{order.id}', edit_mode=True)
+
+@orders.route('/customer/<int:order_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_customer_order(order_id):
+    """Modifier une commande client (produits, date, etc.)"""
+    order = db.session.get(Order, order_id) or abort(404)
+    
+    # Vérifier que c'est bien une commande client
+    if order.order_type != 'customer_order':
+        flash('Cette route est uniquement pour les commandes client.', 'error')
+        return redirect(url_for('orders.view_order', order_id=order.id))
+    
+    form = CustomerOrderForm(obj=order)
+    
+    if form.validate_on_submit():
+        try:
+            # Vérifier les stocks avant de modifier
+            stock_is_sufficient = check_stock_availability(form.items.data)
+            
+            # Supprimer les anciens items
+            for item in order.items:
+                db.session.delete(item)
+            db.session.flush()
+            
+            # Mettre à jour les informations de base
+            order.customer_name = form.customer_name.data
+            order.customer_phone = form.customer_phone.data
+            order.customer_address = form.customer_address.data
+            order.delivery_zone = form.delivery_zone.data
+            order.delivery_option = form.delivery_option.data
+            order.due_date = form.due_date.data  # Modifier la date
+            order.delivery_cost = form.delivery_cost.data or Decimal('0.00')
+            order.notes = form.notes.data
+            
+            # Ajouter les nouveaux items
+            for item_data in form.items.data:
+                if item_data.get('product') and item_data.get('quantity', 0) > 0:
+                    product = Product.query.get(int(item_data['product']))
+                    if product:
+                        order_item = OrderItem(
+                            order_id=order.id,
+                            product_id=product.id,
+                            quantity=item_data['quantity'],
+                            unit_price=product.price or Decimal('0.00')
+                        )
+                        db.session.add(order_item)
+            
+            # Recalculer le total
+            order.calculate_total_amount()
+            
+            # Mettre à jour le statut si stock insuffisant
+            if not stock_is_sufficient and order.status != 'pending':
+                order.status = 'pending'
+                flash('Stock insuffisant. La commande a été mise en attente.', 'warning')
+            
+            db.session.commit()
+            flash('Commande modifiée avec succès.', 'success')
+            return redirect(url_for('orders.view_order', order_id=order.id))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Erreur lors de la modification de la commande: {str(e)}")
+            flash(f"Une erreur est survenue lors de la modification: {str(e)}", "danger")
+    
+    # Pré-remplir le formulaire avec les données existantes
+    if request.method == 'GET':
+        form.items.entries = []
+        for item in order.items:
+            form.items.append_entry({
+                'product': str(item.product_id),
+                'quantity': item.quantity
+            })
+    
+    return render_template('orders/customer_order_form.html', 
+                         form=form, 
+                         order=order,
+                         title=f'Modifier Commande #{order.id}',
+                         edit_mode=True)
 
 @orders.route('/<int:order_id>/edit_status', methods=['GET', 'POST'])
 @login_required

@@ -134,7 +134,8 @@
                 <!-- En-tête -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1 class="h3 mb-0 text-dark">
-                        <i class="bi bi-person-check me-2 text-primary"></i>Nouvelle Commande Client
+                        <i class="bi bi-person-check me-2 text-primary"></i>
+                        {% if edit_mode %}Modifier Commande #{{ order.id }}{% else %}Nouvelle Commande Client{% endif %}
                     </h1>
                     <a href="{{ url_for('orders.list_customer_orders') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-list me-1"></i>Commandes Client
@@ -151,7 +152,7 @@
                     {% endfor %}
                 {% endfor %}
 
-                <form method="POST" id="customer-order-form">
+                <form method="POST" id="customer-order-form" action="{% if edit_mode %}{{ url_for('orders.edit_customer_order', order_id=order.id) }}{% else %}{{ url_for('orders.new_customer_order') }}{% endif %}">
                     {{ form.hidden_tag() }}
 
                     <!-- Informations Client -->
