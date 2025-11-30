@@ -1188,44 +1188,6 @@ def api_consolidate_hours():
             if days_worked_this_week < expected_days_per_week:
                 other_absences += (expected_days_per_week - days_worked_this_week)
         
-        # Vérifier inactivité automatique : 4 jours consécutifs d'absence sur les 7 derniers jours seulement
-        today = date.today()
-        check_start = today - timedelta(days=7)  # Vérifier seulement les 7 derniers jours
-        
-        # Récupérer les pointages des 7 derniers jours (pas seulement du mois sélectionné)
-        recent_records = AttendanceRecord.query.filter(
-            AttendanceRecord.employee_id == employee_id,
-            db.func.date(AttendanceRecord.timestamp) >= check_start,
-            db.func.date(AttendanceRecord.timestamp) <= today
-        ).all()
-        
-        # Grouper par jour pour les 7 derniers jours
-        recent_daily_records = set()
-        for record in recent_records:
-            if record.punch_type == 'in':
-                recent_daily_records.add(record.timestamp.date())
-        
-        consecutive_absences = 0
-        max_consecutive = 0
-        check_day = check_start
-        while check_day <= today:
-            if check_day in recent_daily_records:
-                # Jour travaillé, réinitialiser le compteur
-                consecutive_absences = 0
-            else:
-                # Jour absent
-                consecutive_absences += 1
-                max_consecutive = max(max_consecutive, consecutive_absences)
-            check_day += timedelta(days=1)
-        
-        # Désactiver l'employé si >= 4 jours consécutifs d'absence sur les 7 derniers jours
-        if max_consecutive >= 4 and employee.is_active:
-            employee.is_active = False
-            db.session.commit()
-            current_app.logger.warning(
-                f"Employé {employee.name} désactivé automatiquement: {max_consecutive} jours consécutifs d'absence (sur les 7 derniers jours)"
-            )
-        
         return jsonify({
             'success': True,
             'regular_hours': round(total_regular, 2),
@@ -1353,44 +1315,6 @@ def consolidate_hours():
                 days_worked_this_week = len(days_by_week.get(week_num, []))
                 if days_worked_this_week < expected_days_per_week:
                     other_absences += (expected_days_per_week - days_worked_this_week)
-            
-            # Vérifier inactivité automatique : 4 jours consécutifs d'absence sur les 7 derniers jours seulement
-            today = date.today()
-            check_start = today - timedelta(days=7)  # Vérifier seulement les 7 derniers jours
-            
-            # Récupérer les pointages des 7 derniers jours (pas seulement du mois sélectionné)
-            recent_records = AttendanceRecord.query.filter(
-                AttendanceRecord.employee_id == employee.id,
-                db.func.date(AttendanceRecord.timestamp) >= check_start,
-                db.func.date(AttendanceRecord.timestamp) <= today
-            ).all()
-            
-            # Grouper par jour pour les 7 derniers jours
-            recent_daily_records = set()
-            for record in recent_records:
-                if record.punch_type == 'in':
-                    recent_daily_records.add(record.timestamp.date())
-            
-            consecutive_absences = 0
-            max_consecutive = 0
-            check_day = check_start
-            while check_day <= today:
-                if check_day in recent_daily_records:
-                    # Jour travaillé, réinitialiser le compteur
-                    consecutive_absences = 0
-                else:
-                    # Jour absent
-                    consecutive_absences += 1
-                    max_consecutive = max(max_consecutive, consecutive_absences)
-                check_day += timedelta(days=1)
-            
-            # Désactiver l'employé si >= 4 jours consécutifs d'absence sur les 7 derniers jours
-            if max_consecutive >= 4 and employee.is_active:
-                employee.is_active = False
-                db.session.commit()
-                current_app.logger.warning(
-                    f"Employé {employee.name} désactivé automatiquement: {max_consecutive} jours consécutifs d'absence (sur les 7 derniers jours)"
-                )
             
             total_advances = SalaryAdvance.get_total_for_period(employee.id, month, year)
             
