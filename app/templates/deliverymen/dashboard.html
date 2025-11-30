@@ -26,16 +26,25 @@
                 </div>
                 <div class="card-body">
                     <form method="GET" action="{{ url_for('deliverymen.deliverymen_dashboard') }}" class="row g-3">
-                        <div class="col-md-4">
-                            <label for="date" class="form-label">Date</label>
+                        <div class="col-md-3">
+                            <label for="date_start" class="form-label">Date de début</label>
                             <input type="date" 
                                    class="form-control" 
-                                   id="date" 
-                                   name="date" 
-                                   value="{{ target_date.strftime('%Y-%m-%d') }}"
+                                   id="date_start" 
+                                   name="date_start" 
+                                   value="{{ start_date.strftime('%Y-%m-%d') }}"
                                    required>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <label for="date_end" class="form-label">Date de fin</label>
+                            <input type="date" 
+                                   class="form-control" 
+                                   id="date_end" 
+                                   name="date_end" 
+                                   value="{{ end_date.strftime('%Y-%m-%d') }}"
+                                   required>
+                        </div>
+                        <div class="col-md-3">
                             <label for="deliveryman_id" class="form-label">Livreur</label>
                             <select class="form-select" id="deliveryman_id" name="deliveryman_id">
                                 <option value="">Tous les livreurs</option>
@@ -46,7 +55,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-4 d-flex align-items-end">
+                        <div class="col-md-3 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary w-100">
                                 <i class="bi bi-search"></i> Filtrer
                             </button>
@@ -62,8 +71,14 @@
         <div class="col-md-3">
             <div class="card text-center">
                 <div class="card-body">
-                    <h5 class="card-title text-muted">Date</h5>
-                    <h3 class="text-primary">{{ target_date.strftime('%d/%m/%Y') }}</h3>
+                    <h5 class="card-title text-muted">Période</h5>
+                    {% if start_date == end_date %}
+                    <h3 class="text-primary">{{ start_date.strftime('%d/%m/%Y') }}</h3>
+                    {% else %}
+                    <h6 class="text-primary mb-0">{{ start_date.strftime('%d/%m/%Y') }}</h6>
+                    <small class="text-muted">au</small>
+                    <h6 class="text-primary">{{ end_date.strftime('%d/%m/%Y') }}</h6>
+                    {% endif %}
                 </div>
             </div>
         </div>

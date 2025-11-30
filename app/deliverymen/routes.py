@@ -85,17 +85,31 @@ def deliverymen_dashboard():
     """Dashboard de gestion complète des livreurs avec statistiques"""
     
     # Récupérer les paramètres de filtrage
-    filter_date = request.args.get('date', None)
+    filter_date_start = request.args.get('date_start', None)
+    filter_date_end = request.args.get('date_end', None)
     filter_deliveryman_id = request.args.get('deliveryman_id', None, type=int)
     
-    # Valeurs par défaut : aujourd'hui si pas de date spécifiée
-    if filter_date:
+    # Valeurs par défaut : aujourd'hui si pas de dates spécifiées
+    if filter_date_start:
         try:
-            target_date = datetime.strptime(filter_date, '%Y-%m-%d').date()
+            start_date = datetime.strptime(filter_date_start, '%Y-%m-%d').date()
         except ValueError:
-            target_date = date.today()
+            start_date = date.today()
     else:
-        target_date = date.today()
+        start_date = date.today()
+    
+    if filter_date_end:
+        try:
+            end_date = datetime.strptime(filter_date_end, '%Y-%m-%d').date()
+        except ValueError:
+            end_date = date.today()
+    else:
+        # Si pas de date de fin, utiliser la date de début (une seule journée)
+        end_date = start_date
+    
+    # S'assurer que end_date >= start_date
+    if end_date < start_date:
+        end_date = start_date
     
     # Requête de base : commandes avec livreur assigné
     query = Order.query.filter(
@@ -103,8 +117,11 @@ def deliverymen_dashboard():
         Order.delivery_option == 'delivery'
     )
     
-    # Filtrer par date (sur due_date qui est la date de livraison)
-    query = query.filter(func.date(Order.due_date) == target_date)
+    # Filtrer par période (sur due_date qui est la date de livraison)
+    query = query.filter(
+        func.date(Order.due_date) >= start_date,
+        func.date(Order.due_date) <= end_date
+    )
     
     # Filtrer par livreur si spécifié
     if filter_deliveryman_id:
@@ -158,7 +175,8 @@ def deliverymen_dashboard():
     
     return render_template('deliverymen/dashboard.html',
                          stats_by_deliveryman=stats_by_deliveryman,
-                         target_date=target_date,
+                         start_date=start_date,
+                         end_date=end_date,
                          filter_deliveryman_id=filter_deliveryman_id,
                          all_deliverymen=all_deliverymen,
                          total_orders=total_orders,
