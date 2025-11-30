@@ -504,12 +504,23 @@ def edit_production_order(order_id):
     if request.method == 'GET':
         form.production_date.data = order.due_date
         form.production_notes.data = order.notes
+        
+        # Pré-remplir les items avec les choix de produits
         form.items.entries = []
+        # Récupérer les choix de produits une seule fois
+        products = Product.query.filter_by(can_be_sold=True).all()
+        product_choices = [('', '-- Choisir un produit --')]
+        for product in products:
+            label = f"{product.name} (Unité: {product.unit})"
+            product_choices.append((str(product.id), label))
+        
         for item in order.items:
-            form.items.append_entry({
+            item_entry = form.items.append_entry({
                 'product': str(item.product_id),
                 'quantity': item.quantity
             })
+            # Réinitialiser les choix de produits pour cet item
+            item_entry.product.choices = product_choices
     
     return render_template('orders/production_order_form.html', 
                          form=form, 
