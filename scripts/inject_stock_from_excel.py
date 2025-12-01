@@ -9,7 +9,7 @@ Usage:
 import sys
 import os
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 # Ajouter le répertoire parent au path pour les imports
@@ -239,7 +239,7 @@ def inject_stocks(df, dry_run=True, confirm_all=False):
                 # Appliquer le changement
                 try:
                     setattr(product, stock_field, nouveau_stock)
-                    product.last_stock_update = datetime.utcnow()
+                    product.last_stock_update = datetime.now(timezone.utc)
                     stats['updated'] += 1
                     print(f"✅ ID {product_id} ({product.name}): {stock_field} {current_stock:.2f} → {nouveau_stock:.2f}")
                 except Exception as e:
