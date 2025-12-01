@@ -231,6 +231,22 @@
         text-align: center;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         border: 1px solid rgba(0,0,0,0.05);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: block;
+        color: inherit;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .stat-card:active {
+        transform: translateY(-2px);
     }
     
     .stat-number {
@@ -262,6 +278,16 @@
         margin-bottom: 0.5rem;
         color: #495057;
     }
+    
+    /* Scroll smooth pour les ancres */
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    /* Offset pour les sections avec ancres (compenser le header fixe si nécessaire) */
+    .section-card {
+        scroll-margin-top: 20px;
+    }
 </style>
 {% endblock %}
 
@@ -289,30 +315,30 @@
 <div class="container-fluid">
     <!-- Statistiques -->
     <div class="stats-grid">
-        <div class="stat-card">
+        <a href="#section-production" class="stat-card">
             <span class="stat-number text-warning">{{ orders_in_production|length }}</span>
             <div class="stat-label">En Production</div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="#section-pickup" class="stat-card">
             <span class="stat-number text-info">{{ orders_waiting_pickup|length }}</span>
             <div class="stat-label">Attente Retrait</div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="#section-delivery" class="stat-card">
             <span class="stat-number text-success">{{ orders_ready_delivery|length }}</span>
             <div class="stat-label">Prêt à Livrer</div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="#section-counter" class="stat-card">
             <span class="stat-number text-primary">{{ orders_at_counter|length }}</span>
             <div class="stat-label">Au Comptoir</div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="#section-unpaid" class="stat-card">
             <span class="stat-number text-warning">{{ orders_delivered_unpaid|length }}</span>
             <div class="stat-label">Livré Non Payé</div>
-        </div>
+        </a>
     </div>
     
     <!-- Section 1: Commandes en Production -->
-    <div class="section-card">
+    <div id="section-production" class="section-card">
         <div class="section-title">
             <i class="bi bi-gear-wide-connected me-3 text-warning"></i>
             <h3 class="mb-0">En Production</h3>
@@ -382,7 +408,7 @@
     </div>
     
     <!-- Section 2: En Attente de Retrait -->
-    <div class="section-card">
+    <div id="section-pickup" class="section-card">
         <div class="section-title">
             <i class="bi bi-bag-check me-3 text-info"></i>
             <h3 class="mb-0">En Attente de Retrait</h3>
@@ -462,7 +488,7 @@
     </div>
     
     <!-- Section 3: Prêt à Livrer -->
-    <div class="section-card">
+    <div id="section-delivery" class="section-card">
         <div class="section-title">
             <i class="bi bi-truck me-3 text-success"></i>
             <h3 class="mb-0">Prêt à Livrer</h3>
@@ -553,7 +579,7 @@
     </div>
     
     <!-- Section 4: Au Comptoir -->
-    <div class="section-card">
+    <div id="section-counter" class="section-card">
         <div class="section-title">
             <i class="bi bi-shop-window me-3 text-primary"></i>
             <h3 class="mb-0">Au Comptoir</h3>
@@ -606,7 +632,7 @@
     </div>
     
     <!-- Section 5: Livré Non Payé -->
-    <div class="section-card">
+    <div id="section-unpaid" class="section-card">
         <div class="section-title">
             <i class="bi bi-exclamation-triangle me-3 text-warning"></i>
             <h3 class="mb-0">Livré Non Payé</h3>
