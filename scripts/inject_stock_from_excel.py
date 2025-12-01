@@ -22,10 +22,27 @@ from models import Product
 def analyze_excel_file(file_path):
     """Analyse le fichier Excel et retourne un DataFrame"""
     print(f"📊 Analyse du fichier Excel : {file_path}")
-    df = pd.read_excel(file_path)
+    
+    # Lire le fichier Excel avec gestion de l'encodage
+    try:
+        df = pd.read_excel(file_path, engine='openpyxl')
+    except Exception as e:
+        print(f"⚠️  Erreur lors de la lecture avec openpyxl: {e}")
+        print("   Tentative avec xlrd...")
+        try:
+            df = pd.read_excel(file_path, engine='xlrd')
+        except Exception as e2:
+            print(f"❌ Erreur lors de la lecture: {e2}")
+            raise
     
     print(f"\n✅ Fichier chargé : {len(df)} lignes")
     print(f"📋 Colonnes : {', '.join(df.columns.tolist())}")
+    
+    # Vérifier les IDs valides
+    valid_ids = df['id'].notna() & (df['id'].astype(str).str.isdigit() | df['id'].apply(lambda x: isinstance(x, (int, float))))
+    invalid_ids_count = (~valid_ids).sum()
+    if invalid_ids_count > 0:
+        print(f"⚠️  {invalid_ids_count} lignes avec ID invalide")
     
     # Afficher les types uniques
     if 'type' in df.columns:
@@ -33,6 +50,12 @@ def analyze_excel_file(file_path):
         for ptype in df['type'].unique():
             count = len(df[df['type'] == ptype])
             print(f"   - {ptype}: {count} produits")
+    
+    # Afficher quelques exemples de noms (pour vérifier l'encodage)
+    if 'nom' in df.columns:
+        print(f"\n📝 Exemples de noms (vérification encodage) :")
+        for i, name in enumerate(df['nom'].head(5)):
+            print(f"   {i+1}. {name}")
     
     return df
 
@@ -105,22 +128,66 @@ def inject_stocks(df, dry_run=True, confirm_all=False):
         print("=" * 60)
         
         for idx, row in df.iterrows():
-            product_id = int(row['id']) if pd.notna(row['id']) else None
-            product_name = row['nom'] if 'nom' in row else None
-            product_type = row['type'] if 'type' in row else None
-            nouveau_stock = float(row['nouveau_stock']) if pd.notna(row['nouveau_stock']) else 0.0
+            try:
+                product_id = int(row['id']) if pd.notna(row['id']) else None
+            except (ValueError, TypeError) as e:
+                stats['errors'].append(f"Ligne {idx + 2}: ID invalide '{row.get('id', 'N/A')}' - {str(e)}")
+                continue
+                
+            # Récupérer le nom (gérer l'encodage UTF-8)
+            product_name = None
+            if 'nom' in row and pd.notna(row['nom']):
+                try:
+                    # Essayer de décoder si c'est une chaîne encodée incorrectement
+                    name_str = str(row['nom'])
+                    # Si ça ressemble à de l'UTF-8 mal décodé (PÃ¢te), essayer de le corriger
+                    if 'Ã' in name_str or 'Â' in name_str:
+                        try:
+                            # Essayer de réencoder en latin-1 puis décoder en UTF-8
+                            product_name = name_str.encode('latin-1').decode('utf-8')
+                        except:
+                            product_name = name_str
+                    else:
+                        product_name = name_str
+                except:
+                    product_name = str(row['nom']) if pd.notna(row['nom']) else None
+                    
+            product_type = row['type'] if 'type' in row and pd.notna(row['type']) else None
+            
+            # Gérer les valeurs NaN pour nouveau_stock
+            if pd.isna(row['nouveau_stock']) or row['nouveau_stock'] == '':
+                nouveau_stock = 0.0
+            else:
+                try:
+                    nouveau_stock = float(row['nouveau_stock'])
+                except (ValueError, TypeError):
+                    nouveau_stock = 0.0
+                    print(f"⚠️  ID {product_id}: Valeur de stock invalide '{row['nouveau_stock']}', utilisation de 0.0")
             
             if not product_id:
                 stats['errors'].append(f"Ligne {idx + 2}: ID manquant")
                 continue
             
-            # Trouver le produit (utiliser db.session.get pour éviter le warning SQLAlchemy 2.0)
+            # Trouver le produit par ID (méthode principale - fonctionne même avec encodage incorrect dans le nom)
             product = db.session.get(Product, product_id)
             
             if not product:
                 stats['not_found'] += 1
-                print(f"❌ ID {product_id} ({product_name}): Produit non trouvé")
-                stats['errors'].append(f"ID {product_id}: Produit non trouvé")
+                # Essayer de trouver par nom pour debug (mais l'ID devrait toujours fonctionner)
+                if product_name:
+                    # Essayer recherche exacte puis recherche partielle
+                    product_by_name = Product.query.filter(Product.name == product_name).first()
+                    if not product_by_name:
+                        product_by_name = Product.query.filter(Product.name.ilike(f'%{product_name[:20]}%')).first()
+                    if product_by_name:
+                        print(f"⚠️  ID {product_id} ({product_name}): Produit non trouvé par ID, mais trouvé par nom (ID réel: {product_by_name.id})")
+                        stats['errors'].append(f"ID {product_id}: Produit non trouvé par ID (ID réel: {product_by_name.id})")
+                    else:
+                        print(f"❌ ID {product_id} ({product_name}): Produit non trouvé")
+                        stats['errors'].append(f"ID {product_id} ({product_name}): Produit non trouvé")
+                else:
+                    print(f"❌ ID {product_id}: Produit non trouvé (nom manquant)")
+                    stats['errors'].append(f"ID {product_id}: Produit non trouvé")
                 continue
             
             stats['found'] += 1
