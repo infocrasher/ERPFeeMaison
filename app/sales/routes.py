@@ -47,15 +47,12 @@ def pos_interface():
     # Récupérer les catégories visibles au POV
     pos_categories = Category.query.filter(Category.show_in_pos == True).order_by(Category.name).all()
     
-    # Récupérer tous les produits finis OU les produits avec can_be_sold=True
+    # Récupérer uniquement les produits finis avec stock_comptoir > 0
     # et appartenant à une catégorie visible au POV
-    # Note: On affiche tous les produits, même avec stock_comptoir = 0 (rupture)
     category_ids = [c.id for c in pos_categories]
     products = Product.query.filter(
-        or_(
-            Product.product_type == 'finished',  # Produits finis toujours vendables
-            Product.can_be_sold == True  # Ingrédients/consommables marqués comme vendables
-        ),
+        Product.product_type == 'finished',  # Uniquement produits finis
+        Product.stock_comptoir > 0,  # Uniquement avec stock disponible
         Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
     
@@ -70,7 +67,9 @@ def pos_interface():
         stock_comptoir = float(product.stock_comptoir or 0)
         available_stock = max(0, stock_comptoir - reserved_qty)
         
-        # Afficher tous les produits, même avec stock = 0 (sera marqué comme rupture dans le frontend)
+        # Ne pas afficher les produits entièrement réservés
+        if available_stock <= 0:
+            continue
         
         # Utiliser le nom réel de la catégorie (slugifié pour le frontend)
         category_slug = 'autres'
@@ -85,7 +84,6 @@ def pos_interface():
             'category': category_slug,
             'category_id': product.category_id,
             'stock': available_stock,  # Stock disponible (moins les réservations)
-            'stock_comptoir': stock_comptoir,  # Stock réel (pour afficher rupture si = 0)
             'unit': product.display_sale_unit  # Utiliser l'unité de vente
         })
     
@@ -106,13 +104,10 @@ def get_products():
     pos_categories = Category.query.filter(Category.show_in_pos == True).order_by(Category.name).all()
     category_ids = [c.id for c in pos_categories]
     
-    # Récupérer les produits finis OU les produits avec can_be_sold=True
-    # Note: On affiche tous les produits, même avec stock_comptoir = 0 (rupture)
+    # Récupérer uniquement les produits finis avec stock_comptoir > 0
     products = Product.query.filter(
-        or_(
-            Product.product_type == 'finished',  # Produits finis toujours vendables
-            Product.can_be_sold == True  # Ingrédients/consommables marqués comme vendables
-        ),
+        Product.product_type == 'finished',  # Uniquement produits finis
+        Product.stock_comptoir > 0,  # Uniquement avec stock disponible
         Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
     
@@ -126,7 +121,9 @@ def get_products():
         stock_comptoir = float(product.stock_comptoir or 0)
         available_stock = max(0, stock_comptoir - reserved_qty)
         
-        # Afficher tous les produits, même avec stock = 0 (sera marqué comme rupture dans le frontend)
+        # Ne pas inclure les produits entièrement réservés
+        if available_stock <= 0:
+            continue
         
         # Utiliser le slug de la catégorie réelle
         category_slug = 'autres'

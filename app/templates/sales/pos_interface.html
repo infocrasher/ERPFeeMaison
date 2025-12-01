@@ -1734,9 +1734,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return true;
         }
         if (category === 'in-stock') {
-            // Afficher uniquement les produits avec stock_comptoir > 0
-            const stockComptoir = product.stock_comptoir !== undefined ? product.stock_comptoir : product.stock;
-            return stockComptoir > 0;
+            // Tous les produits affichés ont déjà stock_comptoir > 0, donc on affiche tous
+            return true;
         }
         if (category === 'favorites') {
             // Afficher les favoris (même si la liste est vide, on peut toujours afficher une liste vide)
@@ -1777,12 +1776,7 @@ document.addEventListener('DOMContentLoaded', function() {
             card.className = 'product-card';
             card.dataset.productId = product.id;
             
-            // Utiliser stock_comptoir (stock réel) pour déterminer la rupture
-            // stock_comptoir = 0 signifie rupture, même si stock disponible > 0 (réservations)
-            const stockComptoir = product.stock_comptoir !== undefined ? product.stock_comptoir : product.stock;
-            if (stockComptoir <= 0) {
-                card.classList.add('out-of-stock');
-            }
+            // Tous les produits affichés ont déjà stock_comptoir > 0, donc pas de rupture
 
             const inCart = state.cart.find(item => item.productId === product.id && item.discountPercent === 0);
             const controlsHtml = inCart ? `
@@ -1797,14 +1791,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
             `;
 
-            // Utiliser stock_comptoir pour déterminer la rupture
-            const stockComptoir = product.stock_comptoir !== undefined ? product.stock_comptoir : product.stock;
-            const badge = stockComptoir <= 0 ? '<span class="card-badge badge-out">Rupture</span>' : '';
+            // Tous les produits affichés ont du stock disponible
+            const badge = '';
             const image = product.image ? `<img src="${product.image}" alt="${product.name}">` : `<span class="card-placeholder">${(product.name || 'P')[0]}</span>`;
             const unitLabel = product.unit || 'u.';
             
-            // Afficher le stock disponible (moins réservations) ou "Rupture" si stock_comptoir = 0
-            const stockDisplay = stockComptoir <= 0 ? 'Rupture' : `${product.stock ?? 0} ${unitLabel}`;
+            // Afficher le stock disponible (moins réservations)
+            const stockDisplay = `${product.stock ?? 0} ${unitLabel}`;
 
             card.innerHTML = `
                 ${badge}
@@ -2073,16 +2066,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const product = state.products.find(p => p.id === productId);
         if (!product) return;
 
-        // Utiliser stock_comptoir pour déterminer la rupture
-        const stockComptoir = product.stock_comptoir !== undefined ? product.stock_comptoir : product.stock;
-        const availableStock = product.stock !== undefined ? product.stock : stockComptoir;
+        // Tous les produits affichés ont déjà stock_comptoir > 0
+        const availableStock = product.stock !== undefined ? product.stock : 0;
         
-        // Avertir si rupture mais permettre l'ajout (pour ventes spéciales)
-        if (stockComptoir <= 0) {
-            if (!confirm('⚠️ Ce produit est en rupture de stock. Voulez-vous quand même l\'ajouter au panier ?')) {
-                return;
-            }
-        } else if (availableStock <= 0) {
+        if (availableStock <= 0) {
             alert('Stock disponible insuffisant (produit réservé pour une commande).');
             return;
         }
