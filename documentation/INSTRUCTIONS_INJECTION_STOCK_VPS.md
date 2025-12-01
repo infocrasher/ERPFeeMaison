@@ -9,8 +9,14 @@
 
 ### Option A : Via SCP (depuis votre machine locale)
 
+**Utiliser l'adresse IP ou le domaine :**
+
 ```bash
-scp excel_files/Stock\ V1.xlsx erp-admin@vps-58c1027b:/opt/erp/app/excel_files/
+# Option 1 : Avec l'adresse IP
+scp "/Users/sofiane/Documents/Save FM/fee_maison_gestion_cursor/excel_files/Stock V1.xlsx" erp-admin@51.254.36.25:/opt/erp/app/excel_files/
+
+# Option 2 : Avec le domaine (si configuré dans ~/.ssh/config)
+scp "/Users/sofiane/Documents/Save FM/fee_maison_gestion_cursor/excel_files/Stock V1.xlsx" erp-admin@erp.declaimers.com:/opt/erp/app/excel_files/
 ```
 
 ### Option B : Via SFTP ou FileZilla
