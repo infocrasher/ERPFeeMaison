@@ -1573,9 +1573,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        categoriesBar.innerHTML = categories.map(cat => `
-            <button class="category-tab" data-category="${cat.key}">${cat.label}</button>
-        `).join('');
+        categoriesBar.innerHTML = categories.map(cat => {
+            // Utiliser le slug tel quel (venant du backend) pour les catégories dynamiques
+            // ou générer avec slugifyCategory pour les catégories spéciales
+            const categoryKey = cat.key || slugifyCategory(cat.label);
+            return `<button class="category-tab" data-category="${categoryKey}">${cat.label}</button>`;
+        }).join('');
 
         const toActivate = categoriesBar.querySelector(`[data-category="${previous}"]`) || categoriesBar.querySelector('.category-tab');
         if (toActivate) {
@@ -1741,8 +1744,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Afficher les favoris (même si la liste est vide, on peut toujours afficher une liste vide)
             return state.favoriteProductIds && state.favoriteProductIds.includes(product.id);
         }
-        const slug = product.category_slug || slugifyCategory(product.category_name || product.category || '');
-        return slug === category;
+        
+        // Le slug du produit vient du backend (dans product.category)
+        // Le slug de la catégorie vient du bouton (dans category)
+        // Les deux doivent correspondre exactement
+        const productCategorySlug = product.category || product.category_slug || '';
+        
+        // Comparaison directe (les slugs sont générés de la même manière côté backend)
+        return productCategorySlug === category;
     }
     
     function renderProducts(filter = '', category = 'all') {
