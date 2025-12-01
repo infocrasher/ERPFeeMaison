@@ -47,15 +47,15 @@ def pos_interface():
     # Récupérer les catégories visibles au POV
     pos_categories = Category.query.filter(Category.show_in_pos == True).order_by(Category.name).all()
     
-    # Récupérer tous les produits finis OU les produits avec can_be_sold=True avec stock comptoir > 0
+    # Récupérer tous les produits finis OU les produits avec can_be_sold=True
     # et appartenant à une catégorie visible au POV
+    # Note: On affiche tous les produits, même avec stock_comptoir = 0 (rupture)
     category_ids = [c.id for c in pos_categories]
     products = Product.query.filter(
         or_(
             Product.product_type == 'finished',  # Produits finis toujours vendables
             Product.can_be_sold == True  # Ingrédients/consommables marqués comme vendables
         ),
-        Product.stock_comptoir > 0,
         Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
     
@@ -67,11 +67,10 @@ def pos_interface():
     for product in products:
         # Calculer le stock disponible (stock réel - réservé pour commandes client)
         reserved_qty = reserved_stock.get(product.id, 0)
-        available_stock = max(0, int(product.stock_comptoir or 0) - int(reserved_qty))
+        stock_comptoir = float(product.stock_comptoir or 0)
+        available_stock = max(0, stock_comptoir - reserved_qty)
         
-        # Ne pas afficher les produits entièrement réservés
-        if available_stock <= 0:
-            continue
+        # Afficher tous les produits, même avec stock = 0 (sera marqué comme rupture dans le frontend)
         
         # Utiliser le nom réel de la catégorie (slugifié pour le frontend)
         category_slug = 'autres'
@@ -86,6 +85,7 @@ def pos_interface():
             'category': category_slug,
             'category_id': product.category_id,
             'stock': available_stock,  # Stock disponible (moins les réservations)
+            'stock_comptoir': stock_comptoir,  # Stock réel (pour afficher rupture si = 0)
             'unit': product.display_sale_unit  # Utiliser l'unité de vente
         })
     
@@ -106,13 +106,13 @@ def get_products():
     pos_categories = Category.query.filter(Category.show_in_pos == True).order_by(Category.name).all()
     category_ids = [c.id for c in pos_categories]
     
-    # Récupérer les produits finis OU les produits avec can_be_sold=True avec stock > 0
+    # Récupérer les produits finis OU les produits avec can_be_sold=True
+    # Note: On affiche tous les produits, même avec stock_comptoir = 0 (rupture)
     products = Product.query.filter(
         or_(
             Product.product_type == 'finished',  # Produits finis toujours vendables
             Product.can_be_sold == True  # Ingrédients/consommables marqués comme vendables
         ),
-        Product.stock_comptoir > 0,
         Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
     
@@ -123,11 +123,10 @@ def get_products():
     for product in products:
         # Calculer le stock disponible (stock réel - réservé pour commandes client)
         reserved_qty = reserved_stock.get(product.id, 0)
-        available_stock = max(0, int(product.stock_comptoir or 0) - int(reserved_qty))
+        stock_comptoir = float(product.stock_comptoir or 0)
+        available_stock = max(0, stock_comptoir - reserved_qty)
         
-        # Ne pas inclure les produits entièrement réservés
-        if available_stock <= 0:
-            continue
+        # Afficher tous les produits, même avec stock = 0 (sera marqué comme rupture dans le frontend)
         
         # Utiliser le slug de la catégorie réelle
         category_slug = 'autres'
@@ -139,6 +138,7 @@ def get_products():
             'name': product.name,
             'price': float(product.price or 0),
             'stock': available_stock,  # Stock disponible (moins les réservations)
+            'stock_comptoir': stock_comptoir,  # Stock réel (pour afficher rupture si = 0)
             'category': category_slug,
             'category_id': product.category_id,
             'unit': product.display_sale_unit,  # Utiliser l'unité de vente

@@ -1768,7 +1768,10 @@ document.addEventListener('DOMContentLoaded', function() {
             card.className = 'product-card';
             card.dataset.productId = product.id;
             
-            if (product.stock <= 0) {
+            // Utiliser stock_comptoir (stock réel) pour déterminer la rupture
+            // stock_comptoir = 0 signifie rupture, même si stock disponible > 0 (réservations)
+            const stockComptoir = product.stock_comptoir !== undefined ? product.stock_comptoir : product.stock;
+            if (stockComptoir <= 0) {
                 card.classList.add('out-of-stock');
             }
 
@@ -1785,9 +1788,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
             `;
 
-            const badge = product.stock <= 0 ? '<span class="card-badge badge-out">Rupture</span>' : '';
+            // Utiliser stock_comptoir pour déterminer la rupture
+            const stockComptoir = product.stock_comptoir !== undefined ? product.stock_comptoir : product.stock;
+            const badge = stockComptoir <= 0 ? '<span class="card-badge badge-out">Rupture</span>' : '';
             const image = product.image ? `<img src="${product.image}" alt="${product.name}">` : `<span class="card-placeholder">${(product.name || 'P')[0]}</span>`;
             const unitLabel = product.unit || 'u.';
+            
+            // Afficher le stock disponible (moins réservations) ou "Rupture" si stock_comptoir = 0
+            const stockDisplay = stockComptoir <= 0 ? 'Rupture' : `${product.stock ?? 0} ${unitLabel}`;
 
             card.innerHTML = `
                 ${badge}
@@ -1796,7 +1804,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="card-title">${product.name || 'Produit'}</div>
                     <div class="card-meta">
                         <span>${formatPrice(product.price || 0)}</span>
-                        <span class="stock">${product.stock ?? 0} ${unitLabel}</span>
+                        <span class="stock">${stockDisplay}</span>
                     </div>
                 </div>
                 <div class="card-actions">${controlsHtml}</div>
@@ -2056,8 +2064,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const product = state.products.find(p => p.id === productId);
         if (!product) return;
 
-        if (product.stock <= 0) {
-            alert('Produit en rupture de stock');
+        // Utiliser stock_comptoir pour déterminer la rupture
+        const stockComptoir = product.stock_comptoir !== undefined ? product.stock_comptoir : product.stock;
+        const availableStock = product.stock !== undefined ? product.stock : stockComptoir;
+        
+        // Avertir si rupture mais permettre l'ajout (pour ventes spéciales)
+        if (stockComptoir <= 0) {
+            if (!confirm('⚠️ Ce produit est en rupture de stock. Voulez-vous quand même l\'ajouter au panier ?')) {
+                return;
+            }
+        } else if (availableStock <= 0) {
+            alert('Stock disponible insuffisant (produit réservé pour une commande).');
             return;
         }
 
@@ -2065,8 +2082,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (existingItemIndex > -1) {
             const currentQuantity = state.cart[existingItemIndex].quantity;
-            if (currentQuantity >= product.stock) {
-                alert(`Stock insuffisant. Maximum disponible: ${product.stock}`);
+            const availableStock = product.stock !== undefined ? product.stock : (product.stock_comptoir || 0);
+            if (availableStock > 0 && currentQuantity >= availableStock) {
+                alert(`Stock disponible insuffisant. Maximum disponible: ${availableStock}`);
                 return;
             }
             state.cart[existingItemIndex].quantity++;
@@ -2099,8 +2117,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const nextQuantity = state.cart[index].quantity + delta;
         if (delta > 0) {
-            if (nextQuantity > product.stock) {
-                alert(`Stock insuffisant. Maximum disponible: ${product.stock}`);
+            const availableStock = product.stock !== undefined ? product.stock : (product.stock_comptoir || 0);
+            if (availableStock > 0 && nextQuantity > availableStock) {
+                alert(`Stock disponible insuffisant. Maximum disponible: ${availableStock}`);
                 return;
             }
             state.cart[index].quantity = nextQuantity;
