@@ -9,13 +9,23 @@
 
 ### Option A : Via SCP (depuis votre machine locale)
 
-**Utiliser l'adresse IP ou le domaine :**
+**⚠️ IMPORTANT : Créer le répertoire d'abord !**
 
 ```bash
-# Option 1 : Avec l'adresse IP
-scp "/Users/sofiane/Documents/Save FM/fee_maison_gestion_cursor/excel_files/Stock V1.xlsx" erp-admin@51.254.36.25:/opt/erp/app/excel_files/
+# Étape 1 : Créer le répertoire excel_files sur le VPS
+ssh erp-admin@51.254.36.25 "mkdir -p /opt/erp/app/excel_files"
 
-# Option 2 : Avec le domaine (si configuré dans ~/.ssh/config)
+# Étape 2 : Copier le fichier Excel
+scp "/Users/sofiane/Documents/Save FM/fee_maison_gestion_cursor/excel_files/Stock V1.xlsx" erp-admin@51.254.36.25:/opt/erp/app/excel_files/
+```
+
+**Alternative avec le domaine :**
+
+```bash
+# Étape 1 : Créer le répertoire
+ssh erp-admin@erp.declaimers.com "mkdir -p /opt/erp/app/excel_files"
+
+# Étape 2 : Copier le fichier
 scp "/Users/sofiane/Documents/Save FM/fee_maison_gestion_cursor/excel_files/Stock V1.xlsx" erp-admin@erp.declaimers.com:/opt/erp/app/excel_files/
 ```
 
