@@ -1557,10 +1557,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function refreshCategoryTabs() {
         if (!categoriesBar) return;
         const previous = getActiveCategory();
-        const categories = [{ key: 'all', label: 'Tous' }];
-        if (state.favoriteProductIds && state.favoriteProductIds.length) {
-            categories.push({ key: 'favorites', label: 'Favoris' });
-        }
+        // Ordre fixe : Tous / En Stock / Favoris / puis les autres catégories
+        const categories = [
+            { key: 'all', label: 'Tous' },
+            { key: 'in-stock', label: 'En stock' },
+            { key: 'favorites', label: 'Favoris' }
+        ];
+        
         const dynamicCategories = buildCategoryList().filter(cat => cat.key !== 'all');
         const seen = new Set(categories.map(cat => cat.key));
         dynamicCategories.forEach(cat => {
@@ -1730,8 +1733,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (category === 'all') {
             return true;
         }
+        if (category === 'in-stock') {
+            // Afficher uniquement les produits avec stock_comptoir > 0
+            const stockComptoir = product.stock_comptoir !== undefined ? product.stock_comptoir : product.stock;
+            return stockComptoir > 0;
+        }
         if (category === 'favorites') {
-            return state.favoriteProductIds.includes(product.id);
+            // Afficher les favoris (même si la liste est vide, on peut toujours afficher une liste vide)
+            return state.favoriteProductIds && state.favoriteProductIds.includes(product.id);
         }
         const slug = product.category_slug || slugifyCategory(product.category_name || product.category || '');
         return slug === category;
