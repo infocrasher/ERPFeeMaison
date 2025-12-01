@@ -716,6 +716,26 @@ def pay_delivery_debt(debt_id):
     debt.paid_at = datetime.utcnow()
     debt.session_id = session.id
     db.session.commit()
+    
+    # Intégration POS : Impression reçu + ouverture tiroir pour paiement dette livreur
+    try:
+        from app.services.printer_service import get_printer_service
+        printer_service = get_printer_service()
+        
+        # Imprimer un reçu de paiement dette et ouvrir le tiroir
+        printer_service.print_cashout_receipt(
+            amount=float(debt.amount),
+            notes=f'Paiement dette livreur - Commande #{debt.order_id} - {debt.deliveryman.name}',
+            employee_name=current_user.username,
+            priority=1
+        )
+        printer_service.open_cash_drawer(priority=1)
+        
+        print(f"🖨️ Impression reçu et ouverture tiroir déclenchées pour paiement dette livreur de {debt.amount:.2f} DA")
+    except Exception as e:
+        print(f"⚠️ Erreur intégration POS: {e}")
+        # Ne pas faire échouer le paiement si l'impression échoue
+    
     flash(f'Dette de {debt.amount:.2f} DA pour la commande #{debt.order_id} réglée par {debt.deliveryman.name}.', 'success')
     return redirect(url_for('sales.list_delivery_debts'))
 

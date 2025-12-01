@@ -654,11 +654,20 @@ def pay_order(order_id):
         from app.services.printer_service import get_printer_service
         printer_service = get_printer_service()
         
-        # Imprimer le ticket et ouvrir le tiroir
-        printer_service.print_ticket(order.id, priority=1)
+        # Calculer la monnaie à rendre
+        change_amount = float(amount_received - amount_to_record) if amount_received > amount_to_record else 0
+        
+        # Imprimer le ticket avec les infos de paiement et ouvrir le tiroir
+        printer_service.print_ticket(
+            order.id, 
+            priority=1,
+            employee_name=current_user.name if hasattr(current_user, 'name') else current_user.username,
+            amount_received=float(amount_received),
+            change_amount=change_amount
+        )
         printer_service.open_cash_drawer(priority=1)
         
-        print(f"🖨️ Impression et ouverture tiroir déclenchées pour commande #{order.id}")
+        print(f"🖨️ Impression ticket et ouverture tiroir déclenchées pour commande #{order.id}")
     except Exception as e:
         print(f"⚠️ Erreur intégration POS: {e}")
         # Ne pas faire échouer le paiement si l'impression échoue
