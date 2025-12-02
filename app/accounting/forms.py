@@ -191,9 +191,8 @@ class ExpenseForm(FlaskForm):
     category = SelectField('Catégorie', validators=[DataRequired(message="La catégorie est obligatoire")])
     other_category = StringField('Précision (optionnel)', validators=[Optional(), Length(max=100)])
     payment_method = SelectField('Mode de paiement', choices=[
-        ('bank', 'Virement bancaire (par défaut)'),
-        ('cash', 'Espèces (Caisse)'),
-        ('check', 'Chèque')
+        ('bank', 'Banque'),
+        ('cash', 'Caisse')
     ], default='bank', validators=[DataRequired(message="Le mode de paiement est obligatoire")])
     supplier = StringField('Fournisseur/Bénéficiaire', validators=[Optional(), Length(max=100)])
     reference = StringField('Référence (facture, reçu...)', validators=[Optional(), Length(max=100)])

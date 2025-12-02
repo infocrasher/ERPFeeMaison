@@ -2,7 +2,7 @@
 Routes pour le module comptabilité
 """
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from decorators import admin_required
@@ -1063,14 +1063,28 @@ def new_expense():
         
         if form.payment_method.data == 'cash':
             payment_account = Account.query.filter_by(code='530').first()  # Caisse
+            # Vérifier qu'une session de caisse est ouverte
+            from app.sales.models import CashRegisterSession, CashMovement
+            cash_session = CashRegisterSession.query.filter_by(is_open=True).first()
+            if not cash_session:
+                flash('Erreur : Aucune session de caisse ouverte. Veuillez ouvrir une session de caisse avant de payer une charge en espèces.', 'error')
+                from .services import DashboardService
+                bank_balance = DashboardService.get_bank_balance()
+                return render_template('accounting/expenses/form.html', 
+                                     form=form,
+                                     bank_balance=bank_balance,
+                                     title="Nouvelle Dépense")
         elif form.payment_method.data == 'bank':
             payment_account = Account.query.filter_by(code='512').first()  # Banque
-        else:
-            payment_account = Account.query.filter_by(code='401').first()  # Fournisseurs (pour chèque)
         
         if not expense_account or not payment_account:
             flash('Erreur : Comptes comptables non trouvés. Veuillez créer les comptes nécessaires.', 'error')
-            return render_template('accounting/expenses/form.html', form=form)
+            from .services import DashboardService
+            bank_balance = DashboardService.get_bank_balance()
+            return render_template('accounting/expenses/form.html', 
+                                 form=form,
+                                 bank_balance=bank_balance,
+                                 title="Nouvelle Dépense")
         
         # Préparer la description avec précision si applicable
         description = form.description.data
@@ -1115,6 +1129,42 @@ def new_expense():
         db.session.add(debit_line)
         db.session.add(credit_line)
         
+        # Si paiement en caisse, créer un mouvement de caisse
+        if form.payment_method.data == 'cash':
+            from app.sales.models import CashRegisterSession, CashMovement
+            cash_session = CashRegisterSession.query.filter_by(is_open=True).first()
+            if cash_session:
+                # Préparer la description pour le mouvement de caisse
+                movement_description = description
+                if form.supplier.data:
+                    movement_description = f"{description} - {form.supplier.data}"
+                
+                # Créer le mouvement de caisse (sortie)
+                cash_movement = CashMovement(
+                    session_id=cash_session.id,
+                    created_at=datetime.utcnow(),
+                    type='sortie',
+                    amount=float(form.amount.data),
+                    reason=f'Paiement charge - {form.category.data}',
+                    notes=movement_description,
+                    employee_id=current_user.id
+                )
+                db.session.add(cash_movement)
+                db.session.flush()  # Pour obtenir l'ID du mouvement
+                
+                # Intégration comptable automatique pour le mouvement de caisse
+                try:
+                    from .services import AccountingIntegrationService
+                    AccountingIntegrationService.create_cash_movement_entry(
+                        cash_movement_id=cash_movement.id,
+                        amount=float(form.amount.data),
+                        movement_type='out',
+                        description=f'Paiement charge - {movement_description}'
+                    )
+                except Exception as e:
+                    current_app.logger.error(f"Erreur intégration comptable mouvement caisse (cash_movement_id={cash_movement.id}): {e}", exc_info=True)
+                    # On continue même si l'intégration comptable échoue
+        
         # Valider automatiquement si payé
         if form.is_paid.data:
             entry.is_validated = True
@@ -1122,7 +1172,9 @@ def new_expense():
         
         db.session.commit()
         
-        flash(f'Dépense de {form.amount.data} DZD enregistrée avec succès.', 'success')
+        # Message flash selon le mode de paiement
+        payment_method_label = 'Caisse' if form.payment_method.data == 'cash' else 'Banque'
+        flash(f'Dépense de {form.amount.data} DZD enregistrée avec succès. Déduite de la {payment_method_label.lower()}.', 'success')
         return redirect(url_for('accounting.list_expenses'))
     
     # Récupérer le solde bancaire pour l'affichage

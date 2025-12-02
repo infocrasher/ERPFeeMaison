@@ -14,7 +14,7 @@
                         <i class="bi bi-info-circle me-2"></i>
                         <div>
                             <strong>Déduction automatique :</strong> 
-                            Cette charge sera automatiquement déduite de votre compte bancaire et validée comptablement.
+                            Cette charge sera automatiquement déduite selon le mode de paiement sélectionné (Banque ou Caisse) et validée comptablement.
                             {% if bank_balance %}
                             <br><small class="text-muted">Solde bancaire actuel : <strong>{{ "{:,.2f}".format(bank_balance) }} DZD</strong></small>
                             {% endif %}
