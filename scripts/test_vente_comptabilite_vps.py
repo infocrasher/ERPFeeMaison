@@ -16,12 +16,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app
 from extensions import db
-from models import Product, Order, OrderItem
+from models import Product, Order, OrderItem, User
 from app.sales.models import CashRegisterSession, CashMovement
 from app.accounting.models import JournalEntry, JournalEntryLine, Account, Journal
 from app.accounting.services import AccountingIntegrationService
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
+from flask_login import login_user
 
 def test_vente_comptabilite():
     """Test d'une vente avec vérification de l'intégration comptable"""
@@ -32,6 +33,17 @@ def test_vente_comptabilite():
         print("=" * 70)
         print("TEST VENTE COMPTABILITÉ - VPS")
         print("=" * 70)
+        print()
+        
+        # Récupérer un utilisateur pour le contexte Flask-Login
+        test_user = User.query.filter_by(role='admin').first()
+        if not test_user:
+            test_user = User.query.first()
+        
+        if test_user:
+            print(f"👤 Utilisateur de test: {test_user.username} (ID: {test_user.id})")
+        else:
+            print("⚠️  Aucun utilisateur trouvé, utilisation de l'ID 1 par défaut")
         print()
         
         # 1. Vérifier les prérequis
@@ -125,12 +137,17 @@ def test_vente_comptabilite():
         print("-" * 70)
         
         try:
-            entry = AccountingIntegrationService.create_sale_entry(
-                order_id=999,  # ID de test
-                sale_amount=montant_vente,
-                payment_method='cash',
-                description=f'Test vente comptabilité - Produit: {produit.name}'
-            )
+            # Créer un contexte de requête pour que current_user fonctionne
+            with app.test_request_context():
+                if test_user:
+                    login_user(test_user)
+                
+                entry = AccountingIntegrationService.create_sale_entry(
+                    order_id=999,  # ID de test
+                    sale_amount=montant_vente,
+                    payment_method='cash',
+                    description=f'Test vente comptabilité - Produit: {produit.name}'
+                )
             print(f"✅ Écriture comptable créée avec succès!")
             print(f"   ID: {entry.id}")
             print(f"   Référence: {entry.reference}")
