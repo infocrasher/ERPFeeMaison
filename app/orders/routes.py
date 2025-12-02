@@ -753,12 +753,22 @@ def assign_deliveryman(order_id):
                     
                     change_amount = 0.0  # Pas de monnaie à rendre pour livraison
                     
+                    # Récupérer les informations du livreur
+                    deliveryman = Deliveryman.query.get(deliveryman_id)
+                    deliveryman_name = deliveryman.name if deliveryman else ''
+                    deliveryman_phone = deliveryman.phone if deliveryman and deliveryman.phone else ''
+                    
                     printer_service.print_ticket(
                         order.id,
                         priority=1,
                         employee_name=current_user.name if hasattr(current_user, 'name') else current_user.username,
                         amount_received=float(products_amount),
-                        change_amount=change_amount
+                        change_amount=change_amount,
+                        customer_phone=order.customer_phone,
+                        customer_address=order.customer_address,
+                        delivery_cost=float(order.delivery_cost) if order.delivery_cost else 0,
+                        deliveryman_name=deliveryman_name,
+                        deliveryman_phone=deliveryman_phone
                     )
                     printer_service.open_cash_drawer(priority=1)
                 except Exception as e:
@@ -825,6 +835,33 @@ def assign_deliveryman(order_id):
                 paid=False
             )
             db.session.add(debt)
+            
+            # Impression ticket même si le livreur ne paie pas
+            try:
+                from app.services.printer_service import get_printer_service
+                printer_service = get_printer_service()
+                
+                # Récupérer les informations du livreur
+                deliveryman = Deliveryman.query.get(deliveryman_id)
+                deliveryman_name = deliveryman.name if deliveryman else ''
+                deliveryman_phone = deliveryman.phone if deliveryman and deliveryman.phone else ''
+                
+                printer_service.print_ticket(
+                    order.id,
+                    priority=1,
+                    employee_name=current_user.name if hasattr(current_user, 'name') else current_user.username,
+                    amount_received=0.0,  # Pas de paiement
+                    change_amount=0.0,
+                    customer_phone=order.customer_phone,
+                    customer_address=order.customer_address,
+                    delivery_cost=float(order.delivery_cost) if order.delivery_cost else 0,
+                    deliveryman_name=deliveryman_name,
+                    deliveryman_phone=deliveryman_phone
+                )
+                printer_service.open_cash_drawer(priority=1)
+            except Exception as e:
+                current_app.logger.error(f"Erreur impression/tiroir (assign_deliveryman non payé): {e}")
+            
             flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name}. Dette créée: {products_amount:.2f} DA (hors frais livraison {order.delivery_cost or 0:.2f} DA).', 'info')
         
         # Ajouter les notes à la commande si spécifiées

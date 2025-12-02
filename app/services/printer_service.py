@@ -351,6 +351,16 @@ class PrinterService:
             if customer_name and customer_name not in ['Vente directe', 'Vente POS']:
                 ticket.extend(f"Client: {customer_name}\n".encode('utf-8'))
             
+            # Numéro de téléphone client
+            customer_phone = data.get('customer_phone', '')
+            if customer_phone:
+                ticket.extend(f"Tel: {customer_phone}\n".encode('utf-8'))
+            
+            # Adresse client (si livraison)
+            customer_address = data.get('customer_address', '')
+            if customer_address:
+                ticket.extend(f"Adresse: {customer_address}\n".encode('utf-8'))
+            
             if delivery_option:
                 ticket.extend(f"Type: {delivery_option}\n".encode('utf-8'))
             
@@ -384,15 +394,41 @@ class PrinterService:
             
             ticket.extend(b"--------------------------------\n")
             
+            # Frais de livraison (si applicable)
+            delivery_cost = data.get('delivery_cost', 0)
+            if delivery_cost and delivery_cost > 0:
+                delivery_line = self._format_line("Frais livraison:", self._format_currency(delivery_cost))
+                ticket.extend(f"{delivery_line}\n".encode('utf-8'))
+                total += delivery_cost
+            
             # Total
             ticket.extend(self.ESC_BOLD_ON)
             total_line = self._format_line("TOTAL:", self._format_currency(total))
             ticket.extend(f"{total_line}\n".encode('utf-8'))
             ticket.extend(self.ESC_BOLD_OFF)
             
+            # Informations livreur (si assigné)
+            deliveryman_name = data.get('deliveryman_name', '')
+            deliveryman_phone = data.get('deliveryman_phone', '')
+            if deliveryman_name:
+                ticket.extend(b"--------------------------------\n")
+                ticket.extend(f"Livreur: {deliveryman_name}\n".encode('utf-8'))
+                if deliveryman_phone:
+                    ticket.extend(f"Tel livreur: {deliveryman_phone}\n".encode('utf-8'))
+            
             # Paiement
             ticket.extend(b"--------------------------------\n")
             ticket.extend(b"Mode de paiement: ESPECES\n")
+            
+            # Montant reçu et monnaie à rendre (si applicable)
+            amount_received = data.get('amount_received', 0)
+            change_amount = data.get('change_amount', 0)
+            if amount_received and amount_received > 0:
+                received_line = self._format_line("Montant reçu:", self._format_currency(amount_received))
+                ticket.extend(f"{received_line}\n".encode('utf-8'))
+                if change_amount > 0:
+                    change_line = self._format_line("Monnaie à rendre:", self._format_currency(change_amount))
+                    ticket.extend(f"{change_line}\n".encode('utf-8'))
             
             # Pied de page
             ticket.extend(b"\n")
@@ -567,7 +603,9 @@ class PrinterService:
     # API publique
     def print_ticket(self, order_id: int, priority: int = 1, 
                      employee_name: str = None, amount_received: float = None, 
-                     change_amount: float = None) -> bool:
+                     change_amount: float = None, customer_phone: str = None,
+                     customer_address: str = None, delivery_cost: float = None,
+                     deliveryman_name: str = None, deliveryman_phone: str = None) -> bool:
         """
         Imprimer un ticket de caisse (non bloquant)
         
@@ -612,7 +650,12 @@ class PrinterService:
             order_data = {
                 'order_id': order.id,
                 'customer_name': order.customer_name,
+                'customer_phone': customer_phone or order.customer_phone or '',
+                'customer_address': customer_address or order.customer_address or '',
                 'delivery_option': getattr(order, 'delivery_option', None),
+                'delivery_cost': float(delivery_cost) if delivery_cost is not None else (float(order.delivery_cost) if order.delivery_cost else 0),
+                'deliveryman_name': deliveryman_name or '',
+                'deliveryman_phone': deliveryman_phone or '',
                 'total_amount': float(order.total_amount) if order.total_amount else 0,
                 'employee_name': employee_name or 'Vendeur',
                 'amount_received': float(amount_received) if amount_received else 0,

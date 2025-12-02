@@ -79,7 +79,7 @@ class PrinterAgent:
         
         @self.app.route('/print/ticket', methods=['POST'])
         def print_ticket():
-            """Imprimer un ticket"""
+            """Imprimer un ticket (avec données complètes ou order_id seulement)"""
             try:
                 self.stats['requests_received'] += 1
                 
@@ -90,7 +90,25 @@ class PrinterAgent:
                 order_id = data['order_id']
                 priority = data.get('priority', 1)
                 
-                success = self.printer_service.print_ticket(order_id, priority)
+                # Si les données complètes sont fournies, les utiliser
+                # Sinon, utiliser seulement order_id (mode legacy)
+                if 'customer_phone' in data or 'deliveryman_name' in data or 'items' in data:
+                    # Mode avec données complètes
+                    success = self.printer_service.print_ticket(
+                        order_id=order_id,
+                        priority=priority,
+                        employee_name=data.get('employee_name'),
+                        amount_received=data.get('amount_received'),
+                        change_amount=data.get('change_amount'),
+                        customer_phone=data.get('customer_phone'),
+                        customer_address=data.get('customer_address'),
+                        delivery_cost=data.get('delivery_cost'),
+                        deliveryman_name=data.get('deliveryman_name'),
+                        deliveryman_phone=data.get('deliveryman_phone')
+                    )
+                else:
+                    # Mode legacy (order_id seulement)
+                    success = self.printer_service.print_ticket(order_id, priority)
                 
                 if success:
                     self.stats['print_jobs'] += 1
@@ -280,6 +298,11 @@ class RemotePrinterService:
         payload = {
             'order_id': order_data.get('order_id'),
             'customer_name': order_data.get('customer_name', ''),
+            'customer_phone': order_data.get('customer_phone', ''),
+            'customer_address': order_data.get('customer_address', ''),
+            'delivery_cost': order_data.get('delivery_cost', 0),
+            'deliveryman_name': order_data.get('deliveryman_name', ''),
+            'deliveryman_phone': order_data.get('deliveryman_phone', ''),
             'total': order_data.get('total_amount', 0),
             'total_amount': order_data.get('total_amount', 0),
             'items': order_data.get('items', []),
