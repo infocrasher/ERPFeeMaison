@@ -14,9 +14,42 @@
 
     <div class="card shadow mb-4">
         <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Liste des recettes enregistrées</h6>
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Liste des recettes enregistrées</h6>
+            </div>
         </div>
         <div class="card-body">
+            <!-- Champ de recherche -->
+            <form method="GET" action="{{ url_for('recipes.list_recipes') }}" class="mb-4">
+                <div class="row">
+                    <div class="col-md-10">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="search" 
+                                   id="search"
+                                   placeholder="Rechercher une recette par nom ou un ingrédient..." 
+                                   value="{{ search_query if search_query else '' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search me-1"></i>Rechercher
+                        </button>
+                    </div>
+                </div>
+                {% if search_query %}
+                <div class="mt-2">
+                    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Effacer la recherche
+                    </a>
+                    <span class="text-muted ms-2">
+                        <i class="bi bi-info-circle"></i> {{ recipes_pagination.total }} recette(s) trouvée(s) pour "{{ search_query }}"
+                    </span>
+                </div>
+                {% endif %}
+            </form>
             {% if recipes_pagination.items %}
             <div class="table-responsive">
                 <table class="table table-hover" id="recipesTable" width="100%" cellspacing="0">
@@ -78,7 +111,7 @@
 
             {% if recipes_pagination.pages > 1 %}
             <div class="mt-4">
-                {{ render_pagination(recipes_pagination, 'recipes.list_recipes') }}
+                {{ render_pagination(recipes_pagination, 'recipes.list_recipes', search=search_query if search_query else None) }}
             </div>
             {% endif %}
 

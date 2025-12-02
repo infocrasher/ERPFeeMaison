@@ -17,15 +17,39 @@ class QuickActionForm(FlaskForm):
 @login_required
 @admin_required
 def list_recipes():
-    from models import Recipe
+    from models import Recipe, RecipeIngredient, Product
     form = QuickActionForm()
     page = request.args.get('page', 1, type=int)
-    pagination = Recipe.query.order_by(Recipe.name).paginate(
+    search_query = request.args.get('search', '').strip()
+    
+    # Construire la requête de base
+    query = Recipe.query
+    
+    # Si une recherche est effectuée
+    if search_query:
+        # Rechercher par nom de recette OU par ingrédient
+        # On fait une jointure avec RecipeIngredient et Product pour chercher les ingrédients
+        query = query.join(RecipeIngredient, Recipe.id == RecipeIngredient.recipe_id)\
+                     .join(Product, RecipeIngredient.product_id == Product.id)\
+                     .filter(
+                         or_(
+                             Recipe.name.ilike(f'%{search_query}%'),
+                             Recipe.description.ilike(f'%{search_query}%'),
+                             Product.name.ilike(f'%{search_query}%')
+                         )
+                     ).distinct().order_by(Recipe.name)
+    else:
+        # Pas de recherche, ordre alphabétique normal
+        query = query.order_by(Recipe.name)
+    
+    pagination = query.paginate(
         page=page, per_page=current_app.config.get('ITEMS_PER_PAGE', 10)
     )
+    
     return render_template('recipes/list_recipes.html', 
                          recipes_pagination=pagination, 
                          form=form,
+                         search_query=search_query,
                          title='Gestion des Recettes')
 
 @recipes.route('/<int:recipe_id>')
