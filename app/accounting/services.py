@@ -51,8 +51,7 @@ class AccountingIntegrationService:
                 journal_id=journal.id,
                 entry_date=date.today(),
                 description=description or f"Vente commande #{order_id}",
-                reference=f"CMD-{order_id}",
-                order_id=order_id if order_id and order_id != 999 else None,  # Éviter les IDs de test
+                reference=f"CMD-{order_id}" if order_id and order_id != 999 else "TEST-VENTE",
                 created_by_id=current_user.id if current_user.is_authenticated else 1,
                 is_validated=True  # Valider automatiquement les écritures de vente
             )
@@ -130,8 +129,7 @@ class AccountingIntegrationService:
                 journal_id=journal.id,
                 entry_date=date.today(),
                 description=description or f"Achat #{purchase_id}",
-                reference=f"ACH-{purchase_id}",
-                purchase_id=purchase_id if purchase_id and purchase_id != 999 else None,  # Éviter les IDs de test
+                reference=f"ACH-{purchase_id}" if purchase_id and purchase_id != 999 else "TEST-ACHAT",
                 created_by_id=current_user.id if current_user.is_authenticated else 1,
                 is_validated=True  # Valider automatiquement les écritures d'achat
             )
@@ -193,7 +191,6 @@ class AccountingIntegrationService:
                 entry_date=date.today(),
                 description=description,
                 reference=f"CASH-{cash_movement_id}",
-                cash_movement_id=cash_movement_id,
                 created_by_id=current_user.id if current_user else 1
             )
             entry.generate_reference()
@@ -283,7 +280,6 @@ class AccountingIntegrationService:
                 entry_date=date.today(),
                 description=description,
                 reference=f"DEPOSIT-{cash_movement_id}",
-                cash_movement_id=cash_movement_id,
                 created_by_id=current_user.id if current_user else 1
             )
             entry.generate_reference()
