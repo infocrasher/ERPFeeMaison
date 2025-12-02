@@ -6,6 +6,7 @@ from extensions import db
 from .forms import RecipeForm, ingredient_product_query_factory
 from decorators import admin_required
 from sqlalchemy import or_, and_ # Import or_ and and_
+from app.stock.stock_manager import StockLocationManager
 
 recipes = Blueprint('recipes', __name__, url_prefix='/admin/recipes')
 
@@ -34,9 +35,17 @@ def view_recipe(recipe_id):
     from models import Recipe
     recipe = db.session.get(Recipe, recipe_id) or abort(404)
     form = QuickActionForm()
+    
+    # Obtenir le label lisible pour le lieu de production
+    production_location_label = None
+    if recipe.production_location:
+        production_choices = dict(StockLocationManager.get_production_choices())
+        production_location_label = production_choices.get(recipe.production_location, recipe.production_location)
+    
     return render_template('recipes/view_recipe.html', 
                          recipe=recipe, 
                          form=form,
+                         production_location_label=production_location_label,
                          title=f"Recette : {recipe.name}")
 
 @recipes.route('/new', methods=['GET', 'POST'])

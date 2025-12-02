@@ -84,6 +84,12 @@
                         <span class="info-label">Quantité Produite:</span>
                         <span class="info-value fw-bold">{{ "%.2f"|format(recipe.yield_quantity) }} {{ recipe.yield_unit }}</span>
                     </li>
+                    {% if production_location_label %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span class="info-label">Lieu de Production (Source des Ingrédients):</span>
+                        <span class="info-value fw-bold">{{ production_location_label }}</span>
+                    </li>
+                    {% endif %}
                     {% if recipe.preparation_time is not none %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <span class="info-label">Temps Préparation:</span>
