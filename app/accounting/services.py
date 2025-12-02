@@ -27,22 +27,24 @@ class AccountingIntegrationService:
         """
         try:
             # Récupérer le journal des ventes
-            journal = Journal.query.filter_by(journal_type=JournalType.VENTES).first()
+            journal = Journal.query.filter_by(journal_type=JournalType.VENTES, is_active=True).first()
             if not journal:
-                raise ValueError("Journal des ventes non trouvé")
+                raise ValueError("Journal des ventes (VT) non trouvé ou inactif")
             
             # Comptes comptables
             if payment_method == 'cash':
-                debit_account = Account.query.filter_by(code='530').first()  # Caisse
+                debit_account = Account.query.filter_by(code='530', is_active=True).first()  # Caisse
             elif payment_method == 'bank':
-                debit_account = Account.query.filter_by(code='512').first()  # Banque
+                debit_account = Account.query.filter_by(code='512', is_active=True).first()  # Banque
             else:  # credit
-                debit_account = Account.query.filter_by(code='411').first()  # Clients
+                debit_account = Account.query.filter_by(code='411', is_active=True).first()  # Clients
             
-            credit_account = Account.query.filter_by(code='701').first()  # Ventes de marchandises
+            credit_account = Account.query.filter_by(code='701', is_active=True).first()  # Ventes de marchandises
             
-            if not debit_account or not credit_account:
-                raise ValueError("Comptes comptables non trouvés")
+            if not debit_account:
+                raise ValueError(f"Compte comptable débit ({'530' if payment_method == 'cash' else '512' if payment_method == 'bank' else '411'}) non trouvé ou inactif")
+            if not credit_account:
+                raise ValueError("Compte comptable crédit (701 - Ventes) non trouvé ou inactif")
             
             # Créer l'écriture
             entry = JournalEntry(
@@ -104,22 +106,24 @@ class AccountingIntegrationService:
         """
         try:
             # Récupérer le journal des achats
-            journal = Journal.query.filter_by(journal_type=JournalType.ACHATS).first()
+            journal = Journal.query.filter_by(journal_type=JournalType.ACHATS, is_active=True).first()
             if not journal:
-                raise ValueError("Journal des achats non trouvé")
+                raise ValueError("Journal des achats (AC) non trouvé ou inactif")
             
             # Comptes comptables
-            debit_account = Account.query.filter_by(code='601').first()  # Achats de marchandises
+            debit_account = Account.query.filter_by(code='601', is_active=True).first()  # Achats de marchandises
             
             if payment_method == 'cash':
-                credit_account = Account.query.filter_by(code='530').first()  # Caisse
+                credit_account = Account.query.filter_by(code='530', is_active=True).first()  # Caisse
             elif payment_method == 'bank':
-                credit_account = Account.query.filter_by(code='512').first()  # Banque
+                credit_account = Account.query.filter_by(code='512', is_active=True).first()  # Banque
             else:  # credit
-                credit_account = Account.query.filter_by(code='401').first()  # Fournisseurs
+                credit_account = Account.query.filter_by(code='401', is_active=True).first()  # Fournisseurs
             
-            if not debit_account or not credit_account:
-                raise ValueError("Comptes comptables non trouvés")
+            if not debit_account:
+                raise ValueError("Compte comptable débit (601 - Achats) non trouvé ou inactif")
+            if not credit_account:
+                raise ValueError(f"Compte comptable crédit ({'530' if payment_method == 'cash' else '512' if payment_method == 'bank' else '401'}) non trouvé ou inactif")
             
             # Créer l'écriture
             entry = JournalEntry(
@@ -173,15 +177,15 @@ class AccountingIntegrationService:
         """Créer une écriture comptable pour un mouvement de caisse"""
         try:
             # Récupérer les comptes nécessaires
-            cash_account = Account.query.filter_by(code='530').first()  # Caisse
+            cash_account = Account.query.filter_by(code='530', is_active=True).first()  # Caisse
             
             if not cash_account:
-                raise ValueError("Compte Caisse (530) non trouvé")
+                raise ValueError("Compte Caisse (530) non trouvé ou inactif")
             
             # Récupérer le journal de caisse
-            cash_journal = Journal.query.filter_by(code='CA').first()
+            cash_journal = Journal.query.filter_by(code='CA', is_active=True).first()
             if not cash_journal:
-                raise ValueError("Journal Caisse (CA) non trouvé")
+                raise ValueError("Journal Caisse (CA) non trouvé ou inactif")
             
             # Créer l'écriture
             entry = JournalEntry(
@@ -196,9 +200,9 @@ class AccountingIntegrationService:
             
             if movement_type == 'in':
                 # Entrée de caisse : Débit Caisse, Crédit Produits divers
-                products_account = Account.query.filter_by(code='758').first()
+                products_account = Account.query.filter_by(code='758', is_active=True).first()
                 if not products_account:
-                    raise ValueError("Compte Produits divers (758) non trouvé")
+                    raise ValueError("Compte Produits divers (758) non trouvé ou inactif")
                 
                 # Ligne débit - Caisse
                 debit_line = JournalEntryLine(
@@ -220,9 +224,9 @@ class AccountingIntegrationService:
                 
             else:  # movement_type == 'out'
                 # Sortie de caisse : Débit Charges diverses, Crédit Caisse
-                charges_account = Account.query.filter_by(code='658').first()
+                charges_account = Account.query.filter_by(code='658', is_active=True).first()
                 if not charges_account:
-                    raise ValueError("Compte Charges diverses (658) non trouvé")
+                    raise ValueError("Compte Charges diverses (658) non trouvé ou inactif")
                 
                 # Ligne débit - Charges diverses
                 debit_line = JournalEntryLine(
@@ -260,18 +264,18 @@ class AccountingIntegrationService:
         """Créer une écriture comptable pour un dépôt de caisse vers banque"""
         try:
             # Récupérer les comptes nécessaires
-            cash_account = Account.query.filter_by(code='530').first()  # Caisse
-            bank_account = Account.query.filter_by(code='512').first()  # Banque
+            cash_account = Account.query.filter_by(code='530', is_active=True).first()  # Caisse
+            bank_account = Account.query.filter_by(code='512', is_active=True).first()  # Banque
             
             if not cash_account:
-                raise ValueError("Compte Caisse (530) non trouvé")
+                raise ValueError("Compte Caisse (530) non trouvé ou inactif")
             if not bank_account:
-                raise ValueError("Compte Banque (512) non trouvé")
+                raise ValueError("Compte Banque (512) non trouvé ou inactif")
             
             # Récupérer le journal de banque
-            bank_journal = Journal.query.filter_by(code='BQ').first()
+            bank_journal = Journal.query.filter_by(code='BQ', is_active=True).first()
             if not bank_journal:
-                raise ValueError("Journal Banque (BQ) non trouvé")
+                raise ValueError("Journal Banque (BQ) non trouvé ou inactif")
             
             # Créer l'écriture de transfert (Caisse → Banque)
             entry = JournalEntry(
@@ -328,24 +332,26 @@ class AccountingIntegrationService:
         """
         try:
             # Récupérer le journal des opérations diverses
-            journal = Journal.query.filter_by(journal_type=JournalType.OPERATIONS_DIVERSES).first()
+            journal = Journal.query.filter_by(journal_type=JournalType.OPERATIONS_DIVERSES, is_active=True).first()
             if not journal:
-                raise ValueError("Journal des opérations diverses non trouvé")
+                raise ValueError("Journal des opérations diverses (OD) non trouvé ou inactif")
             
             # Comptes comptables
-            stock_account = Account.query.filter_by(code='300').first()  # Stocks de marchandises
+            stock_account = Account.query.filter_by(code='300', is_active=True).first()  # Stocks de marchandises
             
             if adjustment_type == 'increase':
                 # Augmentation de stock
                 debit_account = stock_account
-                credit_account = Account.query.filter_by(code='758').first()  # Produits divers
+                credit_account = Account.query.filter_by(code='758', is_active=True).first()  # Produits divers
             else:
                 # Diminution de stock
-                debit_account = Account.query.filter_by(code='658').first()  # Charges diverses
+                debit_account = Account.query.filter_by(code='658', is_active=True).first()  # Charges diverses
                 credit_account = stock_account
             
-            if not debit_account or not credit_account:
-                raise ValueError("Comptes comptables non trouvés")
+            if not debit_account:
+                raise ValueError(f"Compte comptable débit ({'300' if adjustment_type == 'increase' else '658'}) non trouvé ou inactif")
+            if not credit_account:
+                raise ValueError(f"Compte comptable crédit ({'758' if adjustment_type == 'increase' else '300'}) non trouvé ou inactif")
             
             # Créer l'écriture
             entry = JournalEntry(
@@ -405,16 +411,18 @@ class AccountingIntegrationService:
         """
         try:
             # Récupérer le journal des opérations diverses
-            journal = Journal.query.filter_by(journal_type=JournalType.OPERATIONS_DIVERSES).first()
+            journal = Journal.query.filter_by(journal_type=JournalType.OPERATIONS_DIVERSES, is_active=True).first()
             if not journal:
-                raise ValueError("Journal des opérations diverses non trouvé")
+                raise ValueError("Journal des opérations diverses (OD) non trouvé ou inactif")
             
             # Comptes comptables
-            salary_account = Account.query.filter_by(code='641').first()  # Rémunérations du personnel
-            payable_account = Account.query.filter_by(code='421').first()  # Personnel - Rémunérations dues
+            salary_account = Account.query.filter_by(code='641', is_active=True).first()  # Rémunérations du personnel
+            payable_account = Account.query.filter_by(code='421', is_active=True).first()  # Personnel - Rémunérations dues
             
-            if not all([salary_account, payable_account]):
-                raise ValueError("Comptes comptables pour les salaires non trouvés")
+            if not salary_account:
+                raise ValueError("Compte Rémunérations du personnel (641) non trouvé ou inactif")
+            if not payable_account:
+                raise ValueError("Compte Personnel - Rémunérations dues (421) non trouvé ou inactif")
             
             # Créer l'écriture
             entry = JournalEntry(
@@ -482,20 +490,22 @@ class AccountingIntegrationService:
         try:
             # Récupérer le journal approprié
             if payment_method == 'cash':
-                journal = Journal.query.filter_by(journal_type=JournalType.CAISSE).first()
-                payment_account = Account.query.filter_by(code='530').first()  # Caisse
+                journal = Journal.query.filter_by(journal_type=JournalType.CAISSE, is_active=True).first()
+                payment_account = Account.query.filter_by(code='530', is_active=True).first()  # Caisse
             else:  # bank
-                journal = Journal.query.filter_by(journal_type=JournalType.BANQUE).first()
-                payment_account = Account.query.filter_by(code='512').first()  # Banque
+                journal = Journal.query.filter_by(journal_type=JournalType.BANQUE, is_active=True).first()
+                payment_account = Account.query.filter_by(code='512', is_active=True).first()  # Banque
             
             if not journal:
-                raise ValueError(f"Journal {payment_method} non trouvé")
+                raise ValueError(f"Journal {payment_method} ({'CA' if payment_method == 'cash' else 'BQ'}) non trouvé ou inactif")
             
             # Comptes comptables
-            payable_account = Account.query.filter_by(code='421').first()  # Personnel - Rémunérations dues
+            payable_account = Account.query.filter_by(code='421', is_active=True).first()  # Personnel - Rémunérations dues
             
-            if not payment_account or not payable_account:
-                raise ValueError("Comptes comptables pour le paiement non trouvés")
+            if not payment_account:
+                raise ValueError(f"Compte paiement ({'530' if payment_method == 'cash' else '512'}) non trouvé ou inactif")
+            if not payable_account:
+                raise ValueError("Compte Personnel - Rémunérations dues (421) non trouvé ou inactif")
             
             # Créer l'écriture
             entry = JournalEntry(

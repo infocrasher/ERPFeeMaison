@@ -1665,7 +1665,7 @@ def calculate_payroll():
                 # Lier l'écriture au calcul de paie
                 payroll.payroll_entry_id = payroll_entry.id
             except Exception as e:
-                print(f"Erreur intégration comptable salaire: {e}")
+                current_app.logger.error(f"Erreur intégration comptable salaire (payroll_id={payroll.id}, employee_id={employee.id}): {e}", exc_info=True)
             # On continue même si l'intégration comptable échoue
         
         flash('Paie calculée avec succès!', 'success')

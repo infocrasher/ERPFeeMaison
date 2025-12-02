@@ -437,7 +437,7 @@ def process_sale():
                 description=f'Vente POS - {len(items)} article(s)'
             )
         except Exception as e:
-            print(f"Erreur intégration comptable: {e}")
+            current_app.logger.error(f"Erreur intégration comptable vente POS (cash_movement_id={cash_movement.id}): {e}", exc_info=True)
             # On continue même si l'intégration comptable échoue
         
         # Créer une commande temporaire pour l'impression du ticket
@@ -620,7 +620,7 @@ def new_cash_movement():
                 description=f'{reason} - {notes}'
             )
         except Exception as e:
-            print(f"Erreur intégration comptable: {e}")
+            current_app.logger.error(f"Erreur intégration comptable mouvement caisse (cash_movement_id={movement.id}): {e}", exc_info=True)
             # On continue même si l'intégration comptable échoue
         
         db.session.commit()
@@ -785,9 +785,11 @@ def cashout():
                 description=f'Dépôt caisse vers banque - {notes}' if notes else 'Dépôt caisse vers banque'
             )
         except Exception as e:
-            print(f"Erreur intégration comptable cashout: {e}")
+            current_app.logger.error(f"Erreur intégration comptable cashout (cash_movement_id={cash_movement.id}): {e}", exc_info=True)
+            flash(f'Dépôt effectué mais erreur lors de l\'écriture comptable: {str(e)}', 'warning')
             # On continue même si l'intégration comptable échoue
         
+        # Note: create_bank_deposit_entry() fait son propre commit, mais on commit aussi le CashMovement
         db.session.commit()
         
         # Intégration POS : Impression reçu + ouverture tiroir pour cashout

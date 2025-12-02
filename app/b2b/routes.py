@@ -2,7 +2,7 @@
 Routes pour le module B2B
 """
 
-from flask import render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
 from flask_login import login_required, current_user
 from datetime import datetime, date, timedelta
 from decimal import Decimal
@@ -482,7 +482,7 @@ def change_invoice_status(invoice_id):
                 )
                 flash(f'Facture marquée comme payée et intégrée à la comptabilité', 'success')
             except Exception as e:
-                print(f"Erreur intégration comptable: {e}")
+                current_app.logger.error(f"Erreur intégration comptable facture B2B (invoice_id={invoice.id}): {e}", exc_info=True)
                 flash(f'Facture marquée comme payée (erreur intégration comptable)', 'warning')
         else:
             flash(f'Statut de la facture changé vers "{invoice.get_status_display()}"', 'success')

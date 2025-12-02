@@ -229,6 +229,29 @@ def new_purchase():
                     else:
                         product.cost_price = Decimal(str(price_per_base_unit))
                 
+                elif product.product_type == 'finished':
+                    # ✅ CORRECTION : Traitement des produits finis achetables
+                    # Pour les produits finis achetables, mettre dans stock_comptoir
+                    stock_location = 'stock_comptoir'
+                    purchase_value = Decimal(quantity_in_base_unit) * price_per_base_unit
+                    
+                    current_app.logger.info(f"DEBUG - Mise à jour produit fini achetable: {stock_location}")
+                    current_app.logger.info(f"DEBUG - Valeur d'achat: {purchase_value}")
+                    
+                    product.update_stock_by_location(
+                        stock_location,
+                        quantity_in_base_unit,
+                        unit_cost_override=price_per_base_unit
+                    )
+                    
+                    # Recalculer le PMP
+                    total_qty_decimal = Decimal(str(product.total_stock_all_locations or 0))
+                    if total_qty_decimal > 0:
+                        new_cost_price = (Decimal(str(product.total_stock_value or 0.0)) / total_qty_decimal).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                        product.cost_price = new_cost_price
+                    else:
+                        product.cost_price = Decimal(str(price_per_base_unit))
+                
                 # DEBUG: Log des données après mise à jour
                 debug_after = f"DEBUG - Stock après: {product.stock_ingredients_magasin} (magasin), {product.stock_ingredients_local} (local), Valeur totale: {product.total_stock_value}"
                 current_app.logger.info(debug_after)
@@ -310,7 +333,7 @@ def mark_as_paid(id):
                 description=f'Achat {purchase.reference} - {purchase.supplier_name}'
             )
         except Exception as e:
-            print(f"Erreur intégration comptable: {e}")
+            current_app.logger.error(f"Erreur intégration comptable achat (purchase_id={purchase.id}): {e}", exc_info=True)
             # On continue même si l'intégration comptable échoue
         
         db.session.commit()

@@ -647,7 +647,7 @@ def pay_order(order_id):
                 description=f'Vente commande #{order.id} - {order.customer_name or "Client"}'
             )
         except Exception as e:
-            print(f"Erreur intégration comptable: {e}")
+            current_app.logger.error(f"Erreur intégration comptable paiement commande (order_id={order.id}): {e}", exc_info=True)
 
     # Intégration POS : Impression ticket + ouverture tiroir
     try:
@@ -721,22 +721,41 @@ def assign_deliveryman(order_id):
             # Le livreur a payé : marquer comme livrée et encaissée
             order.status = 'delivered'
             
+            # Calculer le montant à encaisser (produits seulement, sans frais de livraison)
+            products_amount = order.total_amount - (order.delivery_cost or 0)
+            
             # Créer le mouvement de caisse si une session est ouverte
             session = CashRegisterSession.query.filter_by(is_open=True).first()
             if session:
-                # Calculer le montant à encaisser (produits seulement, sans frais de livraison)
-                products_amount = order.total_amount - (order.delivery_cost or 0)
-                
                 movement = CashMovement(
                     session_id=session.id,
                     created_at=datetime.utcnow(),
                     type='entrée',
-                    amount=products_amount,
+                    amount=float(products_amount),
                     reason=f'Encaissement commande #{order.id} - Livraison payée (hors frais livraison)',
                     notes=f'Livreur: {Deliveryman.query.get(deliveryman_id).name} - Frais livraison: {order.delivery_cost or 0:.2f} DA' + (f' - {notes}' if notes else ''),
                     employee_id=current_user.id
                 )
                 db.session.add(movement)
+                
+                # ✅ CORRECTION : Impression ticket + ouverture tiroir-caisse
+                try:
+                    from app.services.printer_service import get_printer_service
+                    printer_service = get_printer_service()
+                    
+                    change_amount = 0.0  # Pas de monnaie à rendre pour livraison
+                    
+                    printer_service.print_ticket(
+                        order.id,
+                        priority=1,
+                        employee_name=current_user.name if hasattr(current_user, 'name') else current_user.username,
+                        amount_received=float(products_amount),
+                        change_amount=change_amount
+                    )
+                    printer_service.open_cash_drawer(priority=1)
+                except Exception as e:
+                    current_app.logger.error(f"Erreur impression/tiroir (assign_deliveryman): {e}")
+                
                 flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name} et encaissée ({products_amount:.2f} DA, frais livraison {order.delivery_cost or 0:.2f} DA pour le livreur).', 'success')
             else:
                 flash(f'Commande #{order.id} assignée et livrée, mais aucune session de caisse ouverte pour l\'encaissement.', 'warning')
@@ -747,6 +766,26 @@ def assign_deliveryman(order_id):
             order.update_payment_status()
 
             if order.payment_status == 'paid' and previous_payment_status != 'paid':
+                # ✅ CORRECTION : Décrémenter le stock des produits finis (livraison = vente)
+                order._decrement_stock_with_value_on_delivery()
+                
+                # ✅ CORRECTION : Décrémenter les consommables lors de l'encaissement
+                for order_item in order.items:
+                    product_fini = order_item.product
+                    if product_fini and product_fini.category:
+                        from app.consumables.models import ConsumableCategory
+                        consumable_category = ConsumableCategory.query.filter(
+                            ConsumableCategory.product_category_id == product_fini.category.id,
+                            ConsumableCategory.is_active == True
+                        ).first()
+                        
+                        if consumable_category:
+                            consumables_needed = consumable_category.calculate_consumables_needed(int(order_item.quantity))
+                            for consumable_product, qty in consumables_needed:
+                                if consumable_product:
+                                    consumable_product.update_stock_by_location('stock_consommables', -float(qty))
+                                    current_app.logger.info(f"Décrémentation consommable (livraison payée): {consumable_product.name} - {qty} {consumable_product.unit}")
+                
                 try:
                     from app.accounting.services import AccountingIntegrationService
                     AccountingIntegrationService.create_sale_entry(
