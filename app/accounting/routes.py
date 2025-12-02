@@ -1129,7 +1129,9 @@ def new_expense():
         db.session.add(debit_line)
         db.session.add(credit_line)
         
-        # Si paiement en caisse, créer un mouvement de caisse
+        # Si paiement en caisse, créer un mouvement de caisse (pour traçabilité physique)
+        # NOTE: On ne crée PAS d'écriture comptable ici car l'écriture de la charge
+        # (créée ci-dessus) couvre déjà le mouvement comptable (Débit Charge / Crédit Caisse)
         if form.payment_method.data == 'cash':
             from app.sales.models import CashRegisterSession, CashMovement
             cash_session = CashRegisterSession.query.filter_by(is_open=True).first()
@@ -1139,7 +1141,8 @@ def new_expense():
                 if form.supplier.data:
                     movement_description = f"{description} - {form.supplier.data}"
                 
-                # Créer le mouvement de caisse (sortie)
+                # Créer le mouvement de caisse (sortie) - uniquement pour traçabilité physique
+                # L'écriture comptable est déjà créée ci-dessus (Débit Charge / Crédit Caisse)
                 cash_movement = CashMovement(
                     session_id=cash_session.id,
                     created_at=datetime.utcnow(),
@@ -1150,20 +1153,7 @@ def new_expense():
                     employee_id=current_user.id
                 )
                 db.session.add(cash_movement)
-                db.session.flush()  # Pour obtenir l'ID du mouvement
-                
-                # Intégration comptable automatique pour le mouvement de caisse
-                try:
-                    from .services import AccountingIntegrationService
-                    AccountingIntegrationService.create_cash_movement_entry(
-                        cash_movement_id=cash_movement.id,
-                        amount=float(form.amount.data),
-                        movement_type='out',
-                        description=f'Paiement charge - {movement_description}'
-                    )
-                except Exception as e:
-                    current_app.logger.error(f"Erreur intégration comptable mouvement caisse (cash_movement_id={cash_movement.id}): {e}", exc_info=True)
-                    # On continue même si l'intégration comptable échoue
+                # Pas besoin de flush ici car on n'a pas besoin de l'ID pour une écriture comptable
         
         # Valider automatiquement si payé
         if form.is_paid.data:

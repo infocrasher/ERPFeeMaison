@@ -8,7 +8,7 @@
         height: 100%;
         background: #e5e7eb;
         color: #0f172a;
-        overflow: hidden;
+        overflow: auto; /* Permet le scroll sur toute la page */
         font-family: 'Inter', 'Segoe UI', sans-serif;
         margin: 0;
         padding: 0;
@@ -16,7 +16,7 @@
     .tv-wrapper {
         display: flex;
         flex-direction: column;
-        height: 100vh;
+        min-height: 100vh; /* Hauteur minimale, peut grandir */
         padding: 1rem 1.5rem;
         gap: 0.75rem;
         box-sizing: border-box;
@@ -84,10 +84,9 @@
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 0.9rem;
-        overflow-y: auto;
-        overflow-x: hidden;
-        min-height: 0;
-        padding-bottom: 0.5rem;
+        overflow: visible; /* Pas de scroll ici, scroll sur la page entière */
+        min-height: auto; /* Hauteur automatique basée sur le contenu */
+        padding-bottom: 2rem; /* Espace en bas pour le scroll */
         align-content: start;
     }
     
@@ -119,7 +118,8 @@
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
-        min-height: 0;
+        min-height: auto; /* Hauteur automatique basée sur le contenu */
+        height: auto; /* Hauteur automatique */
     }
     
     .hour-header {
@@ -135,12 +135,12 @@
     }
     
     .hour-orders {
-        flex: 1;
         display: flex;
         flex-direction: column;
         gap: 0.6rem;
-        min-height: 0;
-        overflow-y: auto;
+        min-height: auto; /* Hauteur automatique */
+        overflow: visible; /* Pas de scroll, tout est visible */
+        width: 100%;
     }
     
     .hour-orders::-webkit-scrollbar {
@@ -162,8 +162,11 @@
         display: flex;
         flex-direction: column;
         gap: clamp(0.36rem, 0.96vw, 0.6rem);
-        flex: 0 1 auto;
+        flex: 0 0 auto; /* Ne pas rétrécir, taille basée sur le contenu */
         min-height: 0;
+        overflow: visible; /* Permet au contenu de s'afficher correctement */
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .order-card.priority-normal {
@@ -191,7 +194,9 @@
         border-left: 2px solid #dc2626;
         border-radius: 0.3rem;
         margin-bottom: 0.24rem;
-        line-height: 1.3;
+        line-height: 1.4; /* Espacement amélioré */
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
     
     .order-notes:empty {
@@ -210,10 +215,13 @@
     .product-item {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start; /* Alignement en haut pour éviter le chevauchement */
         font-size: 1.14rem;
-        padding: 0.36rem 0;
+        padding: 0.5rem 0; /* Plus d'espace vertical */
         border-bottom: 1px solid rgba(0,0,0,0.05);
+        min-height: auto; /* Hauteur automatique basée sur le contenu */
+        gap: 0.75rem; /* Plus d'espace entre le nom et la quantité */
+        width: 100%;
     }
     
     .product-item:last-child {
@@ -223,8 +231,15 @@
     .product-name {
         font-weight: 600;
         color: #111827;
-        flex: 1;
+        flex: 1 1 auto; /* Peut grandir et rétrécir */
         font-size: clamp(1.02rem, 1.8vw, 1.2rem);
+        word-wrap: break-word; /* Permet la coupure des mots longs */
+        overflow-wrap: break-word; /* Alternative moderne */
+        line-height: 1.5; /* Plus d'espacement entre les lignes */
+        hyphens: auto; /* Césure automatique si supporté */
+        min-width: 0; /* Permet au flex de rétrécir */
+        overflow: visible; /* Affiche tout le contenu */
+        white-space: normal; /* Permet le retour à la ligne */
     }
     
     .product-qty {
@@ -233,25 +248,29 @@
         font-size: clamp(1.08rem, 2.16vw, 1.32rem);
         min-width: 60px;
         text-align: right;
+        flex-shrink: 0; /* Empêche la quantité de rétrécir */
+        white-space: nowrap; /* Empêche la quantité de se couper */
     }
     
     /* Métadonnées */
     .order-meta {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column; /* Empile verticalement pour éviter le chevauchement */
+        gap: 0.3rem;
         font-size: 0.9rem;
         color: #4b5563;
         margin-top: auto;
-        padding-top: 0.48rem;
+        padding-top: 0.6rem;
         border-top: 1px solid rgba(0,0,0,0.1);
         flex-shrink: 0;
+        width: 100%;
     }
     
     .order-time {
         font-weight: 700;
         font-size: clamp(0.96rem, 1.8vw, 1.14rem);
         color: #111827;
+        white-space: nowrap; /* Garde le temps sur une ligne */
     }
     
     .order-id-customer {
@@ -259,6 +278,10 @@
         gap: 0.6rem;
         color: #6b7280;
         font-size: 0.84rem;
+        flex-wrap: wrap; /* Permet le retour à la ligne si nécessaire */
+        line-height: 1.5;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
     
     .empty-hour {
@@ -274,6 +297,31 @@
         color: #9ca3af;
         padding: 3rem;
         grid-column: 1 / -1;
+    }
+    
+    /* Séparateur de date */
+    .date-separator {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 1.5rem 0 1rem 0;
+        flex-shrink: 0;
+    }
+    
+    .date-separator-line {
+        flex: 1;
+        height: 2px;
+        background: #1f2937;
+    }
+    
+    .date-separator-text {
+        font-size: clamp(1.2rem, 2.4vw, 1.56rem);
+        font-weight: 700;
+        color: #1f2937;
+        text-transform: capitalize;
+        white-space: nowrap;
+        padding: 0 0.5rem;
     }
 </style>
 </head>
@@ -303,8 +351,17 @@
     </div>
     
     <div class="orders-by-hour-container">
-        {% if orders_by_hour %}
-            {% for hour_key, orders_list in orders_by_hour %}
+        {% if orders_by_date %}
+            {% for date_group in orders_by_date %}
+            <!-- Séparateur de date -->
+            <div class="date-separator">
+                <div class="date-separator-line"></div>
+                <div class="date-separator-text">{{ date_group.date_display }}</div>
+                <div class="date-separator-line"></div>
+            </div>
+            
+            <!-- Colonnes d'heures pour cette date -->
+            {% for hour_key, orders_list in date_group.hours %}
             <div class="hour-column">
                 <div class="hour-header">{{ hour_key }}</div>
                 <div class="hour-orders">
@@ -327,7 +384,7 @@
                             <div class="order-time">{{ order.time_label }}</div>
                             <div class="order-id-customer">
                                 <span>#{{ order.id }}</span>
-                                <span>Heure: {{ order.due_time }}</span>
+                                <span>{{ order.due_time }}</span>
                                 <span>{{ order.customer }}</span>
                             </div>
                         </div>
@@ -339,6 +396,7 @@
                     {% endif %}
                 </div>
             </div>
+            {% endfor %}
             {% endfor %}
         {% else %}
             <div class="empty-state-tv">Aucune commande en production ✨</div>

@@ -8,6 +8,17 @@ from decorators import admin_required
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
+# Mapping des jours de la semaine en français
+DAYS_FR = {
+    'Monday': 'Lundi',
+    'Tuesday': 'Mardi',
+    'Wednesday': 'Mercredi',
+    'Thursday': 'Jeudi',
+    'Friday': 'Vendredi',
+    'Saturday': 'Samedi',
+    'Sunday': 'Dimanche'
+}
+
 @dashboard_bp.route('/production')
 @login_required
 @admin_required
@@ -25,8 +36,9 @@ def production_dashboard():
     orders_soon = 0
     orders_overdue = 0
     
-    # Structure : {heure: [commandes]}
-    orders_by_hour = {}
+    # Structure : {date: {heure: [commandes]}}
+    # date au format 'YYYY-MM-DD' pour trier facilement
+    orders_by_date = {}
     
     for order in orders_to_produce:
         order_items = order.items.all() if hasattr(order.items, 'all') else (order.items or [])
@@ -44,7 +56,11 @@ def production_dashboard():
                 orders_on_time += 1
                 priority = 'normal'
             
-            # Grouper par heure
+            # Grouper par date puis par heure
+            date_key = order.due_date.strftime('%Y-%m-%d')  # Pour trier
+            day_name_en = order.due_date.strftime('%A')
+            day_name_fr = DAYS_FR.get(day_name_en, day_name_en)
+            date_display = f"{day_name_fr} {order.due_date.strftime('%d/%m/%y')}"  # Format affichage: "Dimanche 16/11/25"
             hour_key = order.due_date.strftime('%Hh')
             hour_value = order.due_date.hour
             
@@ -80,6 +96,8 @@ def production_dashboard():
                 else:
                     time_label = f"{hours}h {mins}min"
         else:
+            date_key = '9999-12-31'  # Pour mettre à la fin
+            date_display = 'Sans date'
             hour_key = 'Sans horaire'
             hour_value = 99  # Pour mettre à la fin
             time_label = 'Sans horaire'
@@ -107,18 +125,33 @@ def production_dashboard():
             'hour_value': hour_value  # Pour trier
         }
         
-        # Ajouter à la structure groupée par heure
-        if hour_key not in orders_by_hour:
-            orders_by_hour[hour_key] = []
-        orders_by_hour[hour_key].append(order_entry)
+        # Ajouter à la structure groupée par date puis heure
+        if date_key not in orders_by_date:
+            orders_by_date[date_key] = {
+                'date_display': date_display,
+                'hours': {}
+            }
+        
+        if hour_key not in orders_by_date[date_key]['hours']:
+            orders_by_date[date_key]['hours'][hour_key] = []
+        
+        orders_by_date[date_key]['hours'][hour_key].append(order_entry)
     
-    # Trier les heures et les commandes dans chaque heure
-    sorted_hours = sorted(orders_by_hour.items(), key=lambda x: x[1][0]['hour_value'] if x[1] else 99)
+    # Trier les dates et les heures dans chaque date
+    sorted_dates = []
+    for date_key in sorted(orders_by_date.keys()):
+        date_data = orders_by_date[date_key]
+        sorted_hours = sorted(date_data['hours'].items(), key=lambda x: x[1][0]['hour_value'] if x[1] else 99)
+        sorted_dates.append({
+            'date_key': date_key,
+            'date_display': date_data['date_display'],
+            'hours': sorted_hours
+        })
     
     total_orders = len(orders_to_produce)
     
     return render_template('dashboards/production_dashboard.html',
-                         orders_by_hour=sorted_hours,
+                         orders_by_date=sorted_dates,
                          orders_on_time=orders_on_time,
                          orders_soon=orders_soon,
                          orders_overdue=orders_overdue,
