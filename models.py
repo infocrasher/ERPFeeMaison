@@ -628,6 +628,28 @@ class Order(db.Model):
 
                 # Le PMP du produit fini ne change pas lors d'une sortie de stock.
     
+    def restore_stock_on_cancellation(self):
+        """
+        Restaure le stock comptoir lors de l'annulation d'une commande de livraison PDV.
+        Réincrémente le stock et la valeur pour chaque produit.
+        """
+        for item in self.items:
+            product_fini = item.product
+            if product_fini:
+                # 1. Réincrémenter la quantité en stock
+                quantity_to_restore = float(item.quantity)
+                product_fini.update_stock_by_location('stock_comptoir', quantity_to_restore)
+
+                # 2. Calculer la valeur à restaurer basée sur le PMP actuel
+                pmp_produit_fini = product_fini.cost_price or Decimal('0.0')
+                value_to_restore = Decimal(quantity_to_restore) * pmp_produit_fini
+
+                # 3. Réincrémenter la valeur totale du stock du produit
+                product_fini.total_stock_value = (product_fini.total_stock_value or Decimal('0.0')) + value_to_restore
+
+                # Le PMP ne change pas lors d'une restauration
+                db.session.add(product_fini)
+    
     def decrement_ingredients_stock_on_production(self):
         """
         Décrémente le stock des ingrédients ET consommables lors de la production d'un produit fini,

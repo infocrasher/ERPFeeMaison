@@ -1389,6 +1389,10 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
                 Paiement
             </button>
+                    <button class="place-order-btn delivery-btn" id="delivery-btn" disabled style="margin-top: 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"></path><path d="M1 8h8v8H1z"></path></svg>
+                Livraison
+            </button>
                 </div>
             </aside>
         </div>
@@ -1437,6 +1441,48 @@
             <div class="pos-modal__error" id="posPaymentError" role="alert"></div>
             <div class="pos-modal__actions">
                 <button type="button" class="modal-btn secondary" id="posPaymentModalCancel">Annuler</button>
+                <button type="submit" class="modal-btn primary">Valider</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="pos-modal" id="posDeliveryModal" aria-hidden="true">
+    <div class="pos-modal__backdrop" data-modal-dismiss></div>
+    <div class="pos-modal__dialog" style="max-width: 600px;">
+        <h3>Commande de Livraison</h3>
+        <form id="posDeliveryForm" class="pos-modal__form">
+            <!-- Liste des produits du panier -->
+            <div class="pos-modal__field">
+                <label>Produits à livrer</label>
+                <div id="posDeliveryProductsList" class="delivery-products-list" style="max-height: 200px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; background: #f8f9fa;">
+                    <!-- Sera rempli dynamiquement -->
+                </div>
+            </div>
+            
+            <div class="pos-modal__field">
+                <label for="posDeliveryCustomerName">Nom du client</label>
+                <input type="text" id="posDeliveryCustomerName" name="customer_name" placeholder="Ex. Yasmine Saifi" required>
+            </div>
+            
+            <div class="pos-modal__field">
+                <label for="posDeliveryCustomerPhone">Téléphone</label>
+                <input type="tel" id="posDeliveryCustomerPhone" name="customer_phone" placeholder="Ex. 0556 00 00 00" required>
+            </div>
+            
+            <div class="pos-modal__field">
+                <label for="posDeliveryAddress">Adresse de livraison</label>
+                <textarea id="posDeliveryAddress" name="customer_address" rows="3" placeholder="Ex. 123 Rue Example, Alger" required></textarea>
+            </div>
+            
+            <div class="pos-modal__field">
+                <label for="posDeliveryCost">Prix de la livraison (DA)</label>
+                <input type="number" step="0.01" min="0" id="posDeliveryCost" name="delivery_cost" placeholder="Ex. 200" value="0" required>
+            </div>
+            
+            <div class="pos-modal__error" id="posDeliveryError" role="alert"></div>
+            <div class="pos-modal__actions">
+                <button type="button" class="modal-btn secondary" id="posDeliveryModalCancel">Annuler</button>
                 <button type="submit" class="modal-btn primary">Valider</button>
             </div>
         </form>
@@ -1507,6 +1553,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const paymentChangeDisplay = document.getElementById('posPaymentChangeDisplay');
     const paymentError = document.getElementById('posPaymentError');
     const paymentTotalDue = document.getElementById('posPaymentTotalDue');
+    const deliveryBtn = document.getElementById('delivery-btn');
+    const deliveryModal = document.getElementById('posDeliveryModal');
+    const deliveryModalCancel = document.getElementById('posDeliveryModalCancel');
+    const deliveryForm = document.getElementById('posDeliveryForm');
+    const deliveryProductsList = document.getElementById('posDeliveryProductsList');
+    const deliveryCustomerName = document.getElementById('posDeliveryCustomerName');
+    const deliveryCustomerPhone = document.getElementById('posDeliveryCustomerPhone');
+    const deliveryAddress = document.getElementById('posDeliveryAddress');
+    const deliveryCost = document.getElementById('posDeliveryCost');
+    const deliveryError = document.getElementById('posDeliveryError');
     let customerSearchTimeout = null;
     const paymentControls = document.querySelector('.payment-controls');
     const serviceButtons = document.querySelectorAll('.service-button');
@@ -1884,6 +1940,9 @@ document.addEventListener('DOMContentLoaded', function() {
         totalEl.textContent = formatPrice(total);
         
         paymentBtn.disabled = state.cart.length === 0;
+        if (deliveryBtn) {
+            deliveryBtn.disabled = state.cart.length === 0;
+        }
     }
 
     function renderSelectedCustomer() {
@@ -1969,6 +2028,128 @@ document.addEventListener('DOMContentLoaded', function() {
         if (paymentError) {
             paymentError.classList.remove('is-visible');
             paymentError.textContent = '';
+        }
+    }
+
+    function renderDeliveryProducts() {
+        if (!deliveryProductsList) return;
+        if (!state.cart || state.cart.length === 0) {
+            deliveryProductsList.innerHTML = '<p class="text-muted">Aucun produit dans le panier</p>';
+            return;
+        }
+        const productsHtml = state.cart.map(item => {
+            const product = state.products.find(p => p.id === item.productId);
+            if (!product) return '';
+            const totalPrice = item.quantity * item.unitPrice;
+            return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                    <div>
+                        <strong>${product.name}</strong>
+                        <div style="font-size: 0.85rem; color: #666;">${item.quantity} × ${formatPrice(item.unitPrice)}</div>
+                    </div>
+                    <div style="font-weight: 600;">${formatPrice(totalPrice)}</div>
+                </div>
+            `;
+        }).join('');
+        deliveryProductsList.innerHTML = productsHtml || '<p class="text-muted">Aucun produit</p>';
+    }
+
+    function openDeliveryModal() {
+        if (!deliveryModal) return;
+        if (!state.cart.length) {
+            alert('Le panier est vide.');
+            return;
+        }
+        renderDeliveryProducts();
+        // Pré-remplir avec le client sélectionné si disponible
+        if (state.customer) {
+            if (deliveryCustomerName) deliveryCustomerName.value = state.customer.name || state.customer.full_name || '';
+            if (deliveryCustomerPhone) deliveryCustomerPhone.value = state.customer.phone || '';
+        } else {
+            if (deliveryCustomerName) deliveryCustomerName.value = '';
+            if (deliveryCustomerPhone) deliveryCustomerPhone.value = '';
+        }
+        if (deliveryAddress) deliveryAddress.value = '';
+        if (deliveryCost) deliveryCost.value = '0';
+        if (deliveryError) {
+            deliveryError.classList.remove('is-visible');
+            deliveryError.textContent = '';
+        }
+        deliveryModal.classList.add('is-open');
+        deliveryModal.setAttribute('aria-hidden', 'false');
+        setTimeout(() => deliveryCustomerName?.focus(), 100);
+    }
+
+    function closeDeliveryModal() {
+        if (!deliveryModal) return;
+        deliveryModal.classList.remove('is-open');
+        deliveryModal.setAttribute('aria-hidden', 'true');
+        deliveryForm?.reset();
+    }
+
+    async function createDeliveryOrder() {
+        if (!state.cart.length) {
+            if (deliveryError) {
+                deliveryError.textContent = 'Le panier est vide.';
+                deliveryError.classList.add('is-visible');
+            }
+            return false;
+        }
+
+        const customerName = deliveryCustomerName?.value.trim();
+        const customerPhone = deliveryCustomerPhone?.value.trim();
+        const address = deliveryAddress?.value.trim();
+        const cost = parseFloat(deliveryCost?.value || '0');
+
+        if (!customerName || !customerPhone || !address) {
+            if (deliveryError) {
+                deliveryError.textContent = 'Veuillez remplir tous les champs obligatoires.';
+                deliveryError.classList.add('is-visible');
+            }
+            return false;
+        }
+
+        const items = state.cart.map(item => ({
+            product_id: item.productId,
+            quantity: item.quantity,
+            unit_price: item.unitPrice
+        }));
+
+        try {
+            const response = await fetch('/sales/api/create-delivery-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    items: items,
+                    customer_name: customerName,
+                    customer_phone: customerPhone,
+                    customer_address: address,
+                    delivery_cost: cost,
+                    customer_id: state.customer?.id || null
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Erreur lors de la création de la commande');
+            }
+
+            // Vider le panier
+            state.cart = [];
+            renderCart();
+            closeDeliveryModal();
+            alert(`Commande de livraison créée avec succès !\nNuméro de commande: #${data.order_id}\nLa commande apparaît dans le Dashboard Shop.`);
+            return true;
+        } catch (error) {
+            console.error('Erreur création commande livraison', error);
+            if (deliveryError) {
+                deliveryError.textContent = error.message || 'Erreur lors de la création de la commande.';
+                deliveryError.classList.add('is-visible');
+            }
+            return false;
         }
     }
 
@@ -2263,6 +2444,8 @@ document.addEventListener('DOMContentLoaded', function() {
             state.paymentMethod = target.dataset.method;
         } else if (target.matches('#payment-btn') && !target.disabled) {
             openPaymentModal();
+        } else if (target.matches('#delivery-btn') && !target.disabled) {
+            openDeliveryModal();
         }
     });
 
@@ -2375,6 +2558,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 closePaymentModal();
                 alert(`Paiement enregistré.\nTotal: ${formatPrice(total)}\nReçu: ${formatPrice(amount)}\nMonnaie à rendre: ${formatPrice(change)}`);
             }
+        });
+    }
+
+    if (deliveryModalCancel) {
+        deliveryModalCancel.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeDeliveryModal();
+        });
+    }
+
+    if (deliveryModal) {
+        deliveryModal.addEventListener('click', (e) => {
+            if (e.target === deliveryModal || e.target.hasAttribute('data-modal-dismiss')) {
+                closeDeliveryModal();
+            }
+        });
+    }
+
+    if (deliveryForm) {
+        deliveryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await createDeliveryOrder();
         });
     }
 

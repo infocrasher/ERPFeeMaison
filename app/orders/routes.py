@@ -699,6 +699,7 @@ def assign_deliveryman(order_id):
     order = Order.query.get_or_404(order_id)
     
     # Vérifier que la commande peut recevoir un livreur
+    # Accepter les commandes customer_order ET in_store avec statut ready_at_shop et delivery_option='delivery'
     if order.status != 'ready_at_shop' or order.delivery_option != 'delivery':
         flash('Cette commande ne peut pas recevoir d\'assignation de livreur.', 'error')
         return redirect(url_for('dashboard.shop_dashboard'))
@@ -722,7 +723,14 @@ def assign_deliveryman(order_id):
             order.status = 'delivered'
             
             # Calculer le montant à encaisser (produits seulement, sans frais de livraison)
-            products_amount = order.total_amount - (order.delivery_cost or 0)
+            # Pour les commandes in_store créées depuis PDV, total_amount = produits seulement
+            # Pour les commandes customer_order, total_amount peut inclure les frais de livraison
+            if order.order_type == 'in_store':
+                # Pour les commandes PDV, total_amount est déjà le montant produits seulement
+                products_amount = order.total_amount
+            else:
+                # Pour les commandes customer_order, soustraire les frais de livraison
+                products_amount = order.total_amount - (order.delivery_cost or 0)
             
             # Créer le mouvement de caisse si une session est ouverte
             session = CashRegisterSession.query.filter_by(is_open=True).first()
@@ -800,8 +808,15 @@ def assign_deliveryman(order_id):
             # Le livreur n'a pas payé : marquer comme livrée non payée et créer une dette
             order.status = 'delivered_unpaid'
             
-            # Créer une dette livreur (produits seulement, sans frais de livraison)
-            products_amount = order.total_amount - (order.delivery_cost or 0)
+            # Calculer le montant produits (sans frais de livraison)
+            # Pour les commandes in_store créées depuis PDV, total_amount = produits seulement
+            # Pour les commandes customer_order, total_amount peut inclure les frais de livraison
+            if order.order_type == 'in_store':
+                # Pour les commandes PDV, total_amount est déjà le montant produits seulement
+                products_amount = order.total_amount
+            else:
+                # Pour les commandes customer_order, soustraire les frais de livraison
+                products_amount = order.total_amount - (order.delivery_cost or 0)
             
             debt = DeliveryDebt(
                 order_id=order.id,
@@ -823,6 +838,35 @@ def assign_deliveryman(order_id):
         return redirect(url_for('dashboard.shop_dashboard'))
     
     return render_template('orders/assign_deliveryman.html', order=order, form=form)
+
+@orders.route('/<int:order_id>/cancel-delivery-order', methods=['POST'])
+@login_required
+@admin_required
+def cancel_delivery_order(order_id):
+    """Annuler une commande de livraison PDV et restaurer le stock"""
+    order = Order.query.get_or_404(order_id)
+    
+    # Vérifier que c'est une commande de livraison PDV qui peut être annulée
+    if order.order_type != 'in_store' or order.delivery_option != 'delivery' or order.status != 'ready_at_shop':
+        flash('Cette commande ne peut pas être annulée.', 'error')
+        return redirect(url_for('dashboard.shop_dashboard'))
+    
+    try:
+        # Restaurer le stock
+        order.restore_stock_on_cancellation()
+        
+        # Changer le statut
+        order.status = 'cancelled'
+        order.notes = (order.notes or '') + f'\n--- Annulée le {datetime.utcnow().strftime("%d/%m/%Y %H:%M")} ---'
+        
+        db.session.commit()
+        flash(f'Commande #{order.id} annulée. Stock restauré.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur lors de l'annulation de la commande {order_id}: {e}", exc_info=True)
+        flash('Erreur lors de l\'annulation de la commande.', 'error')
+    
+    return redirect(url_for('dashboard.shop_dashboard'))
 
 @orders.route('/<int:order_id>/report-issue', methods=['GET', 'POST'])
 @login_required

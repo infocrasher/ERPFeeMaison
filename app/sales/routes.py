@@ -187,6 +187,100 @@ def get_favorite_products():
         'favorite_product_ids': favorite_product_ids
     })
 
+@sales.route('/api/create-delivery-order', methods=['POST'])
+@login_required
+def create_delivery_order():
+    """Créer une commande de livraison depuis le PDV"""
+    try:
+        data = request.get_json()
+        items = data.get('items', [])
+        
+        if not items:
+            return jsonify({'success': False, 'message': 'Aucun article dans la commande'}), 400
+        
+        customer_name = data.get('customer_name', '').strip()
+        customer_phone = data.get('customer_phone', '').strip()
+        customer_address = data.get('customer_address', '').strip()
+        delivery_cost = Decimal(str(data.get('delivery_cost', 0)))
+        customer_id = data.get('customer_id')
+        
+        if not customer_name or not customer_phone or not customer_address:
+            return jsonify({'success': False, 'message': 'Nom, téléphone et adresse sont obligatoires'}), 400
+        
+        # Créer la commande de type 'in_store' avec statut 'ready_at_shop'
+        order = Order(
+            user_id=current_user.id,
+            order_type='in_store',
+            customer_name=customer_name,
+            customer_phone=customer_phone,
+            customer_address=customer_address,
+            customer_id=customer_id,
+            delivery_option='delivery',
+            delivery_cost=delivery_cost,
+            due_date=datetime.utcnow(),
+            status='ready_at_shop',  # Statut pour permettre assignation livreur
+            total_amount=0.0
+        )
+        
+        db.session.add(order)
+        db.session.flush()
+        
+        total_amount = Decimal('0.0')
+        
+        # Ajouter les articles et décrémenter les stocks (réservation temporaire)
+        for item_data in items:
+            product_id = item_data['product_id']
+            quantity = Decimal(str(item_data['quantity']))
+            unit_price = Decimal(str(item_data['unit_price']))
+            
+            product = Product.query.get(product_id)
+            if not product:
+                db.session.rollback()
+                return jsonify({'success': False, 'message': f'Produit {product_id} non trouvé'}), 400
+            
+            # Vérifier le stock
+            if product.stock_comptoir < float(quantity):
+                db.session.rollback()
+                return jsonify({'success': False, 'message': f'Stock insuffisant pour {product.name}'}), 400
+            
+            # Créer l'article de commande
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=product_id,
+                quantity=quantity,
+                unit_price=unit_price
+            )
+            
+            # Décrémenter le stock comptoir (réservation temporaire)
+            product.update_stock_by_location('stock_comptoir', -float(quantity))
+            
+            # Décrémenter la valeur du stock
+            pmp = product.cost_price or Decimal('0.0')
+            value_decrement = quantity * pmp
+            product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_decrement
+            
+            total_amount += quantity * unit_price
+            
+            db.session.add(order_item)
+            db.session.add(product)
+        
+        # Utiliser calculate_total_amount() pour inclure les frais de livraison dans total_amount
+        # Cela garantit la cohérence avec les autres commandes
+        order.total_amount = total_amount  # Montant produits seulement (sans livraison)
+        # Note: calculate_total_amount() ajouterait les frais de livraison, mais pour les commandes PDV,
+        # on garde total_amount = produits seulement pour que le calcul dans assign_deliveryman() soit correct
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Commande de livraison créée avec succès',
+            'order_id': order.id
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur création commande livraison: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': f'Erreur: {str(e)}'}), 500
+
 @sales.route('/api/complete-sale', methods=['POST'])
 @login_required
 @require_open_cash_session

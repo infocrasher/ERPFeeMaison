@@ -174,11 +174,11 @@ def shop_dashboard():
         Order.delivery_option == 'pickup'
     ).order_by(Order.due_date.asc()).all()
     
-    # 3. Prêt à livrer (commandes client delivery)
+    # 3. Prêt à livrer (commandes client delivery ET commandes PDV livraison)
     orders_ready_delivery = Order.query.filter(
         Order.status == 'ready_at_shop',
-        Order.order_type == 'customer_order',
-        Order.delivery_option == 'delivery'
+        Order.delivery_option == 'delivery',
+        Order.order_type.in_(['customer_order', 'in_store'])
     ).order_by(Order.due_date.asc()).all()
     
     # 4. Au comptoir (ordres de production terminés - visibles 24h)

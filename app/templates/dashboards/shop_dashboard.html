@@ -502,6 +502,9 @@
                     <div class="order-info">
                         <h5 class="mb-1">
                             <i class="bi bi-person me-2"></i>Commande #{{ order.id }} - {{ order.customer_name }}
+                            {% if order.order_type == 'in_store' %}
+                                <span class="badge bg-purple ms-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 0.7rem;">PDV</span>
+                            {% endif %}
                         </h5>
                         
                         <div class="product-list">
@@ -528,6 +531,16 @@
                         <a href="{{ url_for('orders.assign_deliveryman', order_id=order.id) }}" class="action-btn btn-assign">
                             <i class="bi bi-person-plus me-1"></i>Assigner Livreur
                         </a>
+                        {% if order.order_type == 'in_store' %}
+                            <form method="POST" action="{{ url_for('orders.cancel_delivery_order', order_id=order.id) }}" 
+                                  onsubmit="return confirm('Êtes-vous sûr de vouloir annuler cette commande de livraison ? Le stock sera restauré.');" 
+                                  style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="action-btn btn-danger">
+                                    <i class="bi bi-x-circle me-1"></i>Annuler
+                                </button>
+                            </form>
+                        {% endif %}
                         {% if cash_session_open %}
                             <form method="POST"
                                   action="{{ url_for('orders.pay_order', order_id=order.id) }}"
