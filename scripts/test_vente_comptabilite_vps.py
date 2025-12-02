@@ -64,11 +64,12 @@ def test_vente_comptabilite():
         if not session:
             print("⚠️  Aucune session de caisse ouverte")
             print("   → Création d'une session de test...")
+            from datetime import timezone
             session = CashRegisterSession(
                 opened_by_id=1,
                 initial_amount=1000.0,
                 is_open=True,
-                opened_at=datetime.utcnow()
+                opened_at=datetime.now(timezone.utc)
             )
             db.session.add(session)
             db.session.flush()
@@ -103,7 +104,7 @@ def test_vente_comptabilite():
             return False
         
         print(f"✅ Produit sélectionné: {produit.name}")
-        print(f"   Prix: {produit.selling_price or 0:.2f} DA")
+        print(f"   Prix: {produit.price or 0:.2f} DA")
         print(f"   Stock comptoir: {produit.stock_comptoir or 0}")
         print()
         
@@ -111,7 +112,7 @@ def test_vente_comptabilite():
         print("💰 4. SIMULATION DE LA VENTE")
         print("-" * 70)
         
-        montant_vente = float(produit.selling_price or 1000.0)
+        montant_vente = float(produit.price or 1000.0)
         quantite = 1
         
         print(f"   Montant: {montant_vente:.2f} DA")
