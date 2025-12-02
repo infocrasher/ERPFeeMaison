@@ -60,10 +60,6 @@
     .progress-50 { width: 50%; }
     .progress-75 { width: 75%; }
     .progress-100 { width: 100%; }
-    
-    .order-urgent { border-left: 4px solid #ff4757; }
-    .order-soon { border-left: 4px solid #ffa502; }
-    .order-normal { border-left: 4px solid #2ed573; }
 </style>
 {% endblock %}
 
@@ -117,131 +113,64 @@
         </div>
     </div>
 
-    <!-- Alertes Urgentes -->
-    {% if missing_ingredients_urgent %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-danger">
-                <h5 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>🚨 PRODUCTION BLOQUÉE</h5>
-                <p class="mb-2">Les ingrédients suivants manquent pour les commandes urgentes :</p>
-                <div class="row">
-                    {% for ingredient in missing_ingredients_urgent %}
-                    <div class="col-md-4">
-                        <span class="badge bg-danger me-2">{{ ingredient.name }}</span>
-                        <small>Besoin: {{ ingredient.needed_quantity }} {{ ingredient.unit }}</small>
-                    </div>
-                    {% endfor %}
-                </div>
-                <hr>
-                <a href="{{ url_for('stock.create_transfer') }}" class="btn btn-outline-danger">
-                    <i class="bi bi-arrow-down-circle me-2"></i>Demander Transfert Urgent
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Ingrédients par Statut -->
+    <!-- Ingrédients par Catégorie -->
     <div class="row">
-        <div class="col-lg-8">
+        <div class="col-lg-9">
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>État des Ingrédients - Production</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        {% for ingredient in ingredients_local %}
-                        {% set stock_level = ingredient.stock_ingredients_local or 0 %}
-                        {% set seuil = ingredient.seuil_min_ingredients_local if ingredient.seuil_min_ingredients_local is not none else 0 %}
-                        {% if stock_level <= 0 %}
-                            {% set level_class = 'ingredient-critical' %}
-                            {% set level_icon = '🔴' %}
-                            {% set status_text = 'RUPTURE' %}
-                        {% elif stock_level <= seuil %}
-                            {% set level_class = 'ingredient-low' %}
-                            {% set level_icon = '🟡' %}
-                            {% set status_text = 'STOCK BAS' %}
-                        {% else %}
-                            {% set level_class = 'ingredient-available' %}
-                            {% set level_icon = '🟢' %}
-                            {% set status_text = 'DISPONIBLE' %}
-                        {% endif %}
-                        
-                        <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="production-card {{ level_class }}">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="fw-bold">{{ level_icon }} {{ ingredient.name }}</span>
-                                    <span class="badge bg-light text-dark">{{ ingredient.get_stock_display('ingredients_local') }}</span>
-                                </div>
-                                <div class="progress mb-2">
-                                    {% set percentage = (stock_level / seuil) * 100 if seuil > 0 else 0 %}
-                                    {% if percentage <= 25 %}
-                                        <div class="progress-bar progress-25"></div>
-                                    {% elif percentage <= 50 %}
-                                        <div class="progress-bar progress-50"></div>
-                                    {% elif percentage <= 75 %}
-                                        <div class="progress-bar progress-75"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-100"></div>
-                                    {% endif %}
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <small>{{ status_text }}</small>
-                                    <small class="text-white-50">{{ "%.2f"|format(ingredient.valeur_stock_ingredients_local or 0) }} DA</small>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Commandes en Attente -->
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-clock me-2"></i>Commandes en Attente</h5>
-                </div>
-                <div class="card-body">
-                    {% for order in pending_orders %}
-                    {% set time_until_due = (order.due_date - current_time).total_seconds() / 3600 if order.due_date else 24 %}
-                    {% if time_until_due <= 2 %}
-                        {% set urgency_class = 'order-urgent' %}
-                        {% set urgency_icon = '🔥' %}
-                    {% elif time_until_due <= 8 %}
-                        {% set urgency_class = 'order-soon' %}
-                        {% set urgency_icon = '⚡' %}
+                    {% for ingredient in ingredients_local %}
+                    {% set stock_level = ingredient.stock_ingredients_local or 0 %}
+                    {% set seuil = ingredient.seuil_min_ingredients_local if ingredient.seuil_min_ingredients_local is not none else 0 %}
+                    {% if stock_level <= 0 %}
+                        {% set level_class = 'ingredient-critical' %}
+                        {% set level_icon = '🔴' %}
+                        {% set status_text = 'RUPTURE' %}
+                    {% elif stock_level <= seuil %}
+                        {% set level_class = 'ingredient-low' %}
+                        {% set level_icon = '🟡' %}
+                        {% set status_text = 'STOCK BAS' %}
                     {% else %}
-                        {% set urgency_class = 'order-normal' %}
-                        {% set urgency_icon = '📋' %}
+                        {% set level_class = 'ingredient-available' %}
+                        {% set level_icon = '🟢' %}
+                        {% set status_text = 'DISPONIBLE' %}
                     {% endif %}
                     
-                    <div class="card mb-2 {{ urgency_class }}">
-                        <div class="card-body py-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ urgency_icon }} Commande #{{ order.id }}</strong>
-                                    <br><small class="text-muted">{{ order.items_count }} produit(s)</small>
-                                </div>
-                                <div class="text-end">
-                                    <small class="text-muted">
-                                        {% if order.due_date %}
-                                            {{ order.due_date.strftime('%H:%M') }}
-                                        {% else %}
-                                            Pas de délai
-                                        {% endif %}
-                                    </small>
-                                </div>
+                    <div class="col-md-6 col-lg-4 mb-3 d-inline-block">
+                        <div class="production-card {{ level_class }}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold">{{ level_icon }} {{ ingredient.name }}</span>
+                                <span class="badge bg-light text-dark">{{ ingredient.get_stock_display('ingredients_local') }}</span>
+                            </div>
+                            <div class="progress mb-2">
+                                {% set percentage = (stock_level / seuil) * 100 if seuil > 0 else 0 %}
+                                {% if percentage <= 25 %}
+                                    <div class="progress-bar progress-25"></div>
+                                {% elif percentage <= 50 %}
+                                    <div class="progress-bar progress-50"></div>
+                                {% elif percentage <= 75 %}
+                                    <div class="progress-bar progress-75"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-100"></div>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small>{{ status_text }}</small>
+                                <small class="text-white-50">{{ "%.2f"|format(ingredient.valeur_stock_ingredients_local or 0) }} DA</small>
                             </div>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
             </div>
+        </div>
 
+        <!-- Actions et Ingrédients Manquants -->
+        <div class="col-lg-3">
             <!-- Actions Rapides -->
-            <div class="card mt-3">
+            <div class="card">
                 <div class="card-header">
                     <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Actions Rapides</h6>
                 </div>
@@ -259,6 +188,32 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Ingrédients Manquants -->
+            {% if missing_ingredients_urgent %}
+            <div class="card mt-3">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>🚨 PRODUCTION BLOQUÉE</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2 small">Les ingrédients suivants manquent pour les commandes urgentes :</p>
+                    <div class="d-grid gap-2">
+                        {% for ingredient in missing_ingredients_urgent %}
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                            <div>
+                                <span class="small fw-bold">{{ ingredient.name }}</span><br>
+                                <small class="text-muted">Besoin: {{ ingredient.needed_quantity }} {{ ingredient.unit }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <hr>
+                    <a href="{{ url_for('stock.create_transfer') }}" class="btn btn-outline-danger btn-sm w-100">
+                        <i class="bi bi-arrow-down-circle me-2"></i>Demander Transfert Urgent
+                    </a>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

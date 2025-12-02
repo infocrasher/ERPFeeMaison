@@ -270,38 +270,10 @@
             </div>
         </div>
 
-        <!-- Actions et Historique -->
+        <!-- Actions -->
         <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Ajustements Récents</h6>
-                </div>
-                <div class="card-body">
-                    {% for adjustment in recent_adjustments %}
-                    <div class="card mb-2">
-                        <div class="card-body py-2">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>{{ adjustment.product_name }}</strong><br>
-                                    <small class="text-muted">{{ adjustment.reason or 'Ajustement manuel' }}</small>
-                                </div>
-                                <div class="text-end">
-                                    {% if adjustment.quantity > 0 %}
-                                    <small class="text-success">+{{ adjustment.quantity }}</small>
-                                    {% else %}
-                                    <small class="text-danger">{{ adjustment.quantity }}</small>
-                                    {% endif %}
-                                    <br><small class="text-muted">{{ adjustment.time_ago }}</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
             <!-- Actions Rapides -->
-            <div class="card mt-3">
+            <div class="card">
                 <div class="card-header">
                     <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Actions Rapides</h6>
                 </div>

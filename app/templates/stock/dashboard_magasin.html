@@ -4,250 +4,242 @@
 
 {% block head %}
 <style>
-    .hero-card {
+    .dashboard-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 18px;
-        padding: 24px;
-        color: #fff;
-        box-shadow: 0 10px 30px rgba(102,126,234,.25);
+        border: none;
+        border-radius: 15px;
+        color: white;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-    .hero-actions .btn {
-        border-radius: 999px;
-        padding: 0.55rem 1.4rem;
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
     }
-    .stat-chip {
-        border-radius: 16px;
-        padding: 14px 16px;
-        background: #fff;
-        box-shadow: 0 5px 18px rgba(0,0,0,.08);
-        transition: transform .2s ease;
-    }
-    .stat-chip:hover { transform: translateY(-4px); }
-    .stat-chip h3 { margin: 0; font-size: 1.6rem; }
-    .filter-panel {
-        background: #fff;
-        border-radius: 14px;
-        box-shadow: 0 8px 25px rgba(0,0,0,.07);
-        padding: 18px;
-    }
-    .search-input {
-        border-radius: 999px;
-        padding: .65rem 1.25rem;
-        border: 1px solid #e3e6ef;
-        box-shadow: none;
-    }
-    .alert-card {
-        border-radius: 16px;
-        padding: 18px;
-        color: #fff;
-        min-height: 180px;
-    }
-    .alert-critical { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); }
-    .alert-warning { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color:#fff; }
-    .category-accordion .accordion-button {
-        background: #f8f9fc;
-        font-weight: 600;
-    }
-    .ingredient-row {
+    .ingredient-card {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         border-radius: 12px;
-        background: #fff;
-        border: 1px solid #eef0f7;
-        padding: 16px;
-        margin-bottom: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: box-shadow .2s ease;
+        padding: 20px;
+        margin-bottom: 15px;
+        color: white;
     }
-    .ingredient-row:hover {
-        box-shadow: 0 12px 28px rgba(15,23,42,.08);
+    .ingredient-available { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .ingredient-low { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .ingredient-critical { background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); }
+    
+    .action-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 25px;
+        color: white;
+        padding: 10px 20px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-block;
+        margin: 5px;
     }
-    .badge-soft {
-        border-radius: 999px;
-        padding: .35rem .8rem;
-        font-size: .85rem;
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        color: white;
+        text-decoration: none;
     }
-    .badge-soft-danger { background: rgba(255,99,132,.15); color:#ff5274; }
-    .badge-soft-warning { background: rgba(253,193,112,.2); color:#ff8d2b; }
-    .badge-soft-success { background: rgba(29,209,161,.15); color:#1dd1a1; }
-    .show-more-btn {
-        border-radius: 999px;
-        padding: .55rem 1.5rem;
+    .btn-purchase { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .btn-transfer { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    
+    .progress {
+        height: 8px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.3);
     }
-    .side-card {
-        border-radius: 16px;
-        box-shadow: 0 12px 28px rgba(0,0,0,.08);
-        margin-bottom: 20px;
+    .progress-bar {
+        border-radius: 10px;
+        background: rgba(255,255,255,0.9);
     }
+    .progress-0 { width: 0%; }
+    .progress-25 { width: 25%; }
+    .progress-50 { width: 50%; }
+    .progress-75 { width: 75%; }
+    .progress-100 { width: 100%; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <div class="hero-card mb-4">
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-            <div>
-                <p class="text-uppercase mb-1" style="letter-spacing:.2em;">Réserve magasin</p>
-                <h1 class="h3 mb-2">📦 Gestion des ingrédients & fournisseurs</h1>
-                <span class="badge bg-light text-dark">Dernière mise à jour {{ current_time.strftime('%d/%m/%Y %H:%M') if current_time is defined else '—' }}</span>
-            </div>
-            <div class="hero-actions btn-group">
-                <a href="{{ url_for('purchases.new_purchase') }}" class="btn btn-light text-primary"><i class="bi bi-plus"></i> Nouvel achat</a>
-                <a href="{{ url_for('stock.create_transfer') }}" class="btn btn-outline-light"><i class="bi bi-arrow-left-right"></i> Transfert</a>
-            </div>
-        </div>
-        <div class="row g-3 mt-3">
-            <div class="col-md-3">
-                <div class="stat-chip">
-                    <small class="text-muted">Ingrédients actifs</small>
-                    <h3>{{ total_ingredients_magasin or 0 }}</h3>
+    <!-- En-tête du Dashboard -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">📦 Stock Magasin - Réserve Ingrédients</h1>
+                    <p class="text-muted">Gestion des ingrédients & fournisseurs</p>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-chip">
-                    <small class="text-muted">Valeur stock</small>
-                    <h3>{{ total_value or '0' }} DA</h3>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-chip">
-                    <small class="text-muted">Sous seuil</small>
-                    <h3>{{ (critical_ingredients|length) + (suggested_purchases|length) }}</h3>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-chip">
-                    <small class="text-muted">Achats en cours</small>
-                    <h3>{{ pending_purchases or 0 }}</h3>
+                <div>
+                    <a href="{{ url_for('purchases.new_purchase') }}" class="action-btn btn-purchase">
+                        <i class="bi bi-plus me-2"></i>Nouvel Achat
+                    </a>
+                    <a href="{{ url_for('stock.create_transfer') }}" class="action-btn btn-transfer">
+                        <i class="bi bi-arrow-left-right me-2"></i>Transfert
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <div class="alert-card alert-critical h-100">
-                        <div class="d-flex justify-content-between mb-2">
-                            <strong>Ruptures immédiates</strong>
-                            <span class="badge bg-light text-danger">{{ critical_ingredients|length }}</span>
-                        </div>
-                        <ul class="list-unstyled mb-0">
-                            {% for ingredient in critical_ingredients[:4] %}
-                            <li class="d-flex justify-content-between">
-                                <span>{{ ingredient.name }}</span>
-                                <span class="badge-soft badge-soft-danger">0</span>
-                            </li>
-                            {% endfor %}
-                            {% if critical_ingredients|length == 0 %}
-                            <li class="text-white-50">Aucune rupture 🎉</li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="alert-card alert-warning h-100">
-                        <div class="d-flex justify-content-between mb-2">
-                            <strong>Surveiller</strong>
-                            <span class="badge bg-light text-dark">{{ suggested_purchases|length }}</span>
-                        </div>
-                        <ul class="list-unstyled mb-0">
-                            {% for suggestion in suggested_purchases[:4] %}
-                            <li class="d-flex justify-content-between">
-                                <span>{{ suggestion.product_name }}</span>
-                                <small>{{ suggestion.suggested_quantity }} {{ suggestion.unit }}</small>
-                            </li>
-                            {% endfor %}
-                            {% if suggested_purchases|length == 0 %}
-                            <li class="text-white-50">Rien à signaler</li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                </div>
+    <!-- Statistiques Rapides -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <h3 class="mb-1">{{ total_ingredients_magasin or 0 }}</h3>
+                <small>Ingrédients Actifs</small>
             </div>
-
-            <div class="filter-panel mb-3">
-                <div class="row align-items-center g-2">
-                    <div class="col-md-7">
-                        <input type="text" id="ingredient-search" class="form-control search-input" placeholder="Filtrer un ingrédient ou une catégorie...">
-                    </div>
-                    <div class="col-md-5 text-md-end">
-                        <span class="badge bg-primary me-2" id="visible-count">0 affichés</span>
-                        <button class="btn btn-outline-primary btn-sm" id="toggle-collapse"><i class="bi bi-arrows-expand"></i> Tout réduire</button>
-                    </div>
-                </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <h3 class="mb-1">{{ total_value or '0' }} DA</h3>
+                <small>Valeur Stock</small>
             </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <h3 class="mb-1">{{ (critical_ingredients|length) + (suggested_purchases|length) }}</h3>
+                <small>Sous Seuil</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <h3 class="mb-1">{{ pending_purchases or 0 }}</h3>
+                <small>Achats en Cours</small>
+            </div>
+        </div>
+    </div>
 
-            <div class="accordion category-accordion" id="categoryAccordion">
-                {% for category, ingredients in ingredients_by_category.items() %}
-                <div class="accordion-item mb-3">
-                    <h2 class="accordion-header" id="heading-{{ loop.index }}">
-                        <button class="accordion-button {{ 'collapsed' if loop.index > 3 }}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}">
-                            <span class="me-2">📁 {{ category }}</span>
-                            <small class="text-muted">{{ ingredients|length }} produits</small>
-                        </button>
-                    </h2>
-                    <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse {{ 'show' if loop.index <= 3 }}" data-bs-parent="#categoryAccordion">
-                        <div class="accordion-body">
+    <!-- Ingrédients par Catégorie -->
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Ingrédients par Catégorie</h5>
+                </div>
+                <div class="card-body">
+                    {% for category, ingredients in ingredients_by_category.items() %}
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3">📁 {{ category }}</h6>
+                        <div class="row">
                             {% for ingredient in ingredients %}
                             {% set stock_level = ingredient.stock_ingredients_magasin or 0 %}
                             {% set seuil = ingredient.seuil_min_ingredients_magasin if ingredient.seuil_min_ingredients_magasin is not none else 0 %}
-                            {% set status = 'success' %}
-                            {% set label = 'Disponible' %}
                             {% if stock_level <= 0 %}
-                                {% set status = 'danger' %}
-                                {% set label = 'Rupture' %}
+                                {% set level_class = 'ingredient-critical' %}
+                                {% set level_icon = '🔴' %}
+                                {% set status_text = 'RUPTURE' %}
                             {% elif stock_level <= seuil %}
-                                {% set status = 'warning' %}
-                                {% set label = 'Sous seuil' %}
+                                {% set level_class = 'ingredient-low' %}
+                                {% set level_icon = '🟡' %}
+                                {% set status_text = 'SOUS SEUIL' %}
+                            {% else %}
+                                {% set level_class = 'ingredient-available' %}
+                                {% set level_icon = '🟢' %}
+                                {% set status_text = 'DISPONIBLE' %}
                             {% endif %}
-                            <div class="ingredient-row" data-name="{{ ingredient.name|lower }}" data-category="{{ category|lower }}">
-                                <div>
-                                    <strong>{{ ingredient.name }}</strong><br>
-                                    <small class="text-muted">{{ ingredient.unit or 'unités' }}</small>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge-soft badge-soft-{{ status }}">{{ "%.2f"|format(stock_level) }} / {{ "%.2f"|format(seuil) }}</span><br>
-                                    <small class="text-muted">{{ "%.2f"|format(ingredient.valeur_stock_ingredients_magasin or 0) }} DA</small>
+                            
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="ingredient-card {{ level_class }}">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold">{{ level_icon }} {{ ingredient.name }}</span>
+                                        <span class="badge bg-light text-dark">{{ "%.2f"|format(stock_level) }} {{ ingredient.unit or 'unités' }}</span>
+                                    </div>
+                                    <div class="progress mb-2">
+                                        {% set percentage = (stock_level / seuil) * 100 if seuil > 0 else 0 %}
+                                        {% if percentage <= 25 %}
+                                            <div class="progress-bar progress-25"></div>
+                                        {% elif percentage <= 50 %}
+                                            <div class="progress-bar progress-50"></div>
+                                        {% elif percentage <= 75 %}
+                                            <div class="progress-bar progress-75"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-100"></div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <small>{{ status_text }}</small><br>
+                                            <small class="text-white-50">{{ "%.2f"|format(ingredient.valeur_stock_ingredients_magasin or 0) }} DA</small>
+                                        </div>
+                                        <small class="text-white-50">Seuil: {{ "%.2f"|format(seuil) }}</small>
+                                    </div>
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
-            <div class="text-center mt-3">
-                <button class="btn btn-outline-primary show-more-btn" id="showMoreBtn">Charger plus</button>
             </div>
         </div>
-        <div class="col-lg-4">
-            <div class="card side-card">
+
+        <!-- Actions et Suggestions -->
+        <div class="col-lg-3">
+            <!-- Actions Rapides -->
+            <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-lightning-charge text-primary me-2"></i>Actions rapides</h5>
+                    <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Actions Rapides</h6>
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{{ url_for('purchases.list_purchases') }}" class="btn btn-outline-primary"><i class="bi bi-receipt me-2"></i> Liste achats</a>
-                        <a href="{{ url_for('stock.transfers_list') }}" class="btn btn-outline-success"><i class="bi bi-arrow-repeat me-2"></i> Transferts</a>
-                        <a href="{{ url_for('stock.overview') }}" class="btn btn-outline-info"><i class="bi bi-pie-chart me-2"></i> Vue globale</a>
-                        <a href="{{ url_for('stock.adjustment') }}" class="btn btn-outline-warning"><i class="bi bi-sliders me-2"></i>Ajuster stock</a>
+                        <a href="{{ url_for('purchases.list_purchases') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-receipt me-2"></i>Liste Achats
+                        </a>
+                        <a href="{{ url_for('stock.transfers_list') }}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-arrow-repeat me-2"></i>Transferts
+                        </a>
+                        <a href="{{ url_for('stock.overview') }}" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-pie-chart me-2"></i>Vue Globale
+                        </a>
+                        <a href="{{ url_for('stock.adjustment') }}" class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-sliders me-2"></i>Ajuster Stock
+                        </a>
                     </div>
                 </div>
             </div>
+
+            <!-- Suggestions d'Achat -->
             {% if suggested_purchases %}
-            <div class="card side-card">
+            <div class="card mt-3">
                 <div class="card-header bg-warning text-dark">
-                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Suggestions d'achat</h6>
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>💡 Suggestions d'Achat</h6>
                 </div>
-                <div class="list-group list-group-flush">
-                    {% for suggestion in suggested_purchases %}
-                    <div class="list-group-item">
-                        <strong>{{ suggestion.product_name }}</strong><br>
-                        <small class="text-muted">Ajouter {{ suggestion.suggested_quantity }} {{ suggestion.unit }}</small>
+                <div class="card-body">
+                    <p class="mb-2 small">Produits à réapprovisionner :</p>
+                    <div class="d-grid gap-2">
+                        {% for suggestion in suggested_purchases %}
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                            <div>
+                                <span class="small fw-bold">{{ suggestion.product_name }}</span><br>
+                                <small class="text-muted">Ajouter {{ suggestion.suggested_quantity }} {{ suggestion.unit }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Ingrédients en Rupture -->
+            {% if critical_ingredients %}
+            <div class="card mt-3">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>⚠️ RUPTURES IMMÉDIATES</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2 small">Ces ingrédients sont en rupture totale :</p>
+                    <div class="d-grid gap-2">
+                        {% for ingredient in critical_ingredients %}
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                            <span class="small fw-bold">{{ ingredient.name }}</span>
+                            <span class="badge bg-danger">0</span>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
             {% endif %}
@@ -258,45 +250,23 @@
 
 {% block scripts %}
 <script>
-const ingredientRows = [...document.querySelectorAll('.ingredient-row')];
-const searchInput = document.getElementById('ingredient-search');
-const visibleCount = document.getElementById('visible-count');
-const showMoreBtn = document.getElementById('showMoreBtn');
-let sliceIndex = 20;
+// Actualisation automatique toutes les 3 minutes
+setTimeout(function() {
+    location.reload();
+}, 180000);
 
-function updateVisibility() {
-    const term = (searchInput.value || '').toLowerCase();
-    let visible = 0;
-    ingredientRows.forEach((row, index) => {
-        const matches = row.dataset.name.includes(term) || row.dataset.category.includes(term);
-        const withinSlice = index < sliceIndex;
-        if (matches && withinSlice) {
-            row.style.display = 'flex';
-            visible++;
-        } else {
-            row.style.display = 'none';
-        }
+// Animation d'entrée pour les cartes
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.ingredient-card');
+    cards.forEach(function(card, index) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9)';
+        setTimeout(function() {
+            card.style.transition = 'all 0.4s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1)';
+        }, index * 100);
     });
-    visibleCount.textContent = `${visible} affichés`;
-    if (sliceIndex >= ingredientRows.length) {
-        showMoreBtn.classList.add('d-none');
-    } else {
-        showMoreBtn.classList.remove('d-none');
-    }
-}
-
-searchInput.addEventListener('input', () => {
-    sliceIndex = 20;
-    updateVisibility();
-});
-
-showMoreBtn.addEventListener('click', () => {
-    sliceIndex += 20;
-    updateVisibility();
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    updateVisibility();
 });
 </script>
 {% endblock %}

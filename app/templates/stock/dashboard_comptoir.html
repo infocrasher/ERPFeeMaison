@@ -128,28 +128,6 @@
         </div>
     </div>
 
-    <!-- Produits en Rupture -->
-    {% if out_of_stock_products %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-warning">
-                <h5 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>⚠️ PRODUITS EN RUPTURE</h5>
-                <p class="mb-2">Ces produits ne sont plus disponibles à la vente :</p>
-                <div class="row">
-                    {% for product in out_of_stock_products %}
-                    <div class="col-md-4 mb-2">
-                        <span class="badge bg-warning text-dark me-2">{{ product.name }}</span>
-                        <a href="{{ url_for('orders.new_production_order') }}?product_id={{ product.id }}" class="btn btn-sm btn-outline-warning">
-                            Réapprovisionner
-                        </a>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
     <!-- Produits par Catégorie -->
     <div class="row">
         <div class="col-lg-9">
@@ -230,34 +208,10 @@
             </div>
         </div>
 
-        <!-- Actions et Ventes Récentes -->
+        <!-- Actions et Produits en Rupture -->
         <div class="col-lg-3">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Ventes Récentes</h6>
-                </div>
-                <div class="card-body">
-                    {% for sale in recent_sales %}
-                    <div class="card mb-2 border-left-success">
-                        <div class="card-body py-2">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>{{ sale.product_name }}</strong><br>
-                                    <small class="text-muted">{{ sale.quantity }} pcs</small>
-                                </div>
-                                <div class="text-end">
-                                    <small class="text-success">{{ sale.total_amount }} DA</small><br>
-                                    <small class="text-muted">{{ sale.time_ago }}</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
             <!-- Actions Rapides -->
-            <div class="card mt-3">
+            <div class="card">
                 <div class="card-header">
                     <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Actions Rapides</h6>
                 </div>
@@ -278,6 +232,28 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Produits en Rupture -->
+            {% if out_of_stock_products %}
+            <div class="card mt-3">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>⚠️ PRODUITS EN RUPTURE</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2 small">Ces produits ne sont plus disponibles à la vente :</p>
+                    <div class="d-grid gap-2">
+                        {% for product in out_of_stock_products %}
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                            <span class="small fw-bold">{{ product.name }}</span>
+                            <a href="{{ url_for('orders.new_production_order') }}?product_id={{ product.id }}" class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

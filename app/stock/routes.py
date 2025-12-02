@@ -263,29 +263,47 @@ def dashboard_magasin():
             ingredients_by_category[category_name] = []
         ingredients_by_category[category_name].append(ingredient)
     
+    # ✅ CORRECTION : Trier les ingrédients - stock > 0 en haut, stock = 0 en bas
+    for category_name in ingredients_by_category:
+        ingredients_by_category[category_name].sort(
+            key=lambda p: ((p.stock_ingredients_magasin or 0) > 0, (p.stock_ingredients_magasin or 0)),
+            reverse=True
+        )
+    
     # Stock critique (rupture totale)
     critical_ingredients = [p for p in all_ingredients if (p.stock_ingredients_magasin or 0) <= 0]
     
-    # Suggestions d'achat (produits avec stock bas)
+    # ✅ CORRECTION : Suggestions d'achat avec calcul dynamique
     suggested_purchases = []
     for product in all_ingredients:
         stock_level = product.stock_ingredients_magasin or 0
-        seuil = product.seuil_min_ingredients_magasin or 50
+        seuil = product.seuil_min_ingredients_magasin
+        if seuil is None or seuil <= 0:
+            continue  # Ignorer les produits sans seuil défini
         if stock_level <= seuil and stock_level > 0:
+            # Calcul dynamique : quantité nécessaire pour atteindre 2x le seuil
+            suggested_quantity = max(seuil * 2 - stock_level, seuil)
             suggested_purchases.append({
                 'product_id': product.id,
                 'product_name': product.name,
-                'suggested_quantity': seuil * 2,  # Suggestion: 2x le seuil
+                'suggested_quantity': suggested_quantity,
                 'unit': product.unit or 'unités'
             })
     
     # Calculs statistiques
     total_ingredients_magasin = len([p for p in all_ingredients if (p.stock_ingredients_magasin or 0) > 0])
     critical_stock_count = len(critical_ingredients)
-    total_value = sum((p.stock_ingredients_magasin or 0) * float(p.cost_price or 0) for p in all_ingredients)
+    # ✅ CORRECTION : Utiliser valeur_stock_ingredients_magasin au lieu de stock × cost_price
+    total_value = sum(float(p.valeur_stock_ingredients_magasin or 0) for p in all_ingredients)
     
-    # Achats en attente (simulation)
-    pending_purchases = 3  # À remplacer par vraie requête purchases
+    # ✅ CORRECTION : Requête réelle pour les achats en attente
+    try:
+        from app.purchases.models import Purchase, PurchaseStatus
+        pending_purchases = Purchase.query.filter(
+            Purchase.status.in_([PurchaseStatus.REQUESTED, PurchaseStatus.APPROVED])
+        ).count()
+    except Exception:
+        pending_purchases = 0
     
     return render_template(
         'stock/dashboard_magasin.html',
@@ -309,6 +327,12 @@ def dashboard_local():
     ingredients_local = Product.query.filter(
         Product.product_type == 'ingredient'
     ).all()
+    
+    # ✅ CORRECTION : Trier les ingrédients - stock > 0 en haut, stock = 0 en bas
+    ingredients_local.sort(
+        key=lambda p: ((p.stock_ingredients_local or 0) > 0, (p.stock_ingredients_local or 0)),
+        reverse=True
+    )
     
     # Ingrédients manquants pour production urgent
     missing_ingredients_urgent = []
@@ -371,6 +395,13 @@ def dashboard_comptoir():
             products_by_category[category_name] = []
         products_by_category[category_name].append(product)
     
+    # ✅ CORRECTION : Trier les produits - stock > 0 en haut, stock = 0 en bas
+    for category_name in products_by_category:
+        products_by_category[category_name].sort(
+            key=lambda p: ((p.stock_comptoir or 0) > 0, (p.stock_comptoir or 0)),
+            reverse=True
+        )
+    
     # Produits en rupture
     out_of_stock_products = [p for p in all_products if (p.stock_comptoir or 0) <= 0]
     
@@ -429,16 +460,27 @@ def dashboard_consommables():
             consumables_by_category[category_name] = []
         consumables_by_category[category_name].append(consumable)
     
-    # Suggestions d'ajustement automatique
+    # ✅ CORRECTION : Trier les consommables - stock > 0 en haut, stock = 0 en bas
+    for category_name in consumables_by_category:
+        consumables_by_category[category_name].sort(
+            key=lambda p: ((p.stock_consommables or 0) > 0, (p.stock_consommables or 0)),
+            reverse=True
+        )
+    
+    # ✅ CORRECTION : Suggestions d'ajustement avec calcul dynamique
     suggested_adjustments = []
     for product in all_consommables:
         stock_level = product.stock_consommables or 0
-        seuil = product.seuil_min_consommables or 20
+        seuil = product.seuil_min_consommables
+        if seuil is None or seuil <= 0:
+            continue  # Ignorer les produits sans seuil défini
         if stock_level <= seuil:
+            # Calcul dynamique : quantité nécessaire pour atteindre 2x le seuil
+            suggested_quantity = max(seuil * 2 - stock_level, seuil)
             suggested_adjustments.append({
                 'product_id': product.id,
                 'product_name': product.name,
-                'estimated_consumption': seuil * 3,  # Suggestion: 3x le seuil
+                'estimated_consumption': suggested_quantity,
                 'unit': product.unit or 'unités'
             })
     
@@ -619,9 +661,13 @@ def complete_transfer(transfer_id):
             dest_stock_key = location_map.get(transfer.destination_location.name, f'stock_{transfer.destination_location.value}')
             
             # Vérification du stock source
-            source_stock = product.get_stock_by_location_type(transfer.source_location.value.replace('stock_', ''))
+            # Convertir la valeur de l'Enum (ex: "ingredients_local") pour get_stock_by_location_type
+            source_location_type = transfer.source_location.value
+            source_stock = product.get_stock_by_location_type(source_location_type)
+            
             if source_stock < quantity:
                 flash(f'Stock insuffisant pour {product.name} (disponible: {source_stock}, demandé: {quantity}).', 'danger')
+                db.session.rollback()
                 return redirect(url_for('stock.transfers_list'))
             
             # Décrémentation stock source
@@ -629,6 +675,9 @@ def complete_transfer(transfer_id):
             
             # Incrémentation stock destination
             product.update_stock_by_location(dest_stock_key, quantity)
+            
+            # Ajouter le produit à la session pour s'assurer qu'il est suivi
+            db.session.add(product)
             
             current_app.logger.info(f"DEBUG - Transfert {transfer.reference}: {product.name} -{quantity} ({source_stock_key}) +{quantity} ({dest_stock_key})")
             
