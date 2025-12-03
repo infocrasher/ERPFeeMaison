@@ -1,0 +1,132 @@
+#!/bin/bash
+# ========================================
+# SCRIPT DE RESTAURATION DE BASE DE DONNÉES
+# Pour remettre la base au backup avant démarrage officiel
+# ========================================
+
+set -e
+
+# Configuration
+DB_NAME="fee_maison_db"
+DB_USER="fee_maison_user"
+SERVICE_NAME="erp-fee-maison"
+BACKUP_DIR="/opt/erp/backups"
+
+echo "🔄 RESTAURATION DE LA BASE DE DONNÉES"
+echo "======================================"
+echo ""
+
+# Vérifier les privilèges
+if [ "$EUID" -ne 0 ]; then 
+    echo "❌ Ce script doit être exécuté avec sudo"
+    exit 1
+fi
+
+# Lister les backups disponibles
+echo "📋 Backups disponibles dans $BACKUP_DIR :"
+echo ""
+if [ -d "$BACKUP_DIR" ]; then
+    ls -lh $BACKUP_DIR/*.sql 2>/dev/null | tail -10 || echo "Aucun backup .sql trouvé"
+    ls -lh $BACKUP_DIR/*.backup 2>/dev/null | tail -10 || echo "Aucun backup .backup trouvé"
+else
+    echo "⚠️  Le répertoire $BACKUP_DIR n'existe pas"
+    mkdir -p $BACKUP_DIR
+    echo "✅ Répertoire créé"
+fi
+
+echo ""
+read -p "📁 Entrez le chemin complet du fichier de backup à restaurer : " BACKUP_FILE
+
+if [ ! -f "$BACKUP_FILE" ]; then
+    echo "❌ Le fichier $BACKUP_FILE n'existe pas"
+    exit 1
+fi
+
+echo ""
+echo "⚠️  ATTENTION : Cette opération va REMPLACER la base de données actuelle !"
+echo "📅 Date du backup : $(stat -c %y "$BACKUP_FILE" 2>/dev/null || stat -f %Sm "$BACKUP_FILE")"
+echo ""
+read -p "Êtes-vous sûr de vouloir continuer ? (tapez 'OUI' pour confirmer) : " CONFIRM
+
+if [ "$CONFIRM" != "OUI" ]; then
+    echo "❌ Restauration annulée"
+    exit 1
+fi
+
+# Créer un backup de sécurité AVANT la restauration
+echo ""
+echo "💾 Création d'un backup de sécurité de la base actuelle..."
+SAFETY_BACKUP="$BACKUP_DIR/safety_backup_before_restore_$(date +%Y%m%d_%H%M%S).sql"
+sudo -u postgres pg_dump $DB_NAME > "$SAFETY_BACKUP"
+echo "✅ Backup de sécurité créé : $SAFETY_BACKUP"
+
+# Arrêter le service
+echo ""
+echo "⏸️  Arrêt du service ERP..."
+systemctl stop $SERVICE_NAME || echo "⚠️  Service déjà arrêté"
+
+# Supprimer la base actuelle et la recréer
+echo ""
+echo "🗑️  Suppression de la base de données actuelle..."
+sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${DB_NAME};" || true
+sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};"
+
+# Restaurer depuis le backup
+echo ""
+echo "📥 Restauration depuis le backup..."
+
+# Détecter le type de backup (.sql ou .backup)
+if [[ "$BACKUP_FILE" == *.backup ]]; then
+    # Format custom PostgreSQL (compressé)
+    echo "📦 Format détecté : PostgreSQL custom (.backup)"
+    sudo -u postgres pg_restore -d $DB_NAME "$BACKUP_FILE" || {
+        echo "❌ Erreur lors de la restauration"
+        echo "💡 Tentative de restauration depuis le backup de sécurité..."
+        sudo -u postgres psql -d $DB_NAME < "$SAFETY_BACKUP"
+        systemctl start $SERVICE_NAME
+        exit 1
+    }
+else
+    # Format SQL plain
+    echo "📄 Format détecté : SQL plain (.sql)"
+    sudo -u postgres psql -d $DB_NAME < "$BACKUP_FILE" || {
+        echo "❌ Erreur lors de la restauration"
+        echo "💡 Tentative de restauration depuis le backup de sécurité..."
+        sudo -u postgres psql -d $DB_NAME < "$SAFETY_BACKUP"
+        systemctl start $SERVICE_NAME
+        exit 1
+    }
+fi
+
+# Vérifier que la restauration a réussi
+echo ""
+echo "🔍 Vérification de la restauration..."
+TABLE_COUNT=$(sudo -u postgres psql -d $DB_NAME -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" | tr -d ' ')
+echo "✅ Nombre de tables restaurées : $TABLE_COUNT"
+
+# Redémarrer le service
+echo ""
+echo "🚀 Redémarrage du service ERP..."
+systemctl start $SERVICE_NAME
+sleep 3
+
+# Vérifier le statut
+if systemctl is-active --quiet $SERVICE_NAME; then
+    echo "✅ Service démarré avec succès"
+else
+    echo "⚠️  Le service n'a pas démarré correctement"
+    echo "💡 Vérifiez les logs : journalctl -u $SERVICE_NAME -n 50"
+fi
+
+echo ""
+echo "✅ RESTAURATION TERMINÉE"
+echo ""
+echo "📋 Prochaines étapes :"
+echo "   1. Vérifier l'application : https://erp.declaimers.com"
+echo "   2. Vérifier les données importantes (produits, commandes, etc.)"
+echo "   3. Si problème, restaurer depuis : $SAFETY_BACKUP"
+echo ""
+echo "📁 Backup de sécurité conservé : $SAFETY_BACKUP"
+
+
+

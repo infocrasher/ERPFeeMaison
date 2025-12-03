@@ -1,0 +1,299 @@
+================================================================================
+ANALYSE COMPLÈTE DES TOKENS CSRF
+================================================================================
+
+1. ANALYSE DES FORMULAIRES POST HTML
+--------------------------------------------------------------------------------
+Total formulaires POST trouvés: 97
+✅ Avec token CSRF: 22
+❌ Sans token CSRF: 75
+
+⚠️  FORMULAIRES SANS TOKEN CSRF:
+
+  ❌ customers/view.html:30
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('customers.toggle_customer_status', custo...
+
+  ❌ accounting/dashboard.html:610
+     Action: {{ url_for(
+     Tag: <form action="{{ url_for('accounting.adjust_cash') }}" method="POST">...
+
+  ❌ accounting/dashboard.html:647
+     Action: {{ url_for(
+     Tag: <form action="{{ url_for('accounting.adjust_bank') }}" method="POST">...
+
+  ❌ accounting/config.html:25
+     Tag: <form method="POST" novalidate>...
+
+  ❌ accounting/set_initial_balances.html:23
+     Tag: <form method="POST">...
+
+  ❌ purchases/edit_purchase.html:62
+     Tag: <form id="editPurchaseForm" method="POST">...
+
+  ❌ purchases/mark_paid.html:130
+     Tag: <form method="POST">...
+
+  ❌ purchases/new_purchase.html:210
+     Tag: <form id="purchaseForm" method="POST">...
+
+  ❌ purchases/list_purchases.html:126
+     Tag: <form method="POST" class="row g-3">...
+
+  ❌ purchases/view_purchase.html:32
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('purchases.cancel_purchase', id=purchase....
+
+  ❌ purchases/view_purchase.html:52
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('purchases.mark_as_unpaid', id=purchase.i...
+
+  ❌ delivery_zones/manage.html:16
+     Tag: <form method="post">...
+
+  ❌ delivery_zones/manage.html:58
+     Action: {{ url_for(
+     Tag: <form method="post" action="{{ url_for('delivery_zones.toggle_zone', zone_id=zon...
+
+  ❌ products/product_form.html:26
+     Tag: <form method="POST" enctype="multipart/form-data" novalidate>...
+
+  ❌ products/category_form.html:17
+     Tag: <form method="POST">...
+
+  ❌ suppliers/view.html:31
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('suppliers.toggle_supplier_status', suppl...
+
+  ❌ auth/login.html:17
+     Tag: <form method="POST" novalidate>...
+
+  ❌ auth/account.html:42
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('auth.account') }}" novalidate>...
+
+  ❌ recipes/recipe_form.html:118
+     Tag: <form method="POST" id="recipeForm">...
+
+  ❌ recipes/view_recipe.html:61
+     Action: {{ url_for(
+     Tag: <form action="{{ url_for('recipes.delete_recipe', recipe_id=recipe.id) }}" metho...
+
+  ❌ inventory/index.html:78
+     Tag: <form method="POST" class="row g-3">...
+
+  ❌ inventory/create.html:36
+     Tag: <form method="POST">...
+
+  ❌ inventory/create_weekly_comptoir.html:23
+     Tag: <form method="POST">...
+
+  ❌ inventory/count_weekly_comptoir_item.html:23
+     Tag: <form method="POST">...
+
+  ❌ inventory/count_item.html:64
+     Tag: <form method="POST">...
+
+  ❌ inventory/validate.html:134
+     Tag: <form method="POST">...
+
+  ❌ orders/assign_deliveryman.html:181
+     Tag: <form method="POST" id="assignForm">...
+
+  ❌ orders/order_form.html:18
+     Tag: <form method="POST" novalidate>...
+
+  ❌ orders/report_issue.html:65
+     Tag: <form method="POST" novalidate>...
+
+  ❌ orders/view_order.html:314
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('orders.resolve_order_issue', order_id=or...
+
+  ❌ orders/order_form_multifield.html:127
+     Tag: <form method="POST" id="order-form">...
+
+  ❌ orders/order_status_form.html:37
+     Tag: <form method="POST" novalidate>...
+
+  ❌ orders/production_order_form.html:126
+     Action: {% if edit_mode %}{{ url_for(
+     Tag: <form method="POST" id="production-order-form" action="{% if edit_mode %}{{ url_...
+
+  ❌ orders/customer_order_form.html:155
+     Action: {% if edit_mode %}{{ url_for(
+     Tag: <form method="POST" id="customer-order-form" action="{% if edit_mode %}{{ url_fo...
+
+  ❌ stock/create_transfer.html:25
+     Tag: <form method="POST" id="transfer-form">...
+
+  ❌ stock/quick_stock_entry.html:35
+     Tag: <form method="POST" novalidate>...
+
+  ❌ stock/stock_adjustment_form.html:36
+     Tag: <form method="POST" novalidate>...
+
+  ❌ stock/view_transfer.html:121
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('stock.request_transfer', transfer_id=tra...
+
+  ❌ stock/view_transfer.html:128
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('stock.approve_transfer', transfer_id=tra...
+
+  ❌ stock/view_transfer.html:134
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('stock.complete_transfer', transfer_id=tr...
+
+  ❌ consumables/create_adjustment.html:23
+     Tag: <form method="POST">...
+
+  ❌ consumables/view_category.html:83
+     Action: {{ url_for(
+     Tag: <form method="POST" 
+                                                      actio...
+
+  ❌ consumables/view_category.html:161
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('consumables.delete_category', category_i...
+
+  ❌ consumables/create_usage.html:23
+     Tag: <form method="POST" id="usage-form">...
+
+  ❌ consumables/create_category.html:23
+     Tag: <form method="POST">...
+
+  ❌ consumables/create_recipe.html:23
+     Tag: <form method="POST" id="recipe-form">...
+
+  ❌ employees/consolidate_hours.html:37
+     Tag: <form method="POST">...
+
+  ❌ employees/work_hours.html:33
+     Tag: <form method="POST" class="needs-validation" novalidate>...
+
+  ❌ employees/generate_payslips.html:27
+     Tag: <form method="POST" class="needs-validation" novalidate>...
+
+  ❌ employees/salaries.html:190
+     Tag: <form method="POST" class="d-inline">...
+
+  ❌ employees/employee_form.html:355
+     Tag: <form method="POST" novalidate id="employeeForm">...
+
+  ❌ employees/salary_advances.html:31
+     Tag: <form method="POST">...
+
+  ❌ employees/salary_advances.html:194
+     Action: {{ url_for(
+     Tag: <form method="POST" 
+                                                  action="{...
+
+  ❌ employees/payroll_calculation.html:27
+     Tag: <form method="POST" class="needs-validation" novalidate>...
+
+  ❌ employees/manual_attendance.html:31
+     Tag: <form method="POST">...
+
+  ❌ employees/list_employees.html:407
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('employees.toggle_employee_status', emplo...
+
+  ❌ employees/employee_analytics.html:32
+     Tag: <form method="POST" class="row g-3">...
+
+  ❌ employees/view_employee.html:692
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('employees.toggle_employee_status', emplo...
+
+  ❌ employees/work_schedule.html:80
+     Tag: <form method="POST">...
+
+  ❌ b2b/clients/form.html:16
+     Tag: <form method="POST" novalidate>...
+
+  ❌ b2b/invoices/form.html:16
+     Tag: <form method="POST" novalidate id="invoiceForm">...
+
+  ❌ b2b/invoices/edit.html:57
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('b2b.edit_invoice', invoice_id=invoice.id...
+
+  ❌ b2b/invoices/view.html:135
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('b2b.change_invoice_status', invoice_id=i...
+
+  ❌ b2b/orders/form.html:80
+     Tag: <form method="POST" novalidate id="orderForm">...
+
+  ❌ b2b/orders/view.html:117
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('b2b.change_order_status', order_id=order...
+
+  ❌ admin/users/form.html:39
+     Tag: <form method="POST" id="userForm">...
+
+  ❌ admin/users/list.html:86
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('users_admin.delete_user', user_id=user.i...
+
+  ❌ admin/profiles/form.html:32
+     Tag: <form method="POST" id="profileForm">...
+
+  ❌ admin/profiles/list.html:84
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('profiles_admin.delete_profile', profile_...
+
+  ❌ accounting/periods/form.html:12
+     Tag: <form method="POST" novalidate>...
+
+  ❌ accounting/entries/form.html:9
+     Tag: <form method="POST" novalidate id="entry-form">...
+
+  ❌ accounting/expenses/form.html:23
+     Tag: <form method="POST" novalidate>...
+
+  ❌ accounting/expenses/list.html:73
+     Action: {{ url_for(
+     Tag: <form method="POST" action="{{ url_for('accounting.delete_entry', entry_id=expen...
+
+  ❌ accounting/journals/form.html:12
+     Tag: <form method="POST" novalidate>...
+
+  ❌ accounting/accounts/form.html:12
+     Tag: <form method="POST" novalidate>...
+
+2. ANALYSE DES ENDPOINTS API POST
+--------------------------------------------------------------------------------
+Total endpoints POST trouvés: 132
+✅ Protégés CSRF: 132
+⚠️  Exemptés CSRF: 0
+
+3. ANALYSE DES REQUÊTES FETCH/AJAX POST
+--------------------------------------------------------------------------------
+Total requêtes fetch POST trouvées: 9
+✅ Avec header CSRF: 5
+❌ Sans header CSRF: 4
+
+⚠️  REQUÊTES FETCH SANS HEADER CSRF:
+
+  ❌ sales/pos_interface_backup.html:1622
+     URL: /sales/api/complete-sale
+
+  ❌ admin/printer_dashboard.html:226
+     URL: /admin/printer/test/print
+
+  ❌ admin/printer_dashboard.html:243
+     URL: /admin/printer/test/drawer
+
+  ❌ admin/printer_dashboard.html:288
+     URL: /admin/printer/restart
+
+================================================================================
+RÉSUMÉ
+================================================================================
+Formulaires HTML sans CSRF: 75
+Endpoints API exemptés: 0
+Requêtes JS sans CSRF: 4
+
+⚠️  TOTAL PROBLÈMES IDENTIFIÉS: 79

@@ -785,7 +785,11 @@ def assign_deliveryman(order_id):
 
             if order.payment_status == 'paid' and previous_payment_status != 'paid':
                 # ✅ CORRECTION : Décrémenter le stock des produits finis (livraison = vente)
-                order._decrement_stock_with_value_on_delivery()
+                # Seulement pour les commandes qui ont été dans le stock_comptoir (in_store)
+                # Les commandes client n'ont jamais été dans le stock_comptoir (réservées)
+                if order.order_type == 'in_store':
+                    order._decrement_stock_with_value_on_delivery()
+                # Pour les commandes client, le stock était déjà réservé, pas besoin de décrémenter
                 
                 # ✅ CORRECTION : Décrémenter les consommables lors de l'encaissement
                 for order_item in order.items:

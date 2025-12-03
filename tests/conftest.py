@@ -6,7 +6,8 @@ from flask import url_for
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app import create_app, User, Category # Importer Category aussi si utilisé dans une fixture
+from app import create_app
+from models import User, Category
 from extensions import db as _db
 
 @pytest.fixture(scope='session')
@@ -74,7 +75,7 @@ def admin_user(db_session): # Dépend de db_session
 def regular_client(client, regular_user, app):
     """Un client de test connecté en tant qu'utilisateur régulier."""
     with app.test_request_context():
-        client.post(url_for('login'), data={
+        client.post(url_for('auth.login'), data={
             'email': regular_user.email,
             'password': 'userpassword'
         }, follow_redirects=True)
@@ -84,7 +85,7 @@ def regular_client(client, regular_user, app):
 def admin_client(client, admin_user, app):
     """Un client de test connecté en tant qu'utilisateur admin."""
     with app.test_request_context():
-        client.post(url_for('login'), data={
+        client.post(url_for('auth.login'), data={
             'email': admin_user.email,
             'password': 'adminpassword'
         }, follow_redirects=True)
