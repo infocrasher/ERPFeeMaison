@@ -162,6 +162,11 @@
 {% block scripts %}
 {{ super() }}
 <script>
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
+
 let messageCount = 0;
 
 function addMessage(message, type = 'info') {
