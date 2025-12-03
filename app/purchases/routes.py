@@ -575,8 +575,27 @@ def edit_purchase(id):
                 
                 if product.product_type == 'consommable':
                     stock_location = 'stock_consommables'
+                    purchase_value = Decimal(quantity_in_base_unit) * price_per_base_unit
+                    
                     current_app.logger.info(f"DEBUG - Mise à jour consommable: {stock_location}")
-                    product.update_stock_by_location(stock_location, quantity_in_base_unit)
+                    current_app.logger.info(f"DEBUG - Valeur d'achat: {purchase_value}")
+                    
+                    # ✅ CORRECTION : Passer le prix d'achat à update_stock_by_location
+                    product.update_stock_by_location(
+                        stock_location,
+                        quantity_in_base_unit,
+                        unit_cost_override=price_per_base_unit
+                    )
+                    
+                    # ✅ CORRECTION : Recalculer le PMP
+                    total_qty_decimal = Decimal(str(product.total_stock_all_locations or 0))
+                    total_value_decimal = Decimal(str(product.total_stock_value or 0))
+                    
+                    if total_qty_decimal > 0:
+                        new_cost_price = (total_value_decimal / total_qty_decimal).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                        product.cost_price = new_cost_price
+                    else:
+                        product.cost_price = Decimal(str(price_per_base_unit))
                 
                 elif product.product_type == 'ingredient':
                     # Mapping des localisations vers les attributs de stock
@@ -588,26 +607,30 @@ def edit_purchase(id):
                     }
                     stock_location_key = location_mapping.get(stock_locations[i], 'stock_ingredients_magasin')
                     
-                    # conversion_factor et price_per_base_unit sont déjà calculés plus haut
+                    # ✅ CORRECTION : Calculer la valeur d'achat
                     purchase_value = Decimal(quantity_in_base_unit) * price_per_base_unit
 
                     current_app.logger.info(f"DEBUG - Mise à jour ingrédient: {stock_location_key}")
                     current_app.logger.info(f"DEBUG - Valeur d'achat: {purchase_value}")
                     
-                    product.total_stock_value = (product.total_stock_value or Decimal('0.0')) + purchase_value
-                    product.update_stock_by_location(stock_location_key, quantity_in_base_unit)
+                    # ✅ CORRECTION : Passer le prix d'achat à update_stock_by_location
+                    product.update_stock_by_location(
+                        stock_location_key,
+                        quantity_in_base_unit,
+                        unit_cost_override=price_per_base_unit
+                    )
                     
-                    # Incrémenter la valeur du stock par emplacement
-                    if stock_location_key == "stock_ingredients_magasin":
-                        product.valeur_stock_ingredients_magasin = float(getattr(product, "valeur_stock_ingredients_magasin", 0.0)) + float(purchase_value)
-                    elif stock_location_key == "stock_ingredients_local":
-                        product.valeur_stock_ingredients_local = float(getattr(product, "valeur_stock_ingredients_local", 0.0)) + float(purchase_value)
+                    # ✅ CORRECTION : Recalculer le PMP basé sur la valeur totale / quantité totale
+                    total_qty_decimal = Decimal(str(product.total_stock_all_locations or 0))
+                    total_value_decimal = Decimal(str(product.total_stock_value or 0))
                     
-                    new_total_stock_qty = Decimal(product.total_stock_all_locations)
-                    if new_total_stock_qty > 0:
-                        product.cost_price = product.total_stock_value / new_total_stock_qty
+                    if total_qty_decimal > 0:
+                        new_cost_price = (total_value_decimal / total_qty_decimal).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                        product.cost_price = new_cost_price
+                        current_app.logger.info(f"DEBUG - PMP recalculé: {new_cost_price} DA (Valeur totale: {total_value_decimal}, Quantité totale: {total_qty_decimal})")
                     else:
-                        product.cost_price = price_per_base_unit
+                        product.cost_price = Decimal(str(price_per_base_unit))
+                        current_app.logger.info(f"DEBUG - Stock total = 0, PMP défini au prix d'achat: {price_per_base_unit}")
                 
                 # DEBUG: Log des données après mise à jour
                 debug_after = f"DEBUG - Stock après: {product.stock_ingredients_magasin} (magasin), {product.stock_ingredients_local} (local), Valeur totale: {product.total_stock_value}"
