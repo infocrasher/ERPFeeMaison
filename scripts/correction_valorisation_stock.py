@@ -31,7 +31,12 @@ def recalculate_stock_values(dry_run=True):
         
         # Récupérer tous les produits avec stock > 0
         products = Product.query.filter(
-            Product.total_stock_all_locations > 0
+            db.or_(
+                Product.stock_comptoir > 0,
+                Product.stock_ingredients_magasin > 0,
+                Product.stock_ingredients_local > 0,
+                Product.stock_consommables > 0
+            )
         ).all()
         
         corrections_needed = 0
@@ -107,7 +112,12 @@ def set_default_pmp_for_products_without():
                 Product.cost_price == None,
                 Product.cost_price == 0
             ),
-            Product.total_stock_all_locations > 0
+            db.or_(
+                Product.stock_comptoir > 0,
+                Product.stock_ingredients_magasin > 0,
+                Product.stock_ingredients_local > 0,
+                Product.stock_consommables > 0
+            )
         ).all()
         
         if products_no_pmp:

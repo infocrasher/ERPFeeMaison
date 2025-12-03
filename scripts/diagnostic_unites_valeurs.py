@@ -201,7 +201,12 @@ def analyze_units_and_values():
                 Product.cost_price == None,
                 Product.cost_price == 0
             ),
-            Product.total_stock_all_locations > 0
+            db.or_(
+                Product.stock_comptoir > 0,
+                Product.stock_ingredients_magasin > 0,
+                Product.stock_ingredients_local > 0,
+                Product.stock_consommables > 0
+            )
         ).count()
         
         print(f"📊 Statistiques:")
