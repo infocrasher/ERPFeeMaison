@@ -81,7 +81,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small>TOTAL STOCK</small>
-                        <div class="value">{{ "%.2f"|format(total_value_global)|replace(",", " ") }} DA</div>
+                        <div class="value">{{ total_value_global|dzd }} DA</div>
                         <div>Valeur totale de tous les emplacements de stock</div>
                     </div>
                     <span class="fs-1"><i class="bi bi-clipboard-data"></i></span>
@@ -100,8 +100,8 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small>{{ card.label }}</small>
-                        <div class="value">{{ "%.2f"|format(card.value)|replace(",", " ") }} DA</div>
-                        <div>{{ "%.2f"|format(card.quantity)|replace(",", " ") }} {{ 'pcs' if card.key == 'comptoir' else 'unités' }}</div>
+                        <div class="value">{{ card.value|dzd }} DA</div>
+                        <div>{{ card.quantity|dzd }} {{ 'pcs' if card.key == 'comptoir' else 'unités' }}</div>
                     </div>
                     <span class="fs-2"><i class="{{ card.icon }}"></i></span>
                 </div>
@@ -165,7 +165,7 @@
             <div class="card shadow-sm mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-pie-chart me-2 text-info"></i>Répartition de la valeur</h5>
-                    <span class="badge bg-light text-dark">{{ "%.0f"|format(total_value_global)|replace(",", " ") }} DA</span>
+                    <span class="badge bg-light text-dark">{{ total_value_global|dzd }} DA</span>
                 </div>
                 <div class="card-body">
                     <canvas id="valueChart" height="200"></canvas>
@@ -180,9 +180,9 @@
                     <div class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
                             <strong>{{ product.name }}</strong><br>
-                            <small class="text-muted">{{ "%.2f"|format(product.total_stock_all_locations)|replace(",", " ") }} {{ product.unit }}</small>
+                            <small class="text-muted">{{ product.total_stock_all_locations|dzd }} {{ product.unit }}</small>
                         </div>
-                        <span class="badge bg-primary">{{ "%.0f"|format(product.total_stock_value or 0)|replace(",", " ") }} DA</span>
+                        <span class="badge bg-primary">{{ (product.total_stock_value or 0)|dzd }} DA</span>
                     </div>
                     {% endfor %}
                     {% if top_value_products|length == 0 %}
@@ -199,7 +199,7 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <small>Consommation à découvert</small>
-                        <div class="value">{{ "%.0f"|format(total_deficit) }} DA</div>
+                        <div class="value">{{ total_deficit|dzd }} DA</div>
                     </div>
                     <i class="bi bi-exclamation-circle fs-2"></i>
                 </div>
@@ -207,7 +207,7 @@
                     {% for k, v in deficit_by_location.items() %}
                     <div class="d-flex justify-content-between text-white-50">
                         <span>{{ k|capitalize }}</span>
-                        <span>{{ "%.0f"|format(v) }} DA</span>
+                        <span>{{ v|dzd }} DA</span>
                     </div>
                     {% endfor %}
                 </div>
@@ -249,7 +249,7 @@
                                 <strong>{{ purchase.reference }}</strong><br>
                                 <small class="text-muted">{{ purchase.supplier_name or 'Fournisseur inconnu' }}</small>
                             </div>
-                            <span class="badge bg-primary">{{ "%.0f"|format(purchase.total_amount or 0) }} DA</span>
+                            <span class="badge bg-primary">{{ (purchase.total_amount or 0)|dzd }} DA</span>
                         </div>
                     </div>
                     {% endfor %}
