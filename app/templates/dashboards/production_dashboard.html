@@ -323,6 +323,35 @@
         white-space: nowrap;
         padding: 0 0.5rem;
     }
+    
+    /* Badge de livraison */
+    .delivery-badge {
+        background: #fef3c7;
+        border: 2px solid #f59e0b;
+        border-radius: 0.5rem;
+        padding: 0.6rem 0.84rem;
+        margin-bottom: 0.6rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.24rem;
+        font-size: 0.9rem;
+    }
+    
+    .delivery-label {
+        font-weight: 700;
+        color: #92400e;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+    }
+    
+    .delivery-address {
+        color: #78350f;
+        font-weight: 600;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.4;
+    }
 </style>
 </head>
 <body>
@@ -367,6 +396,13 @@
                 <div class="hour-orders">
                     {% for order in orders_list %}
                     <div class="order-card priority-{{ order.priority }}">
+                        {% if order.delivery_option == 'delivery' and order.customer_address %}
+                        <div class="delivery-badge">
+                            <span class="delivery-label">Livraison :</span>
+                            <span class="delivery-address">{{ order.customer_address }}</span>
+                        </div>
+                        {% endif %}
+                        
                         {% if order.notes %}
                         <div class="order-notes">• {{ order.notes }}</div>
                         {% endif %}

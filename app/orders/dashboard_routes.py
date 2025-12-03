@@ -122,7 +122,9 @@ def production_dashboard():
             'time_label': time_label,
             'priority': priority,
             'due_time': order.due_date.strftime('%H:%M') if order.due_date else '--',  # Heure de livraison/retrait prévue
-            'hour_value': hour_value  # Pour trier
+            'hour_value': hour_value,  # Pour trier
+            'delivery_option': order.delivery_option,  # Option de livraison (delivery/pickup)
+            'customer_address': order.customer_address or ''  # Adresse de livraison
         }
         
         # Ajouter à la structure groupée par date puis heure
