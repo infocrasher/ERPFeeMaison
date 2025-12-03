@@ -163,7 +163,12 @@
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <small>{{ status_text }}</small><br>
-                                            <small class="text-white-50">{{ "%.2f"|format(ingredient.valeur_stock_ingredients_magasin or 0) }} DA</small>
+                                            {% set valeur_magasin = ingredient.valeur_stock_ingredients_magasin or 0 %}
+                                            {% if valeur_magasin > 0 %}
+                                                <small class="text-white-50">{{ "%.2f"|format(valeur_magasin) }} DA</small>
+                                            {% else %}
+                                                <small class="text-white-50">0.00 DA</small>
+                                            {% endif %}
                                         </div>
                                         <small class="text-white-50">Seuil: {{ "%.2f"|format(seuil) }}</small>
                                     </div>
