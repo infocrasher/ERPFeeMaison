@@ -396,8 +396,13 @@
                 <div class="hour-orders">
                     {% for order in orders_list %}
                     <div class="order-card priority-{{ order.priority }}">
-                        {% if order.delivery_option and order.delivery_option == 'delivery' %}
-                            {% if order.customer_address and order.customer_address|length > 0 %}
+                        {# Debug temporaire - à supprimer après test #}
+                        {% if order.delivery_option %}
+                        <!-- DEBUG: delivery_option={{ order.delivery_option }}, customer_address={{ order.customer_address }} -->
+                        {% endif %}
+                        
+                        {% if order.delivery_option == 'delivery' %}
+                            {% if order.customer_address %}
                             <div class="delivery-badge">
                                 <span class="delivery-label">Livraison :</span>
                                 <span class="delivery-address">{{ order.customer_address }}</span>
