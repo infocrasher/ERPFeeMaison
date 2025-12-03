@@ -20,7 +20,9 @@
                             <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Déclaration d'invendus (multi-produits)</h5>
                         </div>
                         <div class="card-body">
-                            <form method="POST" id="wasteForm">
+                            <form method="POST" id="wasteForm" action="{{ url_for('inventory.declare_daily_waste') }}">
+                                {# Token CSRF - toujours inclure explicitement #}
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 {{ form.hidden_tag() }}
                                 
                                 <!-- Date de l'invendu -->

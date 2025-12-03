@@ -1,7 +1,7 @@
 import os
 from flask import Flask, url_for, render_template
 from config import config_by_name
-from extensions import db, migrate, login_manager
+from extensions import db, migrate, login_manager, csrf
 from datetime import datetime
 from flask_wtf.csrf import generate_csrf
 
@@ -15,6 +15,7 @@ def create_app(config_name=None):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    csrf.init_app(app)
 
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'info'
