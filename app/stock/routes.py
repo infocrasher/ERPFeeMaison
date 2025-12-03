@@ -39,7 +39,8 @@ def overview():
             'gradient': 'gradient-magasin',
             'stock_attr': 'stock_ingredients_magasin',
             'value_attr': 'valeur_stock_ingredients_magasin',
-            'threshold_attr': 'seuil_min_ingredients_magasin'
+            'threshold_attr': 'seuil_min_ingredients_magasin',
+            'product_type': 'ingredient'  # ✅ Filtre par type
         },
         {
             'key': 'local',
@@ -48,7 +49,8 @@ def overview():
             'gradient': 'gradient-local',
             'stock_attr': 'stock_ingredients_local',
             'value_attr': 'valeur_stock_ingredients_local',
-            'threshold_attr': 'seuil_min_ingredients_local'
+            'threshold_attr': 'seuil_min_ingredients_local',
+            'product_type': 'ingredient'  # ✅ Filtre par type
         },
         {
             'key': 'comptoir',
@@ -57,7 +59,8 @@ def overview():
             'gradient': 'gradient-comptoir',
             'stock_attr': 'stock_comptoir',
             'value_attr': 'valeur_stock_comptoir',
-            'threshold_attr': 'seuil_min_comptoir'
+            'threshold_attr': 'seuil_min_comptoir',
+            'product_type': 'finished'  # ✅ Filtre par type
         },
         {
             'key': 'consommables',
@@ -66,7 +69,8 @@ def overview():
             'gradient': 'gradient-consommables',
             'stock_attr': 'stock_consommables',
             'value_attr': 'valeur_stock_consommables',
-            'threshold_attr': 'seuil_min_consommables'
+            'threshold_attr': 'seuil_min_consommables',
+            'product_type': 'consommable'  # ✅ Filtre par type
         }
     ]
     
@@ -80,12 +84,15 @@ def overview():
     total_value_global = 0
     
     for config in location_configs:
-        qty_total = sum(float(getattr(p, config['stock_attr']) or 0) for p in products)
-        value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in products)
+        # ✅ CORRECTION : Filtrer les produits par type pour chaque emplacement
+        filtered_products = [p for p in products if p.product_type == config['product_type']]
+        
+        qty_total = sum(float(getattr(p, config['stock_attr']) or 0) for p in filtered_products)
+        value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in filtered_products)
         total_value_global += value_total
         under_threshold_count = 0
         
-        for product in products:
+        for product in filtered_products:
             stock_level = float(getattr(product, config['stock_attr']) or 0)
             threshold_value = getattr(product, config['threshold_attr'])
             threshold = float(threshold_value) if threshold_value is not None else float(low_stock_fallback)
