@@ -557,3 +557,4 @@ order._decrement_stock_with_value_on_delivery()
 
 **Fin de l'analyse - Aucune modification effectuée**
 
+

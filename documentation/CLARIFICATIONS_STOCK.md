@@ -328,3 +328,4 @@ if product_fini and product_fini.recipe_definition:  # Ligne 591
 
 **Fin des clarifications**
 
+

@@ -56,18 +56,15 @@ def pos_interface():
         Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
     
-    # 🆕 Calculer les quantités réservées pour les commandes client en attente
-    reserved_stock = get_reserved_stock_by_product()
-    
     # Préparer les données pour le JavaScript
     products_js = []
     for product in products:
-        # Calculer le stock disponible (stock réel - réservé pour commandes client)
-        reserved_qty = reserved_stock.get(product.id, 0)
+        # Le stock comptoir représente le stock disponible à la vente
+        # Les commandes clients réservées ne sont PAS incluses dans ce stock
         stock_comptoir = float(product.stock_comptoir or 0)
-        available_stock = max(0, stock_comptoir - reserved_qty)
+        available_stock = stock_comptoir
         
-        # Ne pas afficher les produits entièrement réservés
+        # Ne pas afficher les produits sans stock
         if available_stock <= 0:
             continue
         
@@ -83,7 +80,7 @@ def pos_interface():
             'price': float(product.price or 0),
             'category': category_slug,
             'category_id': product.category_id,
-            'stock': available_stock,  # Stock disponible (moins les réservations)
+            'stock': available_stock,
             'unit': product.display_sale_unit  # Utiliser l'unité de vente
         })
     
@@ -111,17 +108,15 @@ def get_products():
         Product.category_id.in_(category_ids) if category_ids else Product.category_id.isnot(None)
     ).all()
     
-    # 🆕 Calculer les quantités réservées pour les commandes client en attente
-    reserved_stock = get_reserved_stock_by_product()
+    # Le stock comptoir représente le stock disponible à la vente
     
     products_data = []
     for product in products:
-        # Calculer le stock disponible (stock réel - réservé pour commandes client)
-        reserved_qty = reserved_stock.get(product.id, 0)
+        # Le stock comptoir est le stock disponible
         stock_comptoir = float(product.stock_comptoir or 0)
-        available_stock = max(0, stock_comptoir - reserved_qty)
+        available_stock = stock_comptoir
         
-        # Ne pas inclure les produits entièrement réservés
+        # Ne pas inclure les produits sans stock
         if available_stock <= 0:
             continue
         
@@ -134,8 +129,8 @@ def get_products():
             'id': product.id,
             'name': product.name,
             'price': float(product.price or 0),
-            'stock': available_stock,  # Stock disponible (moins les réservations)
-            'stock_comptoir': stock_comptoir,  # Stock réel (pour afficher rupture si = 0)
+            'stock': available_stock,
+            'stock_comptoir': stock_comptoir,
             'category': category_slug,
             'category_id': product.category_id,
             'unit': product.display_sale_unit,  # Utiliser l'unité de vente

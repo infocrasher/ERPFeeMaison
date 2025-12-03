@@ -231,6 +231,9 @@ class Product(db.Model):
         Autorise les stocks négatifs mais conserve une valorisation cohérente grâce à un déficit de valeur
         (consommation à découvert) qui sera résorbé lors des prochaines entrées.
         """
+        from flask import current_app
+        import traceback
+        
         location_mappings = {
             'stock_ingredients_magasin': ('stock_ingredients_magasin', 'valeur_stock_ingredients_magasin', 'deficit_stock_ingredients_magasin'),
             'stock_ingredients_local': ('stock_ingredients_local', 'valeur_stock_ingredients_local', 'deficit_stock_ingredients_local'),
@@ -243,6 +246,23 @@ class Product(db.Model):
             return False
         
         qty_attr, value_attr, deficit_attr = mapping
+        
+        # TRACE: Si on modifie stock_comptoir, logger
+        if qty_attr == 'stock_comptoir':
+            old_stock_comptoir = float(getattr(self, 'stock_comptoir', 0.0))
+            stack = traceback.extract_stack()
+            caller = stack[-2] if len(stack) >= 2 else stack[-1] if stack else None
+            caller2 = stack[-3] if len(stack) >= 3 else None
+            caller3 = stack[-4] if len(stack) >= 4 else None
+            current_app.logger.error(f"🚨 TRACE update_stock_by_location - stock_comptoir modifié! Produit: {self.name} (ID: {self.id}), Location: {location_key}, Changement: {quantity_change}, Avant: {old_stock_comptoir}")
+            current_app.logger.error(f"🚨 Appelant direct: {caller.filename if caller else 'unknown'}:{caller.lineno if caller else 0} - {caller.name if caller else 'unknown'}")
+            if caller2:
+                current_app.logger.error(f"🚨 Appelant niveau 2: {caller2.filename}:{caller2.lineno} - {caller2.name}")
+            if caller3:
+                current_app.logger.error(f"🚨 Appelant niveau 3: {caller3.filename}:{caller3.lineno} - {caller3.name}")
+            current_app.logger.error(f"🚨 Code appelant: {caller.line if caller else 'unknown'}")
+            print(f"🚨🚨🚨 MODIFICATION STOCK_COMPTOIR DÉTECTÉE! Produit: {self.name} (ID: {self.id}), Changement: {quantity_change}, Avant: {old_stock_comptoir}")
+        
         if unit_cost_override is not None:
             unit_cost = Decimal(str(unit_cost_override))
         else:
@@ -252,6 +272,11 @@ class Product(db.Model):
         current_qty = Decimal(str(getattr(self, qty_attr) or 0.0))
         new_qty = current_qty + qty_change
         setattr(self, qty_attr, float(new_qty))
+        
+        # TRACE: Si on a modifié stock_comptoir, vérifier la nouvelle valeur
+        if qty_attr == 'stock_comptoir':
+            new_stock_comptoir = float(getattr(self, 'stock_comptoir', 0.0))
+            current_app.logger.warning(f"TRACE update_stock_by_location - stock_comptoir APRÈS modification! Produit: {self.name} (ID: {self.id}), Avant: {old_stock_comptoir}, Après: {new_stock_comptoir}")
         
         current_value = Decimal(str(getattr(self, value_attr) or 0.0))
         current_deficit = Decimal(str(getattr(self, deficit_attr) or 0.0))
@@ -562,14 +587,28 @@ class Order(db.Model):
     def mark_as_received_at_shop(self):
         if self.status == 'in_production':
             self.status = 'ready_at_shop'
-            self._increment_shop_stock_with_value()
+            # Distinguer les ordres de production pour le comptoir des commandes client
+            if self.order_type == 'counter_production_request':
+                # Ordre de production : incrémenter le stock_comptoir (disponible à la vente)
+                self._increment_shop_stock_with_value()
+            else:
+                # Commande client : mettre à jour uniquement la valeur (pas le stock_comptoir car réservé)
+                self._increment_stock_value_only_for_customer_order()
             return True
         return False
     
     def mark_as_delivered(self):
         if self.status == 'ready_at_shop':
             self.status = 'delivered'
-            self._decrement_stock_with_value_on_delivery()
+            # Distinguer les commandes client des autres types
+            if self.order_type == 'customer_order':
+                # Commande client : ne pas décrémenter stock_comptoir car il n'a jamais été incrémenté
+                # Juste mettre à jour la valeur comptable (déjà fait lors de la production)
+                # Pas besoin de décrémenter car le stock était réservé, pas disponible
+                pass
+            else:
+                # Autres types (in_store, etc.) : décrémenter le stock_comptoir
+                self._decrement_stock_with_value_on_delivery()
             return True
         return False
     
@@ -584,6 +623,7 @@ class Order(db.Model):
         """
         Incrémente le stock comptoir ET sa valeur pour les produits finis.
         Calcule aussi le PMP du produit fini.
+        UTILISÉ UNIQUEMENT POUR LES ORDRES DE PRODUCTION POUR LE COMPTOIR.
         """
         from extensions import db
         for item in self.items:
@@ -607,6 +647,107 @@ class Order(db.Model):
                 
                 db.session.add(product_fini)
                 print(f"INCREMENT COMPTOIR: {quantity_to_increment} {product_fini.unit} de {product_fini.name} (Valeur: {value_to_increment:.2f} DA)")
+    
+    def _increment_stock_value_only_for_customer_order(self):
+        """
+        Met à jour uniquement la valeur du stock pour les commandes client.
+        N'incrémente PAS le stock_comptoir car les produits sont réservés pour le client.
+        Utilisé pour la comptabilité et le calcul du PMP, mais pas pour le stock disponible.
+        """
+        from extensions import db
+        from flask import current_app
+        import traceback
+        
+        for item in self.items:
+            product_fini = item.product
+            if not product_fini:
+                continue
+                
+            quantity = float(item.quantity)
+            
+            # IMPORTANT: Sauvegarder le stock_comptoir AVANT toute modification
+            stock_comptoir_avant = float(product_fini.stock_comptoir or 0.0)
+            current_app.logger.info(f"TRACE - Commande #{self.id} - Produit {product_fini.name} (ID: {product_fini.id}) - Stock comptoir AVANT: {stock_comptoir_avant}")
+            
+            value_to_increment = Decimal('0.0')
+            
+            # Calculer la valeur à ajouter
+            if product_fini.recipe_definition:
+                # Produit avec recette : utiliser le coût de production
+                cost_per_unit = product_fini.recipe_definition.cost_per_unit
+                value_to_increment = cost_per_unit * Decimal(str(quantity))
+            elif product_fini.cost_price:
+                # Produit sans recette : utiliser le PMP existant
+                value_to_increment = product_fini.cost_price * Decimal(str(quantity))
+            else:
+                # Pas de coût disponible : valeur à 0
+                value_to_increment = Decimal('0.0')
+            
+            # Vérifier le stock_comptoir avant modification de total_stock_value
+            stock_comptoir_apres_total_stock = float(product_fini.stock_comptoir or 0.0)
+            if stock_comptoir_avant != stock_comptoir_apres_total_stock:
+                current_app.logger.error(f"TRACE - Stock comptoir modifié APRÈS lecture initiale! Avant: {stock_comptoir_avant}, Après: {stock_comptoir_apres_total_stock}")
+            
+            # Incrémenter la valeur totale du stock (pour la comptabilité)
+            product_fini.total_stock_value = (product_fini.total_stock_value or Decimal('0.0')) + value_to_increment
+            
+            # Vérifier le stock_comptoir après modification de total_stock_value
+            stock_comptoir_apres_total_stock = float(product_fini.stock_comptoir or 0.0)
+            if stock_comptoir_avant != stock_comptoir_apres_total_stock:
+                current_app.logger.error(f"TRACE - Stock comptoir modifié APRÈS modification total_stock_value! Avant: {stock_comptoir_avant}, Après: {stock_comptoir_apres_total_stock}")
+                stack = traceback.format_stack()
+                current_app.logger.error(f"TRACE - Stack: {''.join(stack)}")
+            
+            # Recalculer le PMP du produit fini
+            # IMPORTANT: Pour les commandes client, on ne doit PAS inclure le stock_comptoir
+            # dans le calcul du PMP car ces produits sont réservés, pas disponibles à la vente
+            # On calcule le stock total SANS le stock_comptoir pour le PMP
+            stock_sans_comptoir = (
+                Decimal(str(product_fini.stock_ingredients_local or 0.0)) +
+                Decimal(str(product_fini.stock_ingredients_magasin or 0.0)) +
+                Decimal(str(product_fini.stock_consommables or 0.0))
+            )
+            # Pour les commandes client, on ajoute la quantité produite (réservée) au calcul
+            # mais on ne l'ajoute PAS au stock_comptoir
+            stock_pour_pmp = stock_sans_comptoir + Decimal(str(quantity))
+            
+            # Vérifier le stock_comptoir avant modification de cost_price
+            stock_comptoir_apres_calc_pmp = float(product_fini.stock_comptoir or 0.0)
+            if stock_comptoir_avant != stock_comptoir_apres_calc_pmp:
+                current_app.logger.error(f"TRACE - Stock comptoir modifié APRÈS calcul PMP (avant modification cost_price)! Avant: {stock_comptoir_avant}, Après: {stock_comptoir_apres_calc_pmp}")
+            
+            if stock_pour_pmp > 0:
+                product_fini.cost_price = product_fini.total_stock_value / stock_pour_pmp
+            
+            # Vérifier le stock_comptoir après modification de cost_price
+            stock_comptoir_apres_cost_price = float(product_fini.stock_comptoir or 0.0)
+            if stock_comptoir_avant != stock_comptoir_apres_cost_price:
+                current_app.logger.error(f"TRACE - Stock comptoir modifié APRÈS modification cost_price! Avant: {stock_comptoir_avant}, Après: {stock_comptoir_apres_cost_price}")
+                stack = traceback.format_stack()
+                current_app.logger.error(f"TRACE - Stack: {''.join(stack)}")
+            
+            # VÉRIFICATION CRITIQUE: Le stock_comptoir ne doit PAS avoir changé
+            stock_comptoir_apres = float(product_fini.stock_comptoir or 0.0)
+            if stock_comptoir_avant != stock_comptoir_apres:
+                error_msg = f"ERREUR CRITIQUE: Stock comptoir modifié lors de la réception d'une commande client! Avant: {stock_comptoir_avant}, Après: {stock_comptoir_apres}, Produit: {product_fini.name}, Commande: #{self.id}"
+                current_app.logger.error(error_msg)
+                stack = traceback.format_stack()
+                current_app.logger.error(f"TRACE - Stack complète: {''.join(stack)}")
+                print(f"❌ {error_msg}")
+                # Restaurer le stock_comptoir à sa valeur d'origine
+                product_fini.stock_comptoir = stock_comptoir_avant
+            
+            # NE PAS incrémenter stock_comptoir car c'est réservé pour le client
+            db.session.add(product_fini)
+            
+            # Vérifier le stock_comptoir après db.session.add
+            stock_comptoir_apres_add = float(product_fini.stock_comptoir or 0.0)
+            if stock_comptoir_avant != stock_comptoir_apres_add:
+                current_app.logger.error(f"TRACE - Stock comptoir modifié APRÈS db.session.add! Avant: {stock_comptoir_avant}, Après: {stock_comptoir_apres_add}")
+                # Restaurer à nouveau
+                product_fini.stock_comptoir = stock_comptoir_avant
+            
+            print(f"COMMANDE CLIENT - Valeur ajoutée (stock réservé): {quantity} {product_fini.unit} de {product_fini.name} (Valeur: {value_to_increment:.2f} DA) - Stock comptoir: {stock_comptoir_avant} (inchangé)")
 
     def _decrement_stock_with_value_on_delivery(self):
         """

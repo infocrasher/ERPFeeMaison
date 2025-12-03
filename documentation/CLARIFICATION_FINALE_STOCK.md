@@ -147,3 +147,4 @@ if order.payment_status == 'paid' and previous_payment_status != 'paid':
 
 **Fin de la clarification**
 
+

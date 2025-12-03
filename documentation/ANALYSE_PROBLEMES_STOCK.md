@@ -418,3 +418,4 @@ if product.stock_comptoir < float(quantity):
 
 **Fin de l'analyse**
 
+

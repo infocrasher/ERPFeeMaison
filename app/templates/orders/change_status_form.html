@@ -208,6 +208,7 @@
                 
                 <!-- Formulaire de sélection -->
                 <form method="POST" action="{{ url_for('status.change_status_to_ready', order_id=order.id) }}" id="employeeForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     
                     <!-- Compteur de sélection -->
                     <div class="selection-counter" id="selectionCounter" style="display: none;">

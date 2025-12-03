@@ -175,3 +175,4 @@ Ajout d'un bloc `elif product.product_type == 'finished':` pour traiter les prod
 
 **Fin du résumé**
 
+

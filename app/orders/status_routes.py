@@ -42,6 +42,14 @@ def change_status_to_ready(order_id):
     try:
         # ### DEBUT DE LA LOGIQUE CORRIGÉE ###
         
+        # IMPORTANT: Sauvegarder le stock_comptoir de TOUS les produits finis AVANT toute modification
+        stock_comptoir_before_all = {}
+        for order_item in order.items:
+            product_fini = order_item.product
+            if product_fini:
+                stock_comptoir_before_all[product_fini.id] = float(product_fini.stock_comptoir or 0.0)
+                current_app.logger.info(f"DEBUG - Commande #{order_id} - Produit fini {product_fini.name} - Stock comptoir AVANT: {stock_comptoir_before_all[product_fini.id]}")
+        
         for order_item in order.items:
             product_fini = order_item.product
             
@@ -55,9 +63,21 @@ def change_status_to_ready(order_id):
                     "ingredients_local": "stock_ingredients_local"
                 }
                 stock_attr = location_map.get(labo_key, labo_key)
+                
+                # SAFEGUARD: Prevent decrementing from stock_comptoir for ingredients
+                # This prevents the bug where ingredients are taken from the sales stock
+                # Si stock_attr résout à stock_comptoir ou n'est pas dans les valeurs valides, forcer vers stock_ingredients_magasin
+                if stock_attr == 'stock_comptoir' or stock_attr not in ['stock_ingredients_magasin', 'stock_ingredients_local']:
+                    current_app.logger.warning(f"SAFEGUARD TRIGGERED: Recipe '{recipe.name}' has production_location='{labo_key}' resolving to '{stock_attr}'. Forcing to 'stock_ingredients_magasin' to prevent sales stock decrement.")
+                    stock_attr = 'stock_ingredients_magasin'
 
                 for ingredient_in_recipe in recipe.ingredients.all():
                     ingredient_product = ingredient_in_recipe.product
+                    
+                    # VÉRIFICATION: Si l'ingrédient est le même que le produit fini, ne pas décrémenter le stock_comptoir
+                    if ingredient_product.id == product_fini.id:
+                        current_app.logger.warning(f"ATTENTION - Commande #{order_id} - L'ingrédient {ingredient_product.name} est le même que le produit fini. Vérification du stock_comptoir.")
+                        stock_comptoir_ingredient_before = float(ingredient_product.stock_comptoir or 0.0)
                     
                     qty_per_unit = float(ingredient_in_recipe.quantity_needed) / float(recipe.yield_quantity)
                     quantity_to_decrement = qty_per_unit * float(order_item.quantity)
@@ -69,8 +89,30 @@ def change_status_to_ready(order_id):
                     # 2. On calcule la valeur du stock d'ingrédient qui a été consommé
                     value_to_decrement = quantity_to_decrement * cost_per_base_unit
                     
+                    # VÉRIFICATION CRITIQUE: Si l'ingrédient est le même que le produit fini, sauvegarder le stock_comptoir AVANT
+                    if ingredient_product.id == product_fini.id:
+                        stock_comptoir_ingredient_before = float(ingredient_product.stock_comptoir or 0.0)
+                        current_app.logger.warning(f"ATTENTION - Commande #{order_id} - L'ingrédient {ingredient_product.name} (ID: {ingredient_product.id}) est le même que le produit fini {product_fini.name} (ID: {product_fini.id}). Stock comptoir AVANT décrémentation: {stock_comptoir_ingredient_before}")
+                        current_app.logger.warning(f"ATTENTION - stock_attr utilisé: {stock_attr} (ne doit PAS être stock_comptoir)")
+                    
                     # 3. On met à jour la quantité ET la valeur du stock de l'ingrédient
+                    # TRACE: Logger avant l'appel
+                    if ingredient_product.id == product_fini.id:
+                        current_app.logger.warning(f"TRACE - Avant update_stock_by_location - Produit: {ingredient_product.name}, Location: {stock_attr}, Changement: {-quantity_to_decrement}, Stock comptoir actuel: {float(ingredient_product.stock_comptoir or 0.0)}")
+                    
                     ingredient_product.update_stock_by_location(stock_attr, -quantity_to_decrement)
+                    
+                    # TRACE: Logger après l'appel
+                    if ingredient_product.id == product_fini.id:
+                        stock_comptoir_after_update = float(ingredient_product.stock_comptoir or 0.0)
+                        current_app.logger.warning(f"TRACE - Après update_stock_by_location - Produit: {ingredient_product.name}, Stock comptoir: {stock_comptoir_after_update}")
+                        if stock_comptoir_ingredient_before != stock_comptoir_after_update:
+                            error_msg = f"ERREUR CRITIQUE: Stock comptoir modifié lors de la décrémentation des ingrédients! Produit: {ingredient_product.name}, Avant: {stock_comptoir_ingredient_before}, Après: {stock_comptoir_after_update}, Location utilisée: {stock_attr}, Commande: #{order_id}"
+                            current_app.logger.error(error_msg)
+                            print(f"❌ {error_msg}")
+                            # Restaurer le stock_comptoir à sa valeur d'origine
+                            ingredient_product.stock_comptoir = stock_comptoir_ingredient_before
+                    
                     ingredient_product.total_stock_value = float(ingredient_product.total_stock_value or 0.0) - value_to_decrement
                     
                     # Décrémenter la valeur du stock par emplacement
@@ -81,21 +123,45 @@ def change_status_to_ready(order_id):
                     
                     print(f"DECREMENT: {quantity_to_decrement:.2f}g de {ingredient_product.name} (Valeur: {value_to_decrement:.2f} DA)")
         
-        # On appelle la méthode qui incrémente le stock ET la valeur du produit fini
-        order._increment_shop_stock_with_value()
-
-        # Décision sur le statut final
+        # Décision sur le type de commande et incrémentation appropriée
         if order.order_type == 'counter_production_request':
+            # Ordre de production pour le comptoir : incrémenter le stock_comptoir (disponible à la vente)
+            order._increment_shop_stock_with_value()
             order.status = 'completed'
             final_message = f'Ordre de production #{order.id} terminé. Stocks mis à jour.'
         else:
-            # Commande client : décision basée sur delivery_option
+            # Commande client : mettre à jour uniquement la valeur (pas le stock_comptoir car réservé)
+            # IMPORTANT: Sauvegarder le stock_comptoir AVANT l'incrémentation pour détecter toute modification
+            stock_comptoir_before = {}
+            for item in order.items:
+                if item.product:
+                    stock_comptoir_before[item.product.id] = float(item.product.stock_comptoir or 0.0)
+            
+            order._increment_stock_value_only_for_customer_order()
+            
+            # VÉRIFICATION: Le stock_comptoir ne doit PAS avoir changé
+            for item in order.items:
+                if item.product:
+                    stock_comptoir_after = float(item.product.stock_comptoir or 0.0)
+                    stock_comptoir_before_value = stock_comptoir_before.get(item.product.id, 0.0)
+                    if stock_comptoir_before_value != stock_comptoir_after:
+                        error_msg = f"🚨🚨🚨 ERREUR CRITIQUE: Stock comptoir modifié lors de la réception d'une commande client! Produit: {item.product.name} (ID: {item.product.id}), Avant: {stock_comptoir_before_value}, Après: {stock_comptoir_after}, Différence: {stock_comptoir_after - stock_comptoir_before_value}, Commande: #{order.id}"
+                        current_app.logger.error(error_msg)
+                        print(f"❌ {error_msg}")
+                        import traceback
+                        stack = traceback.format_stack()
+                        current_app.logger.error(f"🚨 Stack trace complète:\n{''.join(stack)}")
+                        # Restaurer le stock_comptoir à sa valeur d'origine
+                        item.product.stock_comptoir = stock_comptoir_before_value
+                        current_app.logger.error(f"🚨 Stock comptoir restauré à: {stock_comptoir_before_value}")
+            
+            # Décision basée sur delivery_option
             if order.delivery_option == 'pickup':
                 order.status = 'waiting_for_pickup'
-                final_message = f'Commande client #{order.id} en attente de retrait. Stocks mis à jour.'
+                final_message = f'Commande client #{order.id} en attente de retrait. Produits réservés (stock comptoir non modifié).'
             else:  # delivery_option == 'delivery'
                 order.status = 'ready_at_shop'
-                final_message = f'Commande client #{order.id} prête à livrer. Stocks mis à jour.'
+                final_message = f'Commande client #{order.id} prête à livrer. Produits réservés (stock comptoir non modifié).'
         
         # Assignation des employés
         for employee_id in employee_ids:
@@ -103,7 +169,38 @@ def change_status_to_ready(order_id):
             if employee and employee.is_active:
                 order.assign_producer(employee)
         
+        # VÉRIFICATION FINALE AVANT COMMIT: Le stock_comptoir ne doit PAS avoir changé
+        if order.order_type == 'customer_order':
+            for item in order.items:
+                if item.product:
+                    stock_comptoir_final_before_commit = float(item.product.stock_comptoir or 0.0)
+                    stock_comptoir_before_value = stock_comptoir_before.get(item.product.id, 0.0)
+                    if stock_comptoir_before_value != stock_comptoir_final_before_commit:
+                        error_msg = f"🚨 ERREUR AVANT COMMIT: Stock comptoir modifié! Produit: {item.product.name}, Avant: {stock_comptoir_before_value}, Avant commit: {stock_comptoir_final_before_commit}, Commande: #{order.id}"
+                        current_app.logger.error(error_msg)
+                        print(f"❌ {error_msg}")
+                        # Restaurer le stock_comptoir à sa valeur d'origine
+                        item.product.stock_comptoir = stock_comptoir_before_value
+        
         db.session.commit()
+        
+        # VÉRIFICATION FINALE APRÈS COMMIT: Le stock_comptoir ne doit PAS avoir changé
+        if order.order_type == 'customer_order':
+            # Recharger les produits depuis la base de données pour vérifier
+            db.session.refresh(order)
+            for item in order.items:
+                if item.product:
+                    db.session.refresh(item.product)
+                    stock_comptoir_final_after_commit = float(item.product.stock_comptoir or 0.0)
+                    stock_comptoir_before_value = stock_comptoir_before.get(item.product.id, 0.0)
+                    if stock_comptoir_before_value != stock_comptoir_final_after_commit:
+                        error_msg = f"🚨🚨🚨 ERREUR APRÈS COMMIT: Stock comptoir modifié après commit! Produit: {item.product.name} (ID: {item.product.id}), Avant: {stock_comptoir_before_value}, Après commit: {stock_comptoir_final_after_commit}, Différence: {stock_comptoir_final_after_commit - stock_comptoir_before_value}, Commande: #{order.id}"
+                        current_app.logger.error(error_msg)
+                        print(f"❌❌❌ {error_msg}")
+                        # Restaurer le stock_comptoir à sa valeur d'origine
+                        item.product.stock_comptoir = stock_comptoir_before_value
+                        db.session.commit()
+                        current_app.logger.error(f"🚨 Stock comptoir restauré à: {stock_comptoir_before_value}")
         
         producers_names = ", ".join([emp.name for emp in order.produced_by])
         flash(f'{final_message} Produit par: {producers_names}', 'success')
