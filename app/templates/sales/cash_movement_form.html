@@ -167,6 +167,7 @@
     </div>
 
     <form method="POST" id="cashMovementForm" class="form-body">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="radio-group">
             <label class="radio-label">
                 <input type="radio" name="type" value="entrée" required checked>

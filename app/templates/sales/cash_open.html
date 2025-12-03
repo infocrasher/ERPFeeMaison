@@ -247,6 +247,7 @@
     </div>
 
     <form method="POST" id="cashOpenForm" class="form-body">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label for="initial_amount">Montant initial (DA)</label>
             <input type="number" class="form-control" id="initial_amount" name="initial_amount" min="0" step="0.01" required value="{{ default_initial_amount|default(0, true)|round(2) }}" data-default-value="{{ default_initial_amount|default(0, true)|round(2) }}">

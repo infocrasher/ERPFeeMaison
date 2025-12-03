@@ -107,6 +107,7 @@
                                 <strong>Commande #{{ dette.order_id }}</strong> – {{ dette.amount|round(2) }} DA
                                 (créée le {{ dette.created_at.strftime('%d/%m/%Y') }})
                                 <form method="POST" action="{{ url_for('sales.pay_delivery_debt', debt_id=dette.id) }}" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn-encaisser" title="Encaisser cette dette" onclick="return confirm('Confirmer l\'encaissement de cette dette ?');">
                                         <i class="bi bi-cash-coin"></i> Encaisser
                                     </button>

@@ -316,6 +316,7 @@
     </div>
 
     <form method="POST" id="cashCloseForm" class="form-body">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="recap-section">
             <div class="recap-title">Récapitulatif de la session</div>
             <div class="recap-row">
