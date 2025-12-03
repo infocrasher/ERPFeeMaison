@@ -632,6 +632,34 @@ def edit_purchase(id):
                         product.cost_price = Decimal(str(price_per_base_unit))
                         current_app.logger.info(f"DEBUG - Stock total = 0, PMP défini au prix d'achat: {price_per_base_unit}")
                 
+                elif product.product_type == 'finished':
+                    # ✅ CORRECTION : Traitement des produits finis achetables
+                    # Pour les produits finis achetables, mettre dans stock_comptoir
+                    stock_location = 'stock_comptoir'
+                    purchase_value = Decimal(quantity_in_base_unit) * price_per_base_unit
+                    
+                    current_app.logger.info(f"DEBUG - Mise à jour produit fini achetable: {stock_location}")
+                    current_app.logger.info(f"DEBUG - Valeur d'achat: {purchase_value}")
+                    
+                    # ✅ CORRECTION : Utiliser update_stock_by_location avec le prix d'achat
+                    product.update_stock_by_location(
+                        stock_location,
+                        quantity_in_base_unit,
+                        unit_cost_override=price_per_base_unit
+                    )
+                    
+                    # ✅ CORRECTION : Recalculer le PMP
+                    total_qty_decimal = Decimal(str(product.total_stock_all_locations or 0))
+                    total_value_decimal = Decimal(str(product.total_stock_value or 0))
+                    
+                    if total_qty_decimal > 0:
+                        new_cost_price = (total_value_decimal / total_qty_decimal).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                        product.cost_price = new_cost_price
+                        current_app.logger.info(f"DEBUG - PMP recalculé: {new_cost_price} DA (Valeur totale: {total_value_decimal}, Quantité totale: {total_qty_decimal})")
+                    else:
+                        product.cost_price = Decimal(str(price_per_base_unit))
+                        current_app.logger.info(f"DEBUG - Stock total = 0, PMP défini au prix d'achat: {price_per_base_unit}")
+                
                 # DEBUG: Log des données après mise à jour
                 debug_after = f"DEBUG - Stock après: {product.stock_ingredients_magasin} (magasin), {product.stock_ingredients_local} (local), Valeur totale: {product.total_stock_value}"
                 current_app.logger.info(debug_after)
