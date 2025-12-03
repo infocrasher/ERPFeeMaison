@@ -71,6 +71,7 @@
                                 <a href="{{ url_for('accounting.view_entry', entry_id=expense.id) }}" class="btn btn-sm btn-info">Voir</a>
                                 <a href="{{ url_for('accounting.edit_entry', entry_id=expense.id) }}" class="btn btn-sm btn-warning">Éditer</a>
                                 <form method="POST" action="{{ url_for('accounting.delete_entry', entry_id=expense.id) }}" class="d-inline" onsubmit="return confirm('Êtes-vous sûr ?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
                                 </form>
                             </td>

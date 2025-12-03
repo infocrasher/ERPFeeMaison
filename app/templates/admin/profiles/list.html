@@ -84,6 +84,7 @@
                                                 <form method="POST" action="{{ url_for('profiles_admin.delete_profile', profile_id=profile.id) }}" 
                                                       style="display: inline;" 
                                                       onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce profil ?');">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                     <button type="submit" class="btn btn-outline-danger" title="Supprimer">
                                                         <i class="fas fa-trash"></i>
                                                     </button>

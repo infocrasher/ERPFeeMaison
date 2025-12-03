@@ -119,6 +119,7 @@
                 <div class="card-body">
                     {% if transfer.status.value == 'draft' %}
                     <form method="POST" action="{{ url_for('stock.request_transfer', transfer_id=transfer.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
                             <i class="bi bi-send me-1"></i>Envoyer la demande
                         </button>
@@ -126,12 +127,14 @@
                     <p class="text-muted small mt-2">Soumettez ce transfert pour approbation.</p>
                     {% elif transfer.status.value == 'requested' %}
                     <form method="POST" action="{{ url_for('stock.approve_transfer', transfer_id=transfer.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-success btn-lg w-100 mb-2">
                             <i class="bi bi-check-circle me-1"></i>Approuver
                         </button>
                     </form>
                     {% elif transfer.status.value == 'approved' %}
                     <form method="POST" action="{{ url_for('stock.complete_transfer', transfer_id=transfer.id) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir finaliser ce transfert ? Les stocks seront mis à jour.');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
                             <i class="bi bi-check2-square me-1"></i>Marquer comme terminé
                         </button>

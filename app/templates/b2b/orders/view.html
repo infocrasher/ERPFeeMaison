@@ -115,6 +115,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('b2b.change_order_status', order_id=order.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="status" class="form-label">Nouveau statut</label>
                             <select name="status" id="status" class="form-select">

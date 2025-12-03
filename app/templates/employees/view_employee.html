@@ -690,6 +690,7 @@
             </a>
             
             <form method="POST" action="{{ url_for('employees.toggle_employee_status', employee_id=employee.id) }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-action btn-toggle" onclick="return confirm('Changer le statut de {{ employee.name }} ?')">
                     <i class="bi bi-toggle-on me-2"></i>
                     {{ 'Désactiver' if employee.is_active else 'Activer' }}

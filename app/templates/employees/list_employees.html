@@ -405,6 +405,7 @@
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <form method="POST" action="{{ url_for('employees.toggle_employee_status', employee_id=employee.id) }}" style="display: inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" class="dropdown-item" onclick="return confirm('Changer le statut de cet employé ?')">
                                                 <i class="bi bi-toggle-on me-2"></i>
                                                 {{ 'Désactiver' if employee.is_active else 'Activer' }}

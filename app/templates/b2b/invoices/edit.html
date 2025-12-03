@@ -55,6 +55,7 @@
         </div>
         <div class="card-body">
             <form method="POST" action="{{ url_for('b2b.edit_invoice', invoice_id=invoice.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <p class="text-muted mb-3">
                     <i class="bi bi-info-circle me-2"></i>
                     Sélectionnez les commandes à ajouter à cette facture. Seules les commandes terminées ou livrées qui n'ont pas encore été facturées sont affichées.

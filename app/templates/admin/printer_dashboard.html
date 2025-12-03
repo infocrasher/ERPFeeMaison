@@ -223,7 +223,12 @@ function updateStatusBadge(elementId, condition, trueText, falseText) {
 function testPrint() {
     addMessage('🖨️ Envoi test d\'impression...', 'info');
     
-    fetch('/admin/printer/test/print', { method: 'POST' })
+    fetch('/admin/printer/test/print', { 
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -240,7 +245,12 @@ function testPrint() {
 function testDrawer() {
     addMessage('💰 Envoi commande ouverture tiroir...', 'info');
     
-    fetch('/admin/printer/test/drawer', { method: 'POST' })
+    fetch('/admin/printer/test/drawer', { 
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -285,7 +295,12 @@ function restartService() {
     
     addMessage('🔄 Redémarrage du service...', 'info');
     
-    fetch('/admin/printer/restart', { method: 'POST' })
+    fetch('/admin/printer/restart', { 
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.success) {

@@ -30,6 +30,7 @@
                         <!-- ### DEBUT DE LA CORRECTION (Méthode 1) ### -->
                         <!-- Remplacement du simple lien <a> par un formulaire qui envoie une requête POST. -->
                         <form method="POST" action="{{ url_for('purchases.cancel_purchase', id=purchase.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-danger"
                                     onclick="return confirm('Êtes-vous sûr de vouloir annuler ce bon d\'achat ?\n\nCette action est irréversible et reversera les stocks si nécessaire.')">
                                 <i class="fas fa-times me-1"></i>
@@ -50,6 +51,7 @@
                     {% if purchase.is_paid %}
                         <!-- Ajout d'un bouton pour annuler le paiement -->
                         <form method="POST" action="{{ url_for('purchases.mark_as_unpaid', id=purchase.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                              <button type="submit" class="btn btn-warning text-dark"
                                     onclick="return confirm('Êtes-vous sûr de vouloir marquer ce bon d\'achat comme NON PAYÉ ?')">
                                 <i class="fas fa-undo me-1"></i>

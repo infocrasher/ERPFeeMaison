@@ -28,6 +28,7 @@
                 <i class="bi bi-pencil me-1"></i>Modifier
             </a>
             <form method="POST" action="{{ url_for('customers.toggle_customer_status', customer_id=customer.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-outline-{{ 'secondary' if customer.is_active else 'success' }}"
                         onclick="return confirm('Êtes-vous sûr de vouloir {{ 'désactiver' if customer.is_active else 'activer' }} ce client ?')">
                     <i class="bi bi-{{ 'pause' if customer.is_active else 'play' }} me-1"></i>

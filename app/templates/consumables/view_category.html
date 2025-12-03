@@ -82,7 +82,8 @@
                                             <td>
                                                 <form method="POST" 
                                                       action="{{ url_for('consumables.delete_range', category_id=category.id, range_id=range.id) }}" 
-                                                      style="display: inline;"
+                                                      style="display: inline;">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                       onsubmit="return confirm('Supprimer cette plage ?');">
                                                     <button type="submit" class="btn btn-sm btn-danger">
                                                         <i class="bi bi-trash"></i>
@@ -161,6 +162,7 @@
                                 <form method="POST" action="{{ url_for('consumables.delete_category', category_id=category.id) }}" 
                                       onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ? Cette action est irréversible.');"
                                       class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-danger w-100">
                                         <i class="bi bi-trash"></i> Supprimer la catégorie
                                     </button>
