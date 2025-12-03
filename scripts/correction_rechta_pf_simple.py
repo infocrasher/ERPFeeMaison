@@ -30,9 +30,12 @@ def correct_rechta_pf():
         # Corriger à 2 pièces
         rechta_pf.stock_comptoir = 2.0
         
-        # Recalculer la valeur
-        if rechta_pf.cost_price and rechta_pf.cost_price > 0:
-            rechta_pf.valeur_stock_comptoir = float(rechta_pf.stock_comptoir * rechta_pf.cost_price)
+        # Recalculer la valeur (convertir Decimal en float)
+        from decimal import Decimal
+        cost_price = float(rechta_pf.cost_price or 0)
+        
+        if cost_price > 0:
+            rechta_pf.valeur_stock_comptoir = float(rechta_pf.stock_comptoir * cost_price)
         else:
             rechta_pf.valeur_stock_comptoir = 0.0
         
@@ -44,8 +47,8 @@ def correct_rechta_pf():
             (rechta_pf.stock_consommables or 0)
         )
         
-        if rechta_pf.cost_price and rechta_pf.cost_price > 0:
-            rechta_pf.total_stock_value = float(total_stock * rechta_pf.cost_price)
+        if cost_price > 0:
+            rechta_pf.total_stock_value = float(total_stock * cost_price)
         else:
             rechta_pf.total_stock_value = rechta_pf.valeur_stock_comptoir
         
