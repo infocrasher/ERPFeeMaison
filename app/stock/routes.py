@@ -27,6 +27,7 @@ from . import bp as stock
 @admin_required
 def overview():
     """Vue globale consolidée de tous les stocks"""
+    # ✅ Récupérer les produits à chaque requête (pas de cache)
     products = Product.query.all()
     low_stock_fallback = current_app.config.get('LOW_STOCK_THRESHOLD', 5)
     
@@ -153,7 +154,10 @@ def overview():
     except Exception:
         pending_purchases = []
     
-    return render_template(
+    # ✅ Rendu du template avec headers no-cache
+    from flask import make_response
+    
+    response = make_response(render_template(
         'stock/stock_overview.html',
         title="Vue Globale Stocks",
         summary_cards=summary_cards,
@@ -167,7 +171,14 @@ def overview():
         deficit_by_location=deficit_by_location,
         pending_transfers=pending_transfers,
         pending_purchases=pending_purchases
-    )
+    ))
+    
+    # Empêcher la mise en cache par le navigateur
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
+    return response
 
 @stock.route('/quick_entry', methods=['GET', 'POST'])
 @login_required
