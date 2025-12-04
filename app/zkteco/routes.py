@@ -152,6 +152,7 @@ def process_attendance_data(data):
         
         user_id = data.get('user_id') or data.get('zk_user_id')
         timestamp_str = data.get('timestamp') or data.get('time')
+        provided_punch_type = data.get('punch_type')  # 'in' ou 'out'
         
         if not user_id or not timestamp_str:
             raise ValueError("Données manquantes: user_id et timestamp requis")
@@ -186,10 +187,22 @@ def process_attendance_data(data):
                 'message': f'Employé non trouvé pour ID: {user_id}'
             }
         
-        # DÉTECTION AUTOMATIQUE IN/OUT basée sur le dernier pointage
-        punch_type = determine_auto_punch_type(employee.id, timestamp.date())
-        
-        current_app.logger.info(f"Auto-détection punch_type pour {employee.name}: {punch_type}")
+        # DÉTERMINATION DU TYPE DE POINTAGE (IN/OUT)
+        # 1. Priorité aux données explicites envoyées par le script
+        if provided_punch_type and str(provided_punch_type).lower() in ['in', 'out', '0', '1']:
+            punch_type = str(provided_punch_type).lower()
+            # Normalisation
+            if punch_type == '0': punch_type = 'in'
+            if punch_type == '1': punch_type = 'out'
+            
+            current_app.logger.info(f"Type de pointage explicite reçu pour {employee.name}: {punch_type}")
+            auto_detected = False
+            
+        # 2. Sinon, fallback sur l'auto-détection
+        else:
+            punch_type = determine_auto_punch_type(employee.id, timestamp.date())
+            current_app.logger.info(f"Auto-détection punch_type pour {employee.name}: {punch_type}")
+            auto_detected = True
         
         # Créer l'enregistrement de pointage
         attendance_record = AttendanceRecord(
@@ -209,7 +222,7 @@ def process_attendance_data(data):
             'employee_name': employee.name,
             'timestamp': timestamp.isoformat(),
             'punch_type': punch_type,
-            'auto_detected': True
+            'auto_detected': auto_detected
         }
         
     except Exception as e:
