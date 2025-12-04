@@ -54,12 +54,13 @@ def list_purchases():
     if request.method == 'POST' and form.validate_on_submit():
         if form.search_term.data:
             search = f"%{form.search_term.data}%"
-            # type: ignore[attr-defined] - Purchase.reference, supplier_name, notes sont des colonnes SQLAlchemy
-            query = query.filter(or_(
+            # ✅ CORRECTION : Recherche aussi dans les noms de produits via PurchaseItem
+            query = query.outerjoin(PurchaseItem).outerjoin(Product).filter(or_(
                 Purchase.reference.ilike(search),
                 Purchase.supplier_name.ilike(search),
-                Purchase.notes.ilike(search)
-            ))
+                Purchase.notes.ilike(search),
+                Product.name.ilike(search)  # Recherche dans les noms de produits
+            )).distinct()
         if form.status_filter.data != 'all':
             query = query.filter(Purchase.status == PurchaseStatus(form.status_filter.data))
         if form.urgency_filter.data != 'all':
@@ -77,11 +78,13 @@ def list_purchases():
         
         if search_term:
             search = f"%{search_term}%"
-            query = query.filter(or_(
+            # ✅ CORRECTION : Recherche aussi dans les noms de produits via PurchaseItem
+            query = query.outerjoin(PurchaseItem).outerjoin(Product).filter(or_(
                 Purchase.reference.ilike(search),
                 Purchase.supplier_name.ilike(search),
-                Purchase.notes.ilike(search)
-            ))
+                Purchase.notes.ilike(search),
+                Product.name.ilike(search)  # Recherche dans les noms de produits
+            )).distinct()
         if status_filter != 'all':
             query = query.filter(Purchase.status == PurchaseStatus(status_filter))
         if urgency_filter != 'all':
@@ -92,6 +95,7 @@ def list_purchases():
 
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('PURCHASES_PER_PAGE', 20)
+    # ✅ Le distinct() dans la requête évite déjà les duplications
     purchases_list = query.order_by(desc(Purchase.created_at)).paginate(
         page=page, per_page=per_page, error_out=False
     )
