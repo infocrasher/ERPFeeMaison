@@ -448,6 +448,134 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 setTimeout(() => window.location.reload(), 5 * 60 * 1000);
+
+// ============ SYSTÈME DE NOTIFICATION SONORE ============
+let previousOrderCount = {{ orders_by_date|length if orders_by_date else 0 }};
+let audioContext = null;
+let isFirstCheck = true;
+
+// Fonction pour jouer un son de notification
+function playNotificationSound() {
+    try {
+        // Initialiser AudioContext si nécessaire
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        // Créer une séquence de sons (3 bips)
+        const beeps = [
+            { frequency: 800, duration: 0.15, delay: 0 },
+            { frequency: 1000, duration: 0.15, delay: 0.2 },
+            { frequency: 1200, duration: 0.3, delay: 0.4 }
+        ];
+        
+        beeps.forEach(beep => {
+            setTimeout(() => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = beep.frequency;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + beep.duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + beep.duration);
+            }, beep.delay * 1000);
+        });
+        
+        console.log('🔔 Notification sonore jouée');
+    } catch (error) {
+        console.error('Erreur lors de la lecture du son:', error);
+    }
+}
+
+// Fonction pour vérifier les nouvelles commandes
+async function checkForNewOrders() {
+    try {
+        const response = await fetch('{{ url_for("dashboard.production_orders_count") }}');
+        if (!response.ok) {
+            console.error('Erreur lors de la vérification des commandes');
+            return;
+        }
+        
+        const data = await response.json();
+        const currentOrderCount = data.count;
+        
+        // Ne pas jouer de son au premier chargement
+        if (!isFirstCheck && currentOrderCount > previousOrderCount) {
+            console.log(`🆕 Nouvelle(s) commande(s) détectée(s): ${currentOrderCount - previousOrderCount}`);
+            playNotificationSound();
+            
+            // Afficher une alerte visuelle temporaire
+            showNewOrderAlert(currentOrderCount - previousOrderCount);
+        }
+        
+        previousOrderCount = currentOrderCount;
+        isFirstCheck = false;
+        
+    } catch (error) {
+        console.error('Erreur lors de la vérification des commandes:', error);
+    }
+}
+
+// Fonction pour afficher une alerte visuelle
+function showNewOrderAlert(newCount) {
+    const alert = document.createElement('div');
+    alert.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 0.75rem;
+        font-size: 1.1rem;
+        font-weight: bold;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        z-index: 9999;
+        animation: slideIn 0.3s ease-out;
+    `;
+    alert.textContent = `🔔 ${newCount} nouvelle(s) commande(s) !`;
+    
+    // Ajouter l'animation CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(alert);
+    
+    // Retirer l'alerte après 5 secondes
+    setTimeout(() => {
+        alert.style.transition = 'opacity 0.5s, transform 0.5s';
+        alert.style.opacity = '0';
+        alert.style.transform = 'translateX(400px)';
+        setTimeout(() => alert.remove(), 500);
+    }, 5000);
+}
+
+// Vérifier les nouvelles commandes toutes les 30 secondes
+setInterval(checkForNewOrders, 30000);
+
+// Première vérification après 30 secondes (pour initialiser le compteur)
+setTimeout(checkForNewOrders, 30000);
+
+console.log('✅ Système de notification sonore activé');
 </script>
 </body>
 </html>

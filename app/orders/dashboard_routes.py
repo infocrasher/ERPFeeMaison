@@ -270,3 +270,12 @@ def orders_stats_api():
         'delivered': Order.query.filter_by(status='delivered').count()
     }
     return jsonify(stats)
+
+@dashboard_bp.route('/api/production-orders-count')
+@login_required
+def production_orders_count():
+    """API pour compter les commandes en production (pour notification sonore)"""
+    count = Order.query.filter(
+        Order.status.in_(['pending', 'in_production'])
+    ).count()
+    return jsonify({'count': count, 'timestamp': datetime.utcnow().isoformat()})
