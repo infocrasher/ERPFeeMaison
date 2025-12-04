@@ -35,7 +35,7 @@ from . import bp as purchases
 
 # ==================== ROUTES PRINCIPALES CRUD ====================
 
-@purchases.route('/')
+@purchases.route('/', methods=['GET', 'POST'])
 @login_required
 def list_purchases():
     """Liste de tous les achats avec filtres et statut paiement"""
@@ -50,7 +50,8 @@ def list_purchases():
     elif payment_filter == 'paid':
         query = query.filter(Purchase.is_paid == True)
 
-    if form.validate_on_submit():
+    # ✅ CORRECTION : Gérer les filtres en GET et POST
+    if request.method == 'POST' and form.validate_on_submit():
         if form.search_term.data:
             search = f"%{form.search_term.data}%"
             # type: ignore[attr-defined] - Purchase.reference, supplier_name, notes sont des colonnes SQLAlchemy
@@ -66,6 +67,27 @@ def list_purchases():
         if form.supplier_filter.data:
             supplier_search = f"%{form.supplier_filter.data}%"
             # type: ignore[attr-defined] - Purchase.supplier_name est une colonne SQLAlchemy
+            query = query.filter(Purchase.supplier_name.ilike(supplier_search))
+    elif request.method == 'GET':
+        # Gérer aussi les filtres via GET (pour les liens et la pagination)
+        search_term = request.args.get('search_term', '')
+        status_filter = request.args.get('status_filter', 'all')
+        urgency_filter = request.args.get('urgency_filter', 'all')
+        supplier_filter = request.args.get('supplier_filter', '')
+        
+        if search_term:
+            search = f"%{search_term}%"
+            query = query.filter(or_(
+                Purchase.reference.ilike(search),
+                Purchase.supplier_name.ilike(search),
+                Purchase.notes.ilike(search)
+            ))
+        if status_filter != 'all':
+            query = query.filter(Purchase.status == PurchaseStatus(status_filter))
+        if urgency_filter != 'all':
+            query = query.filter(Purchase.urgency == PurchaseUrgency(urgency_filter))
+        if supplier_filter:
+            supplier_search = f"%{supplier_filter}%"
             query = query.filter(Purchase.supplier_name.ilike(supplier_search))
 
     page = request.args.get('page', 1, type=int)
