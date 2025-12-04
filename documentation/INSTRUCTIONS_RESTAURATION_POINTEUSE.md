@@ -25,7 +25,8 @@ nano .env
 
 ```bash
 # Configuration Pointeuse ZKTeco
-ZKTECO_IP=192.168.8.101
+# IP de la pointeuse sur le réseau local du magasin
+ZKTECO_IP=192.168.8.104
 ZKTECO_PORT=4370
 ZKTECO_API_TOKEN=TokenSecretFeeMaison2025
 ```
