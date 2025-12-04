@@ -21,10 +21,12 @@ POSTGRES_PASSWORD=your_secure_password_here
 REDIS_URL=redis://localhost:6379/0
 
 # CONFIGURATION POINTEUSE ZKTECO
-ZK_IP=192.168.1.100
+# ⚠️  IMPORTANT: Utiliser l'IP de la pointeuse sur le réseau LOCAL du magasin
+ZKTECO_IP=192.168.8.101
+ZKTECO_PORT=4370
+# Anciennes variables (compatibilité)
+ZK_IP=192.168.8.101
 ZK_PORT=4370
-ZK_PASSWORD=your_zk_password_here
-ZK_API_PASSWORD=your_zk_api_password_here
 
 # CONFIGURATION EMAIL (OPTIONNEL)
 # ⚠️  ATTENTION: Ne jamais commiter de vrais identifiants !

@@ -15,8 +15,9 @@ class Config:
     WTF_CSRF_TIME_LIMIT = 3600
     
     # Configuration pointeuse ZKTeco
-    ZKTECO_IP = os.environ.get('ZKTECO_IP', None)
-    ZKTECO_PORT = int(os.environ.get('ZKTECO_PORT', 4370))
+    # Accepte ZKTECO_IP ou ZK_IP (compatibilité)
+    ZKTECO_IP = os.environ.get('ZKTECO_IP') or os.environ.get('ZK_IP', None)
+    ZKTECO_PORT = int(os.environ.get('ZKTECO_PORT') or os.environ.get('ZK_PORT', 4370))
 
 class DevelopmentConfigSQLite(Config):
     DEBUG = True
