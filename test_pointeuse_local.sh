@@ -13,8 +13,12 @@ echo ""
 # Exporter les variables d'environnement pour le test
 export ZKTECO_IP=$POINTEUSE_IP
 export ZKTECO_PORT=4370
-export ZKTECO_API_TOKEN=TokenSecretFeeMaison2025
+export ZKTECO_API_TOKEN=${ZKTECO_API_TOKEN:-"VotreTokenSecret"}
 export FLASK_ENV=development
+
+echo "⚠️  IMPORTANT: Définir ZKTECO_API_TOKEN dans votre .env local"
+echo "   export ZKTECO_API_TOKEN='VotreTokenSecret'"
+echo ""
 
 # Activer l'environnement virtuel
 source venv/bin/activate
@@ -31,7 +35,7 @@ echo ""
 echo "3️⃣  Test pointage (user_id=3, Machair)..."
 curl -X POST http://127.0.0.1:5000/zkteco/api/test-attendance \
      -H 'Content-Type: application/json' \
-     -H 'Authorization: Bearer TokenSecretFeeMaison2025' \
+     -H "Authorization: Bearer $ZKTECO_API_TOKEN" \
      -d '{
        "user_id": 3,
        "timestamp": "2025-12-04 14:00:00",

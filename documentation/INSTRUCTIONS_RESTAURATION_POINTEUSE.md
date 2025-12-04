@@ -28,8 +28,10 @@ nano .env
 # IP de la pointeuse sur le réseau local du magasin
 ZKTECO_IP=192.168.8.104
 ZKTECO_PORT=4370
-ZKTECO_API_TOKEN=TokenSecretFeeMaison2025
+ZKTECO_API_TOKEN=VotreTokenSecretIci
 ```
+
+⚠️ **IMPORTANT** : Utilisez un token sécurisé. Le vrai token est dans votre configuration actuelle (contactez l'administrateur).
 
 **Appuyer sur `Ctrl+O` pour sauvegarder, `Enter` pour confirmer, `Ctrl+X` pour quitter**
 

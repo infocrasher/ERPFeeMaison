@@ -26,7 +26,7 @@ REDIS_URL=redis://localhost:6379/0
 # Pour tests locaux: Adapter selon votre réseau (ex: 192.168.100.16)
 ZKTECO_IP=192.168.8.104
 ZKTECO_PORT=4370
-ZKTECO_API_TOKEN=TokenSecretFeeMaison2025
+ZKTECO_API_TOKEN=VOTRE_TOKEN_SECRET_ICI_A_CHANGER
 # Anciennes variables (compatibilité)
 ZK_IP=192.168.8.104
 ZK_PORT=4370

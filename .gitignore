@@ -182,6 +182,7 @@ secrets.txt
 *.p12
 tokens.txt
 passwords.txt
+CONFIGURATION_PRIVEE*.txt
 
 # Base de données locales (pointeuse ZKTeco)
 TimeNet.db
