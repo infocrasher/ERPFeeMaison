@@ -2,7 +2,7 @@ from flask import request, jsonify, current_app
 from app.zkteco import zkteco
 from datetime import datetime
 from sqlalchemy import text
-from extensions import db
+from extensions import db, csrf
 from app.employees.models import Employee, AttendanceRecord
 import json
 
@@ -12,6 +12,7 @@ def root():
     return attendance()
 
 @zkteco.route('/api/ping')
+@csrf.exempt  # ✅ Exemption CSRF pour API
 def ping():
     """Test de connectivité pour la pointeuse"""
     try:
@@ -32,9 +33,24 @@ def ping():
         }), 500
 
 @zkteco.route('/api/attendance', methods=['GET', 'POST'])
+@csrf.exempt  # ✅ Exemption CSRF pour API machine-à-machine
 def attendance():
     """Endpoint pour recevoir les données de pointage"""
     try:
+        # ✅ Vérification du token Authorization pour sécuriser l'API
+        auth_header = request.headers.get('Authorization', '')
+        expected_token = current_app.config.get('ZKTECO_API_TOKEN', 'TokenSecretFeeMaison2025')
+        
+        if auth_header:
+            # Format: "Bearer TOKEN"
+            token = auth_header.replace('Bearer ', '').strip()
+            if token != expected_token:
+                current_app.logger.warning(f"Token invalide reçu: {token[:20]}...")
+                return jsonify({
+                    'message': 'Token d\'authentification invalide',
+                    'status': 'error'
+                }), 401
+        
         method = request.method
         data = request.get_data()
         
@@ -205,6 +221,7 @@ def process_attendance_data(data):
         }
 
 @zkteco.route('/api/employees')
+@csrf.exempt  # ✅ Exemption CSRF pour API
 def employees():
     """Endpoint pour récupérer la liste des employés"""
     try:
@@ -242,6 +259,7 @@ def employees():
 
 # Endpoint pour tester l'insertion manuelle de pointages
 @zkteco.route('/api/test-attendance', methods=['GET', 'POST'])
+@csrf.exempt  # ✅ Exemption CSRF pour API
 def test_attendance():
     """Endpoint de test pour simuler un pointage"""
     try:

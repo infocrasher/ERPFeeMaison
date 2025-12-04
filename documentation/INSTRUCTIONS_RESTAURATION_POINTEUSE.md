@@ -27,6 +27,7 @@ nano .env
 # Configuration Pointeuse ZKTeco
 ZKTECO_IP=192.168.8.101
 ZKTECO_PORT=4370
+ZKTECO_API_TOKEN=TokenSecretFeeMaison2025
 ```
 
 **Appuyer sur `Ctrl+O` pour sauvegarder, `Enter` pour confirmer, `Ctrl+X` pour quitter**
