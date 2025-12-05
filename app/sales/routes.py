@@ -639,6 +639,11 @@ def open_cash_register():
 @require_open_cash_session
 def close_cash_register():
     session = get_open_cash_session()
+    
+    # Calculer les totaux AVANT tout traitement (pour GET et POST)
+    total_cash_in = sum(m.amount for m in session.movements if m.type == 'entrée')
+    total_cash_out = sum(m.amount for m in session.movements if m.type == 'sortie')
+    
     if request.method == 'POST':
         closing_amount = float(request.form.get('closing_amount', 0))
         session.closed_at = datetime.utcnow()
@@ -648,10 +653,6 @@ def close_cash_register():
         db.session.commit()
         flash('Caisse clôturée avec succès.', 'success')
         return redirect(url_for('sales.list_cash_sessions'))
-    
-    # Calculer les totaux pour l'affichage
-    total_cash_in = sum(m.amount for m in session.movements if m.type == 'entrée')
-    total_cash_out = sum(m.amount for m in session.movements if m.type == 'sortie')
     
     return render_template('sales/cash_close.html', 
                          session=session,

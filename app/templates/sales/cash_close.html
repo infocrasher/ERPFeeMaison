@@ -333,15 +333,15 @@
             </div>
             <div class="recap-row">
                 <span class="recap-label">Total des entrées :</span>
-                <span class="recap-value">{{ session.total_cash_in|round(2) if session.total_cash_in else 0 }} DA</span>
+                <span class="recap-value">{{ total_cash_in|round(2) }} DA</span>
             </div>
             <div class="recap-row">
                 <span class="recap-label">Total des sorties :</span>
-                <span class="recap-value">{{ session.total_cash_out|round(2) if session.total_cash_out else 0 }} DA</span>
+                <span class="recap-value">{{ total_cash_out|round(2) }} DA</span>
             </div>
             <div class="recap-row recap-total">
                 <span class="recap-label">Solde théorique :</span>
-                <span class="recap-value">{{ (session.initial_amount + (session.total_cash_in or 0) - (session.total_cash_out or 0))|round(2) }} DA</span>
+                <span class="recap-value">{{ (session.initial_amount + total_cash_in - total_cash_out)|round(2) }} DA</span>
             </div>
         </div>
 
@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const differenceAmount = document.getElementById('differenceAmount');
     
     // Calculer le solde théorique
-    const theoreticalBalance = parseFloat('{{ (session.initial_amount + (session.total_cash_in or 0) - (session.total_cash_out or 0))|round(2) }}');
+    const theoreticalBalance = parseFloat('{{ (session.initial_amount + total_cash_in - total_cash_out)|round(2) }}');
     
     function calculateTotal() {
         let total = 0;
