@@ -359,3 +359,36 @@ def production_orders_count():
         Order.status.in_(['pending', 'in_production'])
     ).count()
     return jsonify({'count': count, 'timestamp': datetime.utcnow().isoformat()})
+
+@dashboard_bp.route('/shop/toggle-item/<int:item_id>', methods=['POST'])
+@login_required
+def toggle_item_reception(item_id):
+    """Bascule l'état de réception d'un produit (reçu / non reçu)"""
+    item = OrderItem.query.get_or_404(item_id)
+    
+    # Inverser l'état
+    item.is_received = not item.is_received
+    
+    if item.is_received:
+        item.received_at = datetime.utcnow()
+        # Si nous avions un lien User -> Employee, nous pourrions l'ajouter ici
+        # item.received_by_id = ...
+    else:
+        item.received_at = None
+        item.received_by_id = None
+        
+    db.session.commit()
+    
+    # Vérifier si tous les articles de la commande sont reçus
+    order = item.order
+    all_received = all(i.is_received for i in order.items)
+    percentage = int((sum(1 for i in order.items if i.is_received) / len(order.items)) * 100) if order.items.count() > 0 else 0
+    
+    return jsonify({
+        'success': True, 
+        'is_received': item.is_received,
+        'received_at': item.received_at.isoformat() if item.received_at else None,
+        'all_received': all_received,
+        'percentage': percentage,
+        'order_id': order.id
+    })

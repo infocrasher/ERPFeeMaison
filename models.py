@@ -987,6 +987,14 @@ class OrderItem(db.Model):
     unit_price = db.Column(db.Numeric(10, 2), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Suivi de réception individuelle
+    is_received = db.Column(db.Boolean, default=False, nullable=False, server_default='false')
+    received_at = db.Column(db.DateTime, nullable=True)
+    received_by_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=True)
+    
+    # Relations
+    received_by = db.relationship('Employee', foreign_keys=[received_by_id])
+    
     def get_subtotal(self):
         return float(Decimal(self.quantity) * Decimal(self.unit_price))
     

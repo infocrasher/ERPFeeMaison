@@ -388,7 +388,19 @@
                         </div>
                         <div class="flex-grow-1 ps-3">
                             {% for item in order.items %}
-                            <div>- {{ item.quantity|int }} {{ item.product.name }}</div>
+                            <div class="d-flex align-items-center mb-1">
+                                <div class="form-check m-0 p-0 d-flex align-items-center">
+                                    <input class="form-check-input item-checkbox me-2" type="checkbox"
+                                        id="item-{{ item.id }}" data-item-id="{{ item.id }}"
+                                        data-order-id="{{ order.id }}" style="border-color: #dee2e6;" {% if
+                                        item.is_received %}checked{% endif %}>
+                                    <label
+                                        class="form-check-label {{ 'text-decoration-line-through text-muted' if item.is_received else '' }}"
+                                        for="item-{{ item.id }}" id="label-{{ item.id }}" style="cursor: pointer;">
+                                        {{ item.quantity|int }} {{ item.product.name }}
+                                    </label>
+                                </div>
+                            </div>
                             {% endfor %}
                         </div>
                         <div class="text-end ps-3" style="min-width: 250px;">
@@ -443,7 +455,19 @@
                         </div>
                         <div class="flex-grow-1 ps-3">
                             {% for item in order.items %}
-                            <div>- {{ item.quantity|int }} {{ item.product.name }}</div>
+                            <div class="d-flex align-items-center mb-1">
+                                <div class="form-check m-0 p-0 d-flex align-items-center">
+                                    <input class="form-check-input item-checkbox me-2" type="checkbox"
+                                        id="item-{{ item.id }}" data-item-id="{{ item.id }}"
+                                        data-order-id="{{ order.id }}" style="border-color: #dee2e6;" {% if
+                                        item.is_received %}checked{% endif %}>
+                                    <label
+                                        class="form-check-label {{ 'text-decoration-line-through text-muted' if item.is_received else '' }}"
+                                        for="item-{{ item.id }}" id="label-{{ item.id }}" style="cursor: pointer;">
+                                        {{ item.quantity|int }} {{ item.product.name }}
+                                    </label>
+                                </div>
+                            </div>
                             {% endfor %}
                         </div>
                         <div class="text-end ps-3" style="min-width: 250px;">
@@ -489,7 +513,19 @@
                         </div>
                         <div class="flex-grow-1 ps-3">
                             {% for item in order.items %}
-                            <div>- {{ item.quantity|int }} {{ item.product.name }}</div>
+                            <div class="d-flex align-items-center mb-1">
+                                <div class="form-check m-0 p-0 d-flex align-items-center">
+                                    <input class="form-check-input item-checkbox me-2" type="checkbox"
+                                        id="item-{{ item.id }}" data-item-id="{{ item.id }}"
+                                        data-order-id="{{ order.id }}" style="border-color: #dee2e6;" {% if
+                                        item.is_received %}checked{% endif %}>
+                                    <label
+                                        class="form-check-label {{ 'text-decoration-line-through text-muted' if item.is_received else '' }}"
+                                        for="item-{{ item.id }}" id="label-{{ item.id }}" style="cursor: pointer;">
+                                        {{ item.quantity|int }} {{ item.product.name }}
+                                    </label>
+                                </div>
+                            </div>
                             {% endfor %}
                         </div>
                         <div class="text-end ps-3" style="min-width: 250px;">
@@ -545,7 +581,19 @@
                         </div>
                         <div class="flex-grow-1 ps-3">
                             {% for item in order.items %}
-                            <div>- {{ item.quantity|int }} {{ item.product.name }}</div>
+                            <div class="d-flex align-items-center mb-1">
+                                <div class="form-check m-0 p-0 d-flex align-items-center">
+                                    <input class="form-check-input item-checkbox me-2" type="checkbox"
+                                        id="item-{{ item.id }}" data-item-id="{{ item.id }}"
+                                        data-order-id="{{ order.id }}" style="border-color: #dee2e6;" {% if
+                                        item.is_received %}checked{% endif %}>
+                                    <label
+                                        class="form-check-label {{ 'text-decoration-line-through text-muted' if item.is_received else '' }}"
+                                        for="item-{{ item.id }}" id="label-{{ item.id }}" style="cursor: pointer;">
+                                        {{ item.quantity|int }} {{ item.product.name }}
+                                    </label>
+                                </div>
+                            </div>
                             {% endfor %}
                         </div>
                         <div class="text-end ps-3" style="min-width: 250px;">
@@ -666,5 +714,58 @@
 
     // Auto-refresh 2min
     setTimeout(function () { window.location.reload(); }, 2 * 60 * 1000);
+
+    // Gestion des cases à cocher de réception
+    document.addEventListener('DOMContentLoaded', function () {
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const itemId = this.dataset.itemId;
+                const orderId = this.dataset.orderId;
+                const label = document.querySelector(`label[for="item-${itemId}"]`);
+
+                // Désactiver temporairement pour éviter les doubles clics
+                this.disabled = true;
+
+                // Appel AJAX
+                fetch(`/dashboard/shop/toggle-item/${itemId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        this.disabled = false;
+
+                        if (data.success) {
+                            // Mettre à jour le style visuel
+                            if (data.is_received) {
+                                label.classList.add('text-decoration-line-through', 'text-muted');
+                            } else {
+                                label.classList.remove('text-decoration-line-through', 'text-muted');
+                            }
+
+                            // Si tous les articles sont reçus, on peut activer un effet visuel
+                            if (data.all_received) {
+                                // Optionnel: Animation
+                            }
+                        } else {
+                            // Erreur, on annule
+                            this.checked = !this.checked;
+                            alert('Erreur lors de la mise à jour');
+                        }
+                    })
+                    .catch(error => {
+                        this.disabled = false;
+                        this.checked = !this.checked;
+                        console.error('Erreur:', error);
+                        alert('Erreur de communication avec le serveur (vérifiez votre connexion)');
+                    });
+            });
+        });
+    });
 </script>
 {% endblock %}
