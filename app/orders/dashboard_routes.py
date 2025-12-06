@@ -1,10 +1,11 @@
-from flask import render_template, jsonify, Blueprint
+from flask import render_template, jsonify, Blueprint, request, flash
 from flask_login import login_required
-from models import Order, Product
+from models import Order, Product, OrderItem
 from app.employees.models import Employee
 from app.sales.models import CashRegisterSession
 from datetime import datetime, timedelta
 from decorators import admin_required
+from extensions import db
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -164,48 +165,127 @@ def production_dashboard():
 @login_required
 @admin_required
 def shop_dashboard():
-    # 1. En Production (toutes commandes)
-    orders_in_production = Order.query.filter(
-        Order.status == 'in_production'
-    ).order_by(Order.due_date.asc()).all()
+    # Get date filter from query params
+    selected_date_str = request.args.get('date')
+    selected_date = None
+    
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Format de date invalide', 'warning')
+            selected_date = None
+    
+    # Get search query
+    search_query = request.args.get('search', '').strip()
+    
+    # Build base queries with optional date filter
+    # 1. En Production - Commandes Client
+    query_customer = Order.query.filter(
+        Order.status == 'in_production',
+        Order.order_type == 'customer_order'
+    )
+    if selected_date:
+        query_customer = query_customer.filter(db.func.date(Order.due_date) == selected_date)
+    if search_query:
+        query_customer = query_customer.filter(
+            db.or_(
+                Order.customer_name.ilike(f'%{search_query}%'),
+                Order.customer_phone.ilike(f'%{search_query}%'),
+                Order.customer_address.ilike(f'%{search_query}%'),
+                Order.items.any(db.func.lower(Product.name).contains(search_query.lower()))
+            )
+        ).join(Order.items).join(OrderItem.product)
+    customer_orders_in_production = query_customer.order_by(Order.due_date.asc()).all()
+
+    # 1b. En Production - Ordres de Production
+    query_production = Order.query.filter(
+        Order.status == 'in_production',
+        Order.order_type != 'customer_order'
+    )
+    if selected_date:
+        query_production = query_production.filter(db.func.date(Order.due_date) == selected_date)
+    if search_query:
+        query_production = query_production.filter(
+            Order.items.any(db.func.lower(Product.name).contains(search_query.lower()))
+        ).join(Order.items).join(OrderItem.product)
+    production_orders_in_production = query_production.order_by(Order.due_date.asc()).all()
     
     # 2. En attente de retrait (commandes client pickup)
-    orders_waiting_pickup = Order.query.filter(
+    query_pickup = Order.query.filter(
         Order.status == 'waiting_for_pickup',
         Order.order_type == 'customer_order',
         Order.delivery_option == 'pickup'
-    ).order_by(Order.due_date.asc()).all()
+    )
+    if selected_date:
+        query_pickup = query_pickup.filter(db.func.date(Order.due_date) == selected_date)
+    if search_query:
+        query_pickup = query_pickup.filter(
+            db.or_(
+                Order.customer_name.ilike(f'%{search_query}%'),
+                Order.customer_phone.ilike(f'%{search_query}%'),
+                Order.items.any(db.func.lower(Product.name).contains(search_query.lower()))
+            )
+        ).join(Order.items).join(OrderItem.product)
+    orders_waiting_pickup = query_pickup.order_by(Order.due_date.asc()).all()
     
     # 3. Prêt à livrer (commandes client delivery ET commandes PDV livraison)
-    orders_ready_delivery = Order.query.filter(
+    query_delivery = Order.query.filter(
         Order.status == 'ready_at_shop',
         Order.delivery_option == 'delivery',
         Order.order_type.in_(['customer_order', 'in_store'])
-    ).order_by(Order.due_date.asc()).all()
+    )
+    if selected_date:
+        query_delivery = query_delivery.filter(db.func.date(Order.due_date) == selected_date)
+    if search_query:
+        query_delivery = query_delivery.filter(
+            db.or_(
+                Order.customer_name.ilike(f'%{search_query}%'),
+                Order.customer_phone.ilike(f'%{search_query}%'),
+                Order.customer_address.ilike(f'%{search_query}%'),
+                Order.items.any(db.func.lower(Product.name).contains(search_query.lower()))
+            )
+        ).join(Order.items).join(OrderItem.product)
+    orders_ready_delivery = query_delivery.order_by(Order.due_date.asc()).all()
     
     # 4. Au comptoir (ordres de production terminés - visibles 24h)
     cutoff_datetime = datetime.utcnow() - timedelta(days=1)
-    orders_at_counter = Order.query.filter(
+    query_counter = Order.query.filter(
         Order.status == 'completed',
         Order.order_type == 'counter_production_request',
         Order.created_at >= cutoff_datetime
-    ).order_by(Order.created_at.desc()).limit(10).all()
-    
-    # 5. Livré Non Payé (commandes livrées en attente paiement)
-    orders_delivered_unpaid = Order.query.filter(
-        Order.status == 'delivered_unpaid'
-    ).order_by(Order.due_date.asc()).all()
+    )
+    if selected_date:
+        query_counter = query_counter.filter(db.func.date(Order.created_at) == selected_date)
+    if search_query:
+        query_counter = query_counter.filter(
+            Order.items.any(db.func.lower(Product.name).contains(search_query.lower()))
+        ).join(Order.items).join(OrderItem.product)
+    orders_at_counter = query_counter.order_by(Order.created_at.desc()).limit(10).all()
     
     # Vérifier si une session de caisse est ouverte
     cash_session_open = CashRegisterSession.query.filter_by(is_open=True).first() is not None
     
+    # Récupérer les employés de production pour le modal
+    from app.employees.models import Employee
+    employees = Employee.query.filter(
+        Employee.is_active == True,
+        Employee.role.in_(['production', 'chef_production', 'assistant_production'])
+    ).order_by(Employee.name).all()
+    
+    # Get today's date for default value
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    
     return render_template('dashboards/shop_dashboard.html',
-                         orders_in_production=orders_in_production,
+                         customer_orders_in_production=customer_orders_in_production,
+                         production_orders_in_production=production_orders_in_production,
                          orders_waiting_pickup=orders_waiting_pickup,
                          orders_ready_delivery=orders_ready_delivery,
                          orders_at_counter=orders_at_counter,
-                         orders_delivered_unpaid=orders_delivered_unpaid,
                          cash_session_open=cash_session_open,
+                         employees=employees,
+                         selected_date=selected_date_str,
+                         today_date=today_date,
                          title="Dashboard Magasin")
 
 @dashboard_bp.route('/ingredients-alerts')

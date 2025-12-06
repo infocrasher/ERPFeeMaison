@@ -923,6 +923,34 @@ class Order(db.Model):
     def balance_due_value(self):
         return float(self.balance_due)
     
+    @property
+    def get_delivery_address(self):
+        """
+        Retourne l'adresse de livraison en priorité:
+        1. customer_address (adresse complète stockée dans la commande)
+        2. delivery_zone (commune/zone de livraison)
+        3. customer.delivery_address (adresse de livraison du client)
+        4. customer.address (adresse principale du client)
+        """
+        # 1. Adresse complète stockée directement dans la commande
+        if self.customer_address and self.customer_address.strip():
+            return self.customer_address
+        
+        # 2. Zone de livraison (commune)
+        if self.delivery_zone and self.delivery_zone.strip():
+            return self.delivery_zone
+        
+        # 3. Adresse depuis le client lié
+        if self.customer:
+            # Priorité à l'adresse de livraison spécifique
+            if self.customer.delivery_address:
+                return self.customer.delivery_address
+            # Sinon adresse principale
+            if self.customer.address:
+                return self.customer.address
+        
+        return None
+    
     def get_items_subtotal(self):
         return sum(item.subtotal for item in self.items)
     

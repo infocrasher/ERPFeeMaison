@@ -10,25 +10,26 @@
         background-color: #f8f9fa;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    
+
     .shop-header {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         color: white;
         padding: 2rem 0;
         margin-bottom: 2rem;
         border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     }
-    
+
     .section-card {
         background: white;
         border-radius: 15px;
         padding: 1.5rem;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        scroll-margin-top: 20px;
     }
-    
+
     .section-title {
         display: flex;
         align-items: center;
@@ -37,7 +38,7 @@
         border-bottom: 2px solid #f8f9fa;
         color: #495057;
     }
-    
+
     .order-item {
         background: #f8f9fa;
         border-radius: 10px;
@@ -47,54 +48,55 @@
         transition: all 0.3s ease;
         position: relative;
     }
-    
+
     .order-item:hover {
         transform: translateX(5px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
-    
-    .order-production {
+
+    /* Couleurs des statuts */
+    .order-customer-production {
         border-left-color: #ffc107;
         background: linear-gradient(135deg, #fff3cd 0%, #fffef7 100%);
     }
-    
+
+    .order-internal-production {
+        border-left-color: #6f42c1;
+        background: linear-gradient(135deg, #e2d9f3 0%, #faf8ff 100%);
+    }
+
     .order-pickup {
         border-left-color: #17a2b8;
         background: linear-gradient(135deg, #d1ecf1 0%, #f8fdff 100%);
     }
-    
+
     .order-delivery {
         border-left-color: #28a745;
         background: linear-gradient(135deg, #d4edda 0%, #f8fff9 100%);
     }
-    
-    .order-counter {
-        border-left-color: #6f42c1;
-        background: linear-gradient(135deg, #e2d9f3 0%, #faf8ff 100%);
-    }
-    
+
     .order-unpaid {
         border-left-color: #fd7e14;
         background: linear-gradient(135deg, #ffeaa7 0%, #fffef7 100%);
     }
-    
+
     .order-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
         margin-bottom: 1rem;
     }
-    
+
     .order-info {
         flex: 1;
     }
-    
+
     .order-actions {
         display: flex;
         gap: 0.5rem;
         align-items: center;
     }
-    
+
     .action-btn {
         padding: 0.5rem 1rem;
         border-radius: 20px;
@@ -107,186 +109,177 @@
         display: inline-block;
         text-align: center;
     }
-    
+
     .btn-receive {
         background: #28a745;
         color: white;
     }
-    
+
     .btn-receive:hover {
         background: #218838;
         transform: scale(1.05);
         color: white;
         text-decoration: none;
     }
-    
+
     .btn-assign {
         background: #007bff;
         color: white;
     }
-    
+
     .btn-assign:hover {
         background: #0056b3;
         transform: scale(1.05);
         color: white;
         text-decoration: none;
     }
-    
+
     .btn-cash {
         background: #28a745;
         color: white;
     }
-    
+
     .btn-cash:hover {
         background: #218838;
         transform: scale(1.05);
         color: white;
         text-decoration: none;
     }
-    
+
     .btn-cash-disabled {
         background: #6c757d;
         color: white;
         opacity: 0.6;
         cursor: not-allowed;
     }
-    
+
     .btn-view {
         background: #6c757d;
         color: white;
     }
-    
+
     .btn-view:hover {
         background: #545b62;
         transform: scale(1.05);
         color: white;
         text-decoration: none;
     }
-    
+
     .product-list {
         display: flex;
         flex-wrap: wrap;
         gap: 0.5rem;
         margin: 0.5rem 0;
     }
-    
+
     .product-badge {
-        background: rgba(0,123,255,0.1);
-        color: #007bff;
+        background: rgba(0, 0, 0, 0.05);
+        color: #333;
         padding: 0.3rem 0.8rem;
         border-radius: 15px;
-        font-size: 0.8rem;
-        font-weight: 500;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: 1px solid rgba(0, 0, 0, 0.1);
     }
-    
-    .order-meta {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+
+    .order-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
         margin-top: 1rem;
         padding-top: 1rem;
-        border-top: 1px solid rgba(0,0,0,0.1);
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
         font-size: 0.9rem;
         color: #6c757d;
     }
-    
-    .customer-info {
-        font-weight: 500;
-        color: #495057;
-    }
-    
-    .time-info {
+
+    .detail-item {
         display: flex;
         align-items: center;
         gap: 0.5rem;
     }
-    
-    .urgent-indicator {
-        background: #dc3545;
-        color: white;
-        padding: 0.2rem 0.6rem;
-        border-radius: 10px;
-        font-size: 0.7rem;
-        font-weight: bold;
-        text-transform: uppercase;
-        animation: pulse 2s infinite;
+
+    .detail-icon {
+        color: #adb5bd;
     }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-    
+
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 1rem;
         margin-bottom: 2rem;
     }
-    
+
     .stat-card {
         background: white;
         border-radius: 10px;
         padding: 1.5rem;
         text-align: center;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 0, 0, 0.05);
         cursor: pointer;
         transition: all 0.3s ease;
         text-decoration: none;
         display: block;
         color: inherit;
     }
-    
+
     .stat-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         text-decoration: none;
         color: inherit;
     }
-    
-    .stat-card:active {
-        transform: translateY(-2px);
-    }
-    
+
     .stat-number {
         font-size: 2rem;
         font-weight: bold;
         display: block;
         margin-bottom: 0.5rem;
     }
-    
+
     .stat-label {
         color: #6c757d;
         font-size: 0.9rem;
         font-weight: 500;
     }
-    
-    .empty-state {
+
+    /* Employee Selection Modal Styles */
+    .employee-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 0.5rem;
+    }
+
+    .employee-checkbox-card {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
         text-align: center;
-        padding: 3rem 1rem;
-        color: #6c757d;
     }
-    
-    .empty-state i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        opacity: 0.5;
+
+    .employee-checkbox-card:hover {
+        border-color: #007bff;
+        background-color: #f8f9fa;
     }
-    
-    .empty-state h5 {
-        margin-bottom: 0.5rem;
-        color: #495057;
+
+    .employee-checkbox-card.selected {
+        border-color: #28a745;
+        background-color: #d4edda;
+        color: #155724;
     }
-    
-    /* Scroll smooth pour les ancres */
+
+    .employee-checkbox-card input {
+        display: none;
+    }
+
     html {
         scroll-behavior: smooth;
-    }
-    
-    /* Offset pour les sections avec ancres (compenser le header fixe si nécessaire) */
-    .section-card {
-        scroll-margin-top: 20px;
     }
 </style>
 {% endblock %}
@@ -296,11 +289,52 @@
 <div class="shop-header">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-md-8">
+            <div class="col-md-4">
                 <h1 class="mb-0">
                     <i class="bi bi-shop me-3"></i>Dashboard Magasin
                 </h1>
                 <p class="mb-0 mt-2 opacity-75">Gestion des commandes et livraisons</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <!-- Filter Controls -->
+                <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+                    <a href="{{ url_for('dashboard.shop_dashboard') }}"
+                        class="btn btn-sm {{ 'btn-light' if not selected_date else 'btn-outline-light' }}">
+                        <i class="bi bi-list-ul me-1"></i>Toutes
+                    </a>
+                    <form method="GET" action="{{ url_for('dashboard.shop_dashboard') }}" class="d-inline-block">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-calendar3"></i>
+                            </span>
+                            <input type="date" name="date" class="form-control"
+                                value="{{ selected_date or today_date }}" onchange="this.form.submit()"
+                                style="min-width: 140px;">
+                        </div>
+                    </form>
+                </div>
+                <!-- Search Field -->
+                <div class="mt-2">
+                    <form method="GET" action="{{ url_for('dashboard.shop_dashboard') }}" class="d-inline-block w-100">
+                        {% if selected_date %}
+                        <input type="hidden" name="date" value="{{ selected_date }}">
+                        {% endif %}
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="search" class="form-control"
+                                placeholder="Nom, Tél, Produit, Adresse..." value="{{ request.args.get('search', '') }}"
+                                style="min-width: 200px;">
+                            {% if request.args.get('search') %}
+                            <a href="{{ url_for('dashboard.shop_dashboard', date=selected_date if selected_date else '') }}"
+                                class="btn btn-sm btn-outline-light">
+                                <i class="bi bi-x"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
             </div>
             <div class="col-md-4 text-end">
                 <div class="text-white">
@@ -313,427 +347,279 @@
 </div>
 
 <div class="container-fluid">
-    <!-- Statistiques -->
+    <!-- Statistiques (Nouvelle Structure) -->
     <div class="stats-grid">
-        <a href="#section-production" class="stat-card">
-            <span class="stat-number text-warning">{{ orders_in_production|length }}</span>
-            <div class="stat-label">En Production</div>
+        <a href="#section-customer-production" class="stat-card">
+            <span class="stat-number text-warning">{{ customer_orders_in_production|length }}</span>
+            <div class="stat-label">Commande Client</div>
+        </a>
+        <a href="#section-internal-production" class="stat-card">
+            <span class="stat-number text-purple" style="color: #6f42c1;">{{ production_orders_in_production|length
+                }}</span>
+            <div class="stat-label">Ordre de Prod</div>
         </a>
         <a href="#section-pickup" class="stat-card">
             <span class="stat-number text-info">{{ orders_waiting_pickup|length }}</span>
-            <div class="stat-label">Attente Retrait</div>
+            <div class="stat-label">Attente de Retrait</div>
         </a>
         <a href="#section-delivery" class="stat-card">
             <span class="stat-number text-success">{{ orders_ready_delivery|length }}</span>
             <div class="stat-label">Prêt à Livrer</div>
         </a>
-        <a href="#section-counter" class="stat-card">
-            <span class="stat-number text-primary">{{ orders_at_counter|length }}</span>
-            <div class="stat-label">Au Comptoir</div>
-        </a>
-        <a href="#section-unpaid" class="stat-card">
-            <span class="stat-number text-warning">{{ orders_delivered_unpaid|length }}</span>
-            <div class="stat-label">Livré Non Payé</div>
-        </a>
     </div>
-    
-    <!-- Section 1: Commandes en Production -->
-    <div id="section-production" class="section-card">
+
+    <!-- Section 1: Commandes Client en Production -->
+    <div id="section-customer-production" class="section-card">
         <div class="section-title">
-            <i class="bi bi-gear-wide-connected me-3 text-warning"></i>
-            <h3 class="mb-0">En Production</h3>
-            <span class="badge bg-warning ms-auto">{{ orders_in_production|length }}</span>
+            <i class="bi bi-person-gear me-3 text-warning"></i>
+            <h3 class="mb-0">Commandes Client (En Production)</h3>
+            <span class="badge bg-warning ms-auto">{{ customer_orders_in_production|length }}</span>
         </div>
-        
-        {% if orders_in_production %}
-            {% for order in orders_in_production %}
-            <div class="order-item order-production">
-                <div class="order-header">
-                    <div class="order-info">
-                        <h5 class="mb-1">
-                            {% if order.order_type == 'customer_order' %}
-                                <i class="bi bi-person me-2"></i>Commande #{{ order.id }} - {{ order.customer_name }}
-                            {% else %}
-                                <i class="bi bi-gear me-2"></i>Ordre Production #{{ order.id }}
-                            {% endif %}
-                        </h5>
-                        
-                        <div class="product-list">
+
+        {% if customer_orders_in_production %}
+        {% for order in customer_orders_in_production %}
+        <div class="order-item order-customer-production">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1" style="font-size: 1.08rem;">
+                    <div class="d-flex align-items-start gap-4">
+                        <div style="min-width: 250px;">
+                            <span class="fw-bold">{{ order.customer_name }}</span><br>
+                            <span class="text-muted">{{ order.customer_phone or 'N/A' }}</span>
+                        </div>
+                        <div class="flex-grow-1 ps-3">
                             {% for item in order.items %}
-                                <span class="product-badge">
-                                    {{ item.product.name }} ({{ item.quantity }} {{ item.product.unit }})
-                                </span>
+                            <div>- {{ item.quantity|int }} {{ item.product.name }}</div>
                             {% endfor %}
                         </div>
-                    </div>
-                    
-                    <div class="order-actions">
-                        <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
-                            <i class="bi bi-eye me-1"></i>Voir
-                        </a>
-                        <a href="{{ url_for('status.select_employees_for_status_change', order_id=order.id, new_status='ready_at_shop') }}" class="action-btn btn-receive">
-                            <i class="bi bi-check-circle me-1"></i>Reçu
-                        </a>
-                        <a href="{{ url_for('orders.report_order_issue', order_id=order.id) }}" class="action-btn btn-warning">
-                            <i class="bi bi-flag me-1"></i>Signaler Erreur
-                        </a>
+                        <div class="text-end ps-3" style="min-width: 250px;">
+                            <div class="text-muted fw-bold">{{ order.due_date.strftime('%H:%M') if order.due_date else
+                                'N/A' }}</div>
+                            {% if order.delivery_option == 'delivery' %}
+                            {% if order.get_delivery_address %}
+                            <div class="text-muted small">📍 {{ order.get_delivery_address }}</div>
+                            {% else %}
+                            <div class="text-muted small">🚚 Livraison (adresse non renseignée)</div>
+                            {% endif %}
+                            {% else %}
+                            <div class="text-muted small">🏪 Retrait magasin</div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-                
-                <div class="order-meta">
-                    <div class="customer-info">
-                        {% if order.order_type == 'customer_order' %}
-                            <i class="bi bi-telephone me-1"></i>{{ order.customer_phone or 'N/A' }}
-                        {% else %}
-                            <i class="bi bi-box me-1"></i>Pour stock comptoir
-                        {% endif %}
-                    </div>
-                    <div class="time-info">
-                        <i class="bi bi-clock me-1"></i>
-                        {{ order.due_date.strftime('%H:%M') }}
-                        {% if order.is_overdue() %}
-                        <span class="urgent-indicator">En retard</span>
-                        {% endif %}
-                    </div>
+                <div class="order-actions ms-3">
+                    <button type="button" class="action-btn btn-receive"
+                        onclick="openEmployeeModal('{{ order.id }}', 'ready_at_shop')">
+                        <i class="bi bi-check-circle me-1"></i>Reçu
+                    </button>
+                    <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
+                        <i class="bi bi-eye"></i>
+                    </a>
                 </div>
             </div>
-            {% endfor %}
+        </div>
+        {% endfor %}
         {% else %}
-            <div class="empty-state">
-                <i class="bi bi-hourglass-split"></i>
-                <h5>Aucune commande en production</h5>
-                <p class="text-muted">Les commandes en cours de production apparaîtront ici.</p>
-            </div>
+        <div class="text-center text-muted py-4">Aucune commande client en production</div>
         {% endif %}
     </div>
-    
-    <!-- Section 2: En Attente de Retrait -->
+
+    <!-- Section 2: Ordres de Production Interne -->
+    <div id="section-internal-production" class="section-card">
+        <div class="section-title">
+            <i class="bi bi-gear-wide-connected me-3" style="color: #6f42c1;"></i>
+            <h3 class="mb-0">Ordres de Production (Interne)</h3>
+            <span class="badge bg-purple ms-auto" style="background-color: #6f42c1;">{{
+                production_orders_in_production|length }}</span>
+        </div>
+
+        {% if production_orders_in_production %}
+        {% for order in production_orders_in_production %}
+        <div class="order-item order-internal-production">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1" style="font-size: 1.08rem;">
+                    <div class="d-flex align-items-start gap-4">
+                        <div style="min-width: 250px;">
+                            <span class="fw-bold">Ordre #{{ order.id }}</span>
+                        </div>
+                        <div class="flex-grow-1 ps-3">
+                            {% for item in order.items %}
+                            <div>- {{ item.quantity|int }} {{ item.product.name }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-end ps-3" style="min-width: 250px;">
+                            <div class="text-muted fw-bold">{{ order.due_date.strftime('%H:%M') if order.due_date else
+                                'N/A' }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="order-actions ms-3">
+                    <button type="button" class="action-btn btn-receive"
+                        onclick="openEmployeeModal('{{ order.id }}', 'completed')">
+                        <i class="bi bi-check-circle me-1"></i>Reçu
+                    </button>
+                    <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center text-muted py-4">Aucun ordre de production en cours</div>
+        {% endif %}
+    </div>
+
+    <!-- Section 3: Attente de Retrait -->
     <div id="section-pickup" class="section-card">
         <div class="section-title">
             <i class="bi bi-bag-check me-3 text-info"></i>
-            <h3 class="mb-0">En Attente de Retrait</h3>
+            <h3 class="mb-0">Attente de Retrait</h3>
             <span class="badge bg-info ms-auto">{{ orders_waiting_pickup|length }}</span>
         </div>
-        
+
         {% if orders_waiting_pickup %}
-            {% for order in orders_waiting_pickup %}
-            <div class="order-item order-pickup">
-                <div class="order-header">
-                    <div class="order-info">
-                        <h5 class="mb-1">
-                            <i class="bi bi-person me-2"></i>Commande #{{ order.id }} - {{ order.customer_name }}
-                        </h5>
-                        
-                        <div class="product-list">
+        {% for order in orders_waiting_pickup %}
+        <div class="order-item order-pickup">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1" style="font-size: 1.08rem;">
+                    <div class="d-flex align-items-start gap-4">
+                        <div style="min-width: 250px;">
+                            <span class="fw-bold">{{ order.customer_name }}</span><br>
+                            <span class="text-muted">{{ order.customer_phone or 'N/A' }}</span>
+                        </div>
+                        <div class="flex-grow-1 ps-3">
                             {% for item in order.items %}
-                                <span class="product-badge">
-                                    {{ item.product.name }} ({{ item.quantity }} {{ item.product.unit }})
-                                </span>
+                            <div>- {{ item.quantity|int }} {{ item.product.name }}</div>
                             {% endfor %}
                         </div>
-                    </div>
-                    
-                    <div class="order-actions">
-                        <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
-                            <i class="bi bi-eye me-1"></i>Voir
-                        </a>
-                        {% if cash_session_open %}
-                            <form method="POST"
-                                  action="{{ url_for('orders.pay_order', order_id=order.id) }}"
-                                  class="shop-pay-form"
-                                  data-order-id="{{ order.id }}"
-                                  data-total="{{ '%.2f'|format(order.total_amount|float) if order.total_amount else '0.00' }}"
-                                  data-paid="{{ '%.2f'|format(order.amount_paid_value) if order.amount_paid_value else '0.00' }}"
-                                  data-balance="{{ '%.2f'|format(order.balance_due_value) if order.balance_due_value else '0.00' }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="amount_received" value="">
-                                <button type="button" class="action-btn btn-cash shop-pay-trigger">
-                                    <i class="bi bi-cash-coin me-1"></i>Encaisser
-                                </button>
-                            </form>
-                        {% else %}
-                            <span class="action-btn btn-cash-disabled">
-                                <i class="bi bi-cash-coin me-1"></i>Encaisser
-                            </span>
-                        {% endif %}
-                        <a href="{{ url_for('orders.report_order_issue', order_id=order.id) }}" class="action-btn btn-warning">
-                            <i class="bi bi-flag me-1"></i>Signaler Erreur
-                        </a>
+                        <div class="text-end ps-3" style="min-width: 250px;">
+                            <div class="text-muted fw-bold">{{ order.due_date.strftime('%H:%M') if order.due_date else
+                                'N/A' }}</div>
+                            <div class="text-muted small">🏪 Retrait magasin</div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="order-meta">
-                    <div class="customer-info">
-                        <i class="bi bi-telephone me-1"></i>{{ order.customer_phone or 'N/A' }}
-                        {% if order.total_amount %}
-                            <span class="ms-3">
-                                <i class="bi bi-cash me-1"></i>{{ "%.2f"|format(order.total_amount|float) }} DA
-                            </span>
-                        {% endif %}
-                    </div>
-                    <div class="time-info">
-                        <i class="bi bi-clock me-1"></i>
-                        Prêt depuis {{ order.due_date.strftime('%H:%M') }}
-                    </div>
+                <div class="order-actions ms-3">
+                    {% if cash_session_open %}
+                    <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}"
+                        class="shop-pay-form" data-order-id="{{ order.id }}"
+                        data-total="{{ '%.2f'|format(order.total_amount|float) if order.total_amount else '0.00' }}"
+                        data-paid="{{ '%.2f'|format(order.amount_paid_value) if order.amount_paid_value else '0.00' }}"
+                        data-balance="{{ '%.2f'|format(order.balance_due_value) if order.balance_due_value else '0.00' }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="amount_received" value="">
+                        <button type="button" class="action-btn btn-cash shop-pay-trigger">
+                            <i class="bi bi-cash-coin me-1"></i>Encaisser
+                        </button>
+                    </form>
+                    {% endif %}
+                    <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
+                        <i class="bi bi-eye"></i>
+                    </a>
                 </div>
             </div>
-            {% endfor %}
+        </div>
+        {% endfor %}
         {% else %}
-            <div class="empty-state">
-                <i class="bi bi-bag-check"></i>
-                <h5>Aucune commande en attente de retrait</h5>
-                <p class="text-muted">Les commandes retrait magasin apparaîtront ici.</p>
-            </div>
+        <div class="text-center text-muted py-4">Aucune commande en attente de retrait</div>
         {% endif %}
     </div>
-    
-    <!-- Section 3: Prêt à Livrer -->
+
+    <!-- Section 4: Prêt à Livrer -->
     <div id="section-delivery" class="section-card">
         <div class="section-title">
             <i class="bi bi-truck me-3 text-success"></i>
             <h3 class="mb-0">Prêt à Livrer</h3>
             <span class="badge bg-success ms-auto">{{ orders_ready_delivery|length }}</span>
         </div>
-        
+
         {% if orders_ready_delivery %}
-            {% for order in orders_ready_delivery %}
-            <div class="order-item order-delivery">
-                <div class="order-header">
-                    <div class="order-info">
-                        <h5 class="mb-1">
-                            <i class="bi bi-person me-2"></i>Commande #{{ order.id }} - {{ order.customer_name }}
-                            {% if order.order_type == 'in_store' %}
-                                <span class="badge bg-purple ms-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 0.7rem;">PDV</span>
-                            {% endif %}
-                        </h5>
-                        
-                        <div class="product-list">
+        {% for order in orders_ready_delivery %}
+        <div class="order-item order-delivery">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1" style="font-size: 1.08rem;">
+                    <div class="d-flex align-items-start gap-4">
+                        <div style="min-width: 250px;">
+                            <span class="fw-bold">{{ order.customer_name }}</span><br>
+                            <span class="text-muted">{{ order.customer_phone or 'N/A' }}</span>
+                        </div>
+                        <div class="flex-grow-1 ps-3">
                             {% for item in order.items %}
-                                <span class="product-badge">
-                                    {{ item.product.name }} ({{ item.quantity }} {{ item.product.unit }})
-                                </span>
+                            <div>- {{ item.quantity|int }} {{ item.product.name }}</div>
                             {% endfor %}
                         </div>
-                        
-                        <div class="mt-2">
-                            <i class="bi bi-geo-alt me-1"></i>
-                            <strong>{{ order.get_delivery_option_display() }}</strong>
-                            {% if order.customer_address %}
-                                <br><small class="text-muted">{{ order.customer_address }}</small>
+                        <div class="text-end ps-3" style="min-width: 250px;">
+                            <div class="text-muted fw-bold">{{ order.due_date.strftime('%H:%M') if order.due_date else
+                                'N/A' }}</div>
+                            {% if order.get_delivery_address %}
+                            <div class="text-muted small">📍 {{ order.get_delivery_address }}</div>
+                            {% else %}
+                            <div class="text-muted small">🚚 Livraison (adresse non renseignée)</div>
                             {% endif %}
                         </div>
                     </div>
-                    
-                    <div class="order-actions">
-                        <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
-                            <i class="bi bi-eye me-1"></i>Voir
-                        </a>
-                        <a href="{{ url_for('orders.assign_deliveryman', order_id=order.id) }}" class="action-btn btn-assign">
-                            <i class="bi bi-person-plus me-1"></i>Assigner Livreur
-                        </a>
-                        {% if order.order_type == 'in_store' %}
-                            <form method="POST" action="{{ url_for('orders.cancel_delivery_order', order_id=order.id) }}" 
-                                  onsubmit="return confirm('Êtes-vous sûr de vouloir annuler cette commande de livraison ? Le stock sera restauré.');" 
-                                  style="display: inline;">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="action-btn btn-danger">
-                                    <i class="bi bi-x-circle me-1"></i>Annuler
-                                </button>
-                            </form>
-                        {% endif %}
-                        {% if cash_session_open %}
-                            <form method="POST"
-                                  action="{{ url_for('orders.pay_order', order_id=order.id) }}"
-                                  class="shop-pay-form"
-                                  data-order-id="{{ order.id }}"
-                                  data-total="{{ '%.2f'|format(order.total_amount|float) if order.total_amount else '0.00' }}"
-                                  data-paid="{{ '%.2f'|format(order.amount_paid_value) if order.amount_paid_value else '0.00' }}"
-                                  data-balance="{{ '%.2f'|format(order.balance_due_value) if order.balance_due_value else '0.00' }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="amount_received" value="">
-                                <button type="button" class="action-btn btn-cash shop-pay-trigger">
-                                    <i class="bi bi-cash-coin me-1"></i>Encaisser
-                                </button>
-                            </form>
-                        {% else %}
-                            <span class="action-btn btn-cash-disabled">
-                                <i class="bi bi-cash-coin me-1"></i>Encaisser
-                            </span>
-                        {% endif %}
-                        <a href="{{ url_for('orders.report_order_issue', order_id=order.id) }}" class="action-btn btn-warning">
-                            <i class="bi bi-flag me-1"></i>Signaler Erreur
-                        </a>
-                    </div>
                 </div>
-                
-                <div class="order-meta">
-                    <div class="customer-info">
-                        <i class="bi bi-telephone me-1"></i>{{ order.customer_phone or 'N/A' }}
-                        {% if order.total_amount %}
-                            <span class="ms-3">
-                                <i class="bi bi-cash me-1"></i>{{ "%.2f"|format(order.total_amount|float) }} DA
-                            </span>
-                        {% endif %}
-                    </div>
-                    <div class="time-info">
-                        <i class="bi bi-clock me-1"></i>
-                        Prêt depuis {{ order.due_date.strftime('%H:%M') }}
-                    </div>
+                <div class="order-actions ms-3">
+                    <a href="{{ url_for('orders.assign_deliveryman', order_id=order.id) }}"
+                        class="action-btn btn-assign">
+                        <i class="bi bi-person-plus me-1"></i>Livreur
+                    </a>
+                    <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
+                        <i class="bi bi-eye"></i>
+                    </a>
                 </div>
             </div>
-            {% endfor %}
-        {% else %}
-            <div class="empty-state">
-                <i class="bi bi-truck"></i>
-                <h5>Aucune commande prête à livrer</h5>
-                <p class="text-muted">Les commandes livraison à domicile apparaîtront ici.</p>
-            </div>
-        {% endif %}
-    </div>
-    
-    <!-- Section 4: Au Comptoir -->
-    <div id="section-counter" class="section-card">
-        <div class="section-title">
-            <i class="bi bi-shop-window me-3 text-primary"></i>
-            <h3 class="mb-0">Au Comptoir</h3>
-            <span class="badge bg-primary ms-auto">{{ orders_at_counter|length }}</span>
         </div>
-        
-        {% if orders_at_counter %}
-            {% for order in orders_at_counter %}
-            <div class="order-item order-counter">
-                <div class="order-header">
-                    <div class="order-info">
-                        <h5 class="mb-1">
-                            <i class="bi bi-box me-2"></i>Ordre Production #{{ order.id }}
-                        </h5>
-                        
-                        <div class="product-list">
-                            {% for item in order.items %}
-                                <span class="product-badge">
-                                    {{ item.product.name }} ({{ item.quantity }} {{ item.product.unit }})
-                                </span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    
-                    <div class="order-actions">
-                        <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
-                            <i class="bi bi-eye me-1"></i>Voir
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="order-meta">
-                    <div class="customer-info">
-                        <i class="bi bi-box me-1"></i>Disponible en stock comptoir
-                    </div>
-                    <div class="time-info">
-                        <i class="bi bi-clock me-1"></i>
-                        Terminé le {{ order.created_at.strftime('%d/%m à %H:%M') }}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
+        {% endfor %}
         {% else %}
-            <div class="empty-state">
-                <i class="bi bi-shop-window"></i>
-                <h5>Aucun produit au comptoir</h5>
-                <p class="text-muted">Les ordres de production terminés apparaîtront ici.</p>
-            </div>
-        {% endif %}
-    </div>
-    
-    <!-- Section 5: Livré Non Payé -->
-    <div id="section-unpaid" class="section-card">
-        <div class="section-title">
-            <i class="bi bi-exclamation-triangle me-3 text-warning"></i>
-            <h3 class="mb-0">Livré Non Payé</h3>
-            <span class="badge bg-warning ms-auto">{{ orders_delivered_unpaid|length }}</span>
-        </div>
-        
-        {% if orders_delivered_unpaid %}
-            {% for order in orders_delivered_unpaid %}
-            <div class="order-item order-unpaid">
-                <div class="order-header">
-                    <div class="order-info">
-                        <h5 class="mb-1">
-                            <i class="bi bi-person me-2"></i>Commande #{{ order.id }} - {{ order.customer_name }}
-                        </h5>
-                        
-                        <div class="product-list">
-                            {% for item in order.items %}
-                                <span class="product-badge">
-                                    {{ item.product.name }} ({{ item.quantity }} {{ item.product.unit }})
-                                </span>
-                            {% endfor %}
-                        </div>
-                        
-                        {% if order.deliveryman %}
-                            <div class="mt-2">
-                                <i class="bi bi-person-badge me-1"></i>
-                                <strong>Livreur: {{ order.deliveryman.name }}</strong>
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="order-actions">
-                        <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="action-btn btn-view">
-                            <i class="bi bi-eye me-1"></i>Voir
-                        </a>
-                        {% if cash_session_open %}
-                            <form method="POST"
-                                  action="{{ url_for('orders.pay_order', order_id=order.id) }}"
-                                  class="shop-pay-form"
-                                  data-order-id="{{ order.id }}"
-                                  data-total="{{ '%.2f'|format(order.total_amount|float) if order.total_amount else '0.00' }}"
-                                  data-paid="{{ '%.2f'|format(order.amount_paid_value) if order.amount_paid_value else '0.00' }}"
-                                  data-balance="{{ '%.2f'|format(order.balance_due_value) if order.balance_due_value else '0.00' }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="amount_received" value="">
-                                <button type="button" class="action-btn btn-cash shop-pay-trigger">
-                                    <i class="bi bi-cash-coin me-1"></i>Encaisser
-                                </button>
-                            </form>
-                        {% else %}
-                            <span class="action-btn btn-cash-disabled">
-                                <i class="bi bi-cash-coin me-1"></i>Encaisser
-                            </span>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <div class="order-meta">
-                    <div class="customer-info">
-                        <i class="bi bi-telephone me-1"></i>{{ order.customer_phone or 'N/A' }}
-                        {% if order.total_amount %}
-                            <span class="ms-3">
-                                <i class="bi bi-cash me-1"></i>{{ "%.2f"|format(order.total_amount|float) }} DA
-                            </span>
-                        {% endif %}
-                    </div>
-                    <div class="time-info">
-                        <i class="bi bi-truck me-1"></i>
-                        Livré le {{ order.due_date.strftime('%d/%m à %H:%M') }}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="empty-state">
-                <i class="bi bi-check-circle"></i>
-                <h5>Aucune commande en attente de paiement</h5>
-                <p class="text-muted">Les commandes livrées non payées apparaîtront ici.</p>
-            </div>
+        <div class="text-center text-muted py-4">Aucune commande prête à livrer</div>
         {% endif %}
     </div>
 </div>
 
-<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+<!-- Modal Sélection Employés -->
+<div class="modal fade" id="employeeSelectionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-people-fill me-2 text-primary"></i>Qui a produit ça ?
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="employeeSelectionForm" method="POST" action="">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <p class="text-muted mb-3">Sélectionnez les employés ayant participé à cette production :</p>
+
+                    <div class="employee-grid">
+                        {% for employee in employees %}
+                        <label class="employee-checkbox-card" id="card_emp_{{ employee.id }}">
+                            <input type="checkbox" name="employee_ids[]" value="{{ employee.id }}"
+                                onchange="toggleEmployeeCard(this)">
+                            <div class="fw-bold">{{ employee.name }}</div>
+                            <div class="small text-muted">{{ employee.role.title().replace('_', ' ') }}</div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary" id="confirmEmployeeBtn" disabled>
+                        <i class="bi bi-check-lg me-1"></i>Valider Réception
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Paiement (Existant) -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="paymentModalLabel">
+                <h5 class="modal-title">
                     <i class="bi bi-cash-stack me-2 text-success"></i>Encaisser un paiement
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
@@ -741,7 +627,8 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label for="paymentAmountInput" class="form-label fw-semibold">Montant reçu</label>
-                    <input type="number" class="form-control" id="paymentAmountInput" step="0.01" min="0" placeholder="0.00">
+                    <input type="number" class="form-control" id="paymentAmountInput" step="0.01" min="0"
+                        placeholder="0.00">
                 </div>
                 <div class="alert alert-secondary">
                     <div>Total commande : <strong id="paymentModalTotal">0.00 DA</strong></div>
@@ -759,114 +646,25 @@
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script src="{{ url_for('static', filename='js/dashboards/shop.js') }}"></script>
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Mise à jour de l'horloge
+    // Horloge
     function updateClock() {
         const now = new Date();
         document.getElementById('current-time').textContent = now.toLocaleTimeString('fr-FR');
         document.getElementById('current-date').textContent = now.toLocaleDateString('fr-FR', {
-            weekday: 'long',
-            day: 'numeric', 
-            month: 'long'
+            weekday: 'long', day: 'numeric', month: 'long'
         });
     }
-    
-    // Initialisation
     updateClock();
     setInterval(updateClock, 1000);
-    
-    // Rafraîchissement automatique toutes les 2 minutes
-    setTimeout(function() {
-        window.location.reload();
-    }, 2 * 60 * 1000);
-});
-</script>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const modalElement = document.getElementById('paymentModal');
-    const amountInput = document.getElementById('paymentAmountInput');
-    const totalDisplay = document.getElementById('paymentModalTotal');
-    const paidDisplay = document.getElementById('paymentModalPaid');
-    const balanceDisplay = document.getElementById('paymentModalBalance');
-    const balanceAfterDisplay = document.getElementById('paymentModalBalanceAfter');
-    const changeDisplay = document.getElementById('paymentModalChange');
-    const confirmBtn = document.getElementById('paymentModalConfirm');
-
-    if (!modalElement || !amountInput) {
-        return;
-    }
-
-    const modal = new bootstrap.Modal(modalElement);
-
-    function formatAmount(val) {
-        return (parseFloat(val) || 0).toFixed(2) + ' DA';
-    }
-
-    function refreshDisplays(outstanding) {
-        const amount = parseFloat(amountInput.value || '0') || 0;
-        const balanceAfter = Math.max(outstanding - amount, 0);
-        const change = amount > outstanding ? amount - outstanding : 0;
-        balanceAfterDisplay.textContent = formatAmount(balanceAfter);
-        changeDisplay.textContent = formatAmount(change);
-    }
-
-    document.querySelectorAll('.shop-pay-trigger').forEach(function(button) {
-        button.addEventListener('click', function(event) {
-            event.preventDefault();
-            const form = button.closest('form');
-            if (!form) {
-                return;
-            }
-
-            const balance = parseFloat(form.dataset.balance || '0') || 0;
-            const paid = parseFloat(form.dataset.paid || '0') || 0;
-            const total = parseFloat(form.dataset.total || '0') || 0;
-
-            if (balance <= 0) {
-                alert('Cette commande est déjà totalement réglée.');
-                return;
-            }
-
-            if (paid > 0) {
-                totalDisplay.textContent = formatAmount(total);
-                paidDisplay.textContent = formatAmount(paid);
-                balanceDisplay.textContent = formatAmount(balance);
-                amountInput.value = balance.toFixed(2);
-                refreshDisplays(balance);
-
-                confirmBtn.onclick = function() {
-                    const amountField = form.querySelector('input[name="amount_received"]');
-                    if (amountField) {
-                        amountField.value = amountInput.value;
-                    }
-                    modal.hide();
-                    form.submit();
-                };
-
-                amountInput.oninput = function() {
-                    refreshDisplays(balance);
-                };
-
-                modal.show();
-                amountInput.focus();
-                amountInput.select();
-            } else {
-                const amountField = form.querySelector('input[name="amount_received"]');
-                if (amountField) {
-                    amountField.value = '';
-                }
-                form.submit();
-            }
-        });
-    });
-});
+    // Auto-refresh 2min
+    setTimeout(function () { window.location.reload(); }, 2 * 60 * 1000);
 </script>
 {% endblock %}
