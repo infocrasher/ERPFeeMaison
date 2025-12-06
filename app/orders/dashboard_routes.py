@@ -381,8 +381,11 @@ def toggle_item_reception(item_id):
     
     # Vérifier si tous les articles de la commande sont reçus
     order = item.order
-    all_received = all(i.is_received for i in order.items)
-    percentage = int((sum(1 for i in order.items if i.is_received) / len(order.items)) * 100) if order.items.count() > 0 else 0
+    total_items = order.items.count()
+    received_items = order.items.filter_by(is_received=True).count()
+    
+    all_received = (received_items == total_items) and (total_items > 0)
+    percentage = int((received_items / total_items) * 100) if total_items > 0 else 0
     
     return jsonify({
         'success': True, 
