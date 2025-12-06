@@ -1,0 +1,15 @@
+# Dépendances pour le service pont (bridge) pointeuse → VPS
+# À installer sur le PC du magasin uniquement
+
+# Connexion à la pointeuse ZKTeco
+pyzk==0.9
+
+# Requêtes HTTP vers le VPS
+requests>=2.31.0
+
+# Configuration via .env
+python-dotenv>=1.0.0
+
+# Service Windows (optionnel, uniquement si installation comme service)
+pywin32>=305  # Windows seulement
+
