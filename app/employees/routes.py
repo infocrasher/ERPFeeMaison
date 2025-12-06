@@ -1030,6 +1030,9 @@ def employee_analytics(employee_id):
         'days_present': days_present,
         'days_absent': days_absent,
         'late_arrivals': late_arrivals,
+        'tardiness_rate': tardiness_rate,
+        'total_late_minutes': total_late_minutes,
+        'average_late_minutes': (total_late_minutes / late_arrivals) if late_arrivals > 0 else 0,
         'attendance_details': len(attendance_records) > 0,  # Indique si on a des données réelles
         
         # Évolution
