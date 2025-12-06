@@ -403,6 +403,22 @@
                             </div>
                             {% endfor %}
                         </div>
+                        <!-- Info Financière -->
+                        <div class="ps-3 text-end" style="min-width: 140px;">
+                            <div class="fw-bold text-dark">{{ order.total_amount|currency }}</div>
+                            {% if order.amount_paid and order.amount_paid > 0 %}
+                            <div class="small text-success">
+                                <i class="bi bi-check-circle-fill me-1"></i>Reglé: {{ order.amount_paid|currency }}
+                            </div>
+                            {% if order.total_amount > order.amount_paid %}
+                            <div class="small text-danger">
+                                Reste: {{ (order.total_amount - order.amount_paid)|currency }}
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <div class="small text-danger">Non payé</div>
+                            {% endif %}
+                        </div>
                         <div class="text-end ps-3" style="min-width: 250px;">
                             <div class="text-muted fw-bold">{{ order.due_date.strftime('%H:%M') if order.due_date else
                                 'N/A' }}</div>
@@ -411,6 +427,9 @@
                             <div class="text-muted small">📍 {{ order.get_delivery_address }}</div>
                             {% else %}
                             <div class="text-muted small">🚚 Livraison (adresse non renseignée)</div>
+                            {% endif %}
+                            {% if order.delivery_cost and order.delivery_cost > 0 %}
+                            <div class="text-muted small fst-italic">+ Liv: {{ order.delivery_cost|currency }}</div>
                             {% endif %}
                             {% else %}
                             <div class="text-muted small">🏪 Retrait magasin</div>
@@ -528,6 +547,22 @@
                             </div>
                             {% endfor %}
                         </div>
+                        <!-- Info Financière -->
+                        <div class="ps-3 text-end" style="min-width: 140px;">
+                            <div class="fw-bold text-dark">{{ order.total_amount|currency }}</div>
+                            {% if order.amount_paid and order.amount_paid > 0 %}
+                            <div class="small text-success">
+                                <i class="bi bi-check-circle-fill me-1"></i>Reglé: {{ order.amount_paid|currency }}
+                            </div>
+                            {% if order.total_amount > order.amount_paid %}
+                            <div class="small text-danger">
+                                Reste: {{ (order.total_amount - order.amount_paid)|currency }}
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <div class="small text-danger">Non payé</div>
+                            {% endif %}
+                        </div>
                         <div class="text-end ps-3" style="min-width: 250px;">
                             <div class="text-muted fw-bold">{{ order.due_date.strftime('%H:%M') if order.due_date else
                                 'N/A' }}</div>
@@ -596,6 +631,22 @@
                             </div>
                             {% endfor %}
                         </div>
+                        <!-- Info Financière -->
+                        <div class="ps-3 text-end" style="min-width: 140px;">
+                            <div class="fw-bold text-dark">{{ order.total_amount|currency }}</div>
+                            {% if order.amount_paid and order.amount_paid > 0 %}
+                            <div class="small text-success">
+                                <i class="bi bi-check-circle-fill me-1"></i>Reglé: {{ order.amount_paid|currency }}
+                            </div>
+                            {% if order.total_amount > order.amount_paid %}
+                            <div class="small text-danger">
+                                Reste: {{ (order.total_amount - order.amount_paid)|currency }}
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <div class="small text-danger">Non payé</div>
+                            {% endif %}
+                        </div>
                         <div class="text-end ps-3" style="min-width: 250px;">
                             <div class="text-muted fw-bold">{{ order.due_date.strftime('%H:%M') if order.due_date else
                                 'N/A' }}</div>
@@ -603,6 +654,9 @@
                             <div class="text-muted small">📍 {{ order.get_delivery_address }}</div>
                             {% else %}
                             <div class="text-muted small">🚚 Livraison (adresse non renseignée)</div>
+                            {% endif %}
+                            {% if order.delivery_cost and order.delivery_cost > 0 %}
+                            <div class="text-muted small fst-italic">+ Liv: {{ order.delivery_cost|currency }}</div>
                             {% endif %}
                         </div>
                     </div>

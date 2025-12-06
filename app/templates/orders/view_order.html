@@ -10,36 +10,46 @@
                 <h1 class="h3 mb-0">
                     <i class="bi bi-receipt me-2 text-primary"></i>
                     {% if order.order_type == 'customer_order' %}
-                        Commande Client #{{ order.id }}
+                    Commande Client #{{ order.id }}
                     {% else %}
-                        Ordre de Production #{{ order.id }}
+                    Ordre de Production #{{ order.id }}
                     {% endif %}
                 </h1>
                 <div class="d-flex gap-2 flex-wrap">
-                    <a href="{{ url_for('orders.edit_order_status', order_id=order.id) }}" class="btn btn-outline-primary">
+                    <a href="{{ url_for('orders.edit_order_status', order_id=order.id) }}"
+                        class="btn btn-outline-primary">
                         <i class="bi bi-pencil me-1"></i>Modifier Statut
                     </a>
                     {% if order.order_type == 'customer_order' %}
-                        {% set balance_due = order.balance_due_value %}
-                        {% if balance_due > 0 %}
-                            {% if order.amount_paid_value > 0 %}
-                                <button type="button"
-                                        class="btn btn-success"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#paymentModal"
-                                        {% if not cash_session_open %}disabled title="Aucune session de caisse ouverte"{% endif %}>
-                                    <i class="bi bi-cash-coin"></i> Encaisser un paiement
-                                </button>
-                            {% else %}
-                                <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" class="d-inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="amount_received" value="">
-                                    <button type="submit" class="btn btn-success" {% if not cash_session_open %}disabled title="Aucune session de caisse ouverte"{% endif %}>
-                                        <i class="bi bi-cash-coin"></i> Encaisser la totalité
-                                    </button>
-                                </form>
-                            {% endif %}
-                        {% endif %}
+                    <a href="{{ url_for('orders.edit_customer_order', order_id=order.id) }}"
+                        class="btn btn-outline-secondary">
+                        <i class="bi bi-pencil-square me-1"></i>Modifier Commande
+                    </a>
+                    {% elif order.order_type == 'counter_production_request' %}
+                    <a href="{{ url_for('orders.edit_production_order', order_id=order.id) }}"
+                        class="btn btn-outline-secondary">
+                        <i class="bi bi-pencil-square me-1"></i>Modifier l'Ordre
+                    </a>
+                    {% endif %}
+                    {% if order.order_type == 'customer_order' %}
+                    {% set balance_due = order.balance_due_value %}
+                    {% if balance_due > 0 %}
+                    {% if order.amount_paid_value > 0 %}
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal"
+                        {% if not cash_session_open %}disabled title="Aucune session de caisse ouverte" {% endif %}>
+                        <i class="bi bi-cash-coin"></i> Encaisser un paiement
+                    </button>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="amount_received" value="">
+                        <button type="submit" class="btn btn-success" {% if not cash_session_open %}disabled
+                            title="Aucune session de caisse ouverte" {% endif %}>
+                            <i class="bi bi-cash-coin"></i> Encaisser la totalité
+                        </button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
                     {% endif %}
                     <a href="{{ url_for('orders.list_orders') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left me-1"></i>Retour
@@ -58,45 +68,50 @@
                     <div class="row">
                         <div class="col-md-6">
                             <p><strong>Type :</strong> {{ order.get_order_type_display() }}</p>
-                            
+
                             {% if order.order_type == 'customer_order' %}
-                                {% if order.customer_name %}
-                                    <p><strong>Client :</strong> {{ order.customer_name }}</p>
-                                {% endif %}
-                                {% if order.customer_phone %}
-                                    <p><strong>Téléphone :</strong> {{ order.customer_phone }}</p>
-                                {% endif %}
-                                {% if order.delivery_option == 'delivery' and order.customer_address %}
-                                    <p><strong>Adresse de livraison :</strong><br>
-                                    {{ order.customer_address|nl2br|safe }}</p>
-                                {% endif %}
-                            {% else %}
-                                <p><strong>Pour :</strong> Stock Comptoir</p>
+                            {% if order.customer_name %}
+                            <p><strong>Client :</strong> {{ order.customer_name }}</p>
                             {% endif %}
-                            
+                            {% if order.customer_phone %}
+                            <p><strong>Téléphone :</strong> {{ order.customer_phone }}</p>
+                            {% endif %}
+                            {% if order.delivery_option == 'delivery' and order.customer_address %}
+                            <p><strong>Adresse de livraison :</strong><br>
+                                {{ order.customer_address|nl2br|safe }}</p>
+                            {% endif %}
+                            {% else %}
+                            <p><strong>Pour :</strong> Stock Comptoir</p>
+                            {% endif %}
+
                             <p><strong>Numéro :</strong> #{{ order.id }}</p>
                         </div>
                         <div class="col-md-6">
                             {% if order.due_date %}
-                                {% if order.order_type == 'customer_order' %}
-                                    <p><strong>Date Prévue :</strong> {{ order.due_date.strftime('%d/%m/%Y à %H:%M') }}</p>
-                                {% else %}
-                                    <p><strong>Date Production :</strong> {{ order.due_date.strftime('%d/%m/%Y à %H:%M') }}</p>
-                                {% endif %}
-                            {% endif %}
-                            
                             {% if order.order_type == 'customer_order' %}
-                                {% if order.delivery_option %}
-                                    <p><strong>Option de Service :</strong> {{ order.get_delivery_option_display() }}</p>
-                                {% endif %}
-                                {% if order.delivery_option == 'delivery' and order.delivery_cost is not none and order.delivery_cost > 0 %}
-                                    <p><strong>Frais de Livraison :</strong> {{ "%.2f"|format(order.delivery_cost|float) }} DA</p>
-                                {% endif %}
-                                {% if order.deliveryman %}
-                                    <p><strong>Livreur :</strong> {{ order.deliveryman.name }}</p>
-                                {% endif %}
+                            <p><strong>Date Prévue :</strong> {{ order.due_date.strftime('%d/%m/%Y à %H:%M') }}</p>
+                            {% else %}
+                            <p><strong>Date Production :</strong> {{ order.due_date.strftime('%d/%m/%Y à %H:%M') }}</p>
                             {% endif %}
-                            
+                            {% endif %}
+
+                            {% if order.order_type == 'customer_order' %}
+                            {% if order.delivery_option %}
+                            <p><strong>Option de Service :</strong> {{ order.get_delivery_option_display() }}</p>
+                            {% endif %}
+                            {% if order.delivery_option == 'delivery' and order.delivery_zone %}
+                            <p><strong>Lieu de Livraison :</strong> {{ order.delivery_zone }}</p>
+                            {% endif %}
+                            {% if order.delivery_option == 'delivery' and order.delivery_cost is not none and
+                            order.delivery_cost > 0 %}
+                            <p><strong>Frais de Livraison :</strong> {{ "%.2f"|format(order.delivery_cost|float) }} DA
+                            </p>
+                            {% endif %}
+                            {% if order.deliveryman %}
+                            <p><strong>Livreur :</strong> {{ order.deliveryman.name }}</p>
+                            {% endif %}
+                            {% endif %}
+
                             <p><strong>Statut :</strong>
                                 {% set status_class = 'secondary' %}
                                 {% if order.status == 'completed' %}{% set status_class = 'success' %}
@@ -110,13 +125,14 @@
                                 {% endif %}
                                 <span class="badge bg-{{ status_class }}">{{ order.get_status_display() }}</span>
                             </p>
-                            
+
                             {% if order.order_type == 'customer_order' %}
-                                <p><strong>Montant Total :</strong> 
-                                    <span class="fs-5 fw-bold text-success">{{ "%.2f"|format(order.total_amount|float) }} DA</span>
-                                </p>
+                            <p><strong>Montant Total :</strong>
+                                <span class="fs-5 fw-bold text-success">{{ "%.2f"|format(order.total_amount|float) }}
+                                    DA</span>
+                            </p>
                             {% else %}
-                                <p><strong>Coût :</strong> <span class="text-muted">N/A (Production Interne)</span></p>
+                            <p><strong>Coût :</strong> <span class="text-muted">N/A (Production Interne)</span></p>
                             {% endif %}
                         </div>
                     </div>
@@ -136,16 +152,17 @@
                     {% set payment_badge = 'bg-secondary' %}
                     {% set payment_label = 'En attente' %}
                     {% if payment_status == 'paid' %}
-                        {% set payment_badge = 'bg-success' %}
-                        {% set payment_label = 'Payé intégralement' %}
+                    {% set payment_badge = 'bg-success' %}
+                    {% set payment_label = 'Payé intégralement' %}
                     {% elif payment_status == 'partial' %}
-                        {% set payment_badge = 'bg-warning text-dark' %}
-                        {% set payment_label = 'Partiellement payé' %}
+                    {% set payment_badge = 'bg-warning text-dark' %}
+                    {% set payment_label = 'Partiellement payé' %}
                     {% endif %}
                     <div class="row gy-3">
                         <div class="col-md-3">
                             <small class="text-muted text-uppercase">Montant total</small>
-                            <div class="fs-5 fw-semibold text-success">{{ "%.2f"|format(order.total_amount|float) }} DA</div>
+                            <div class="fs-5 fw-semibold text-success">{{ "%.2f"|format(order.total_amount|float) }} DA
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <small class="text-muted text-uppercase">Montant versé</small>
@@ -153,7 +170,8 @@
                         </div>
                         <div class="col-md-3">
                             <small class="text-muted text-uppercase">Solde restant</small>
-                            <div class="fs-5 fw-semibold {% if order.balance_due_value > 0 %}text-danger{% else %}text-success{% endif %}">
+                            <div
+                                class="fs-5 fw-semibold {% if order.balance_due_value > 0 %}text-danger{% else %}text-success{% endif %}">
                                 {{ "%.2f"|format(order.balance_due_value) }} DA
                             </div>
                         </div>
@@ -161,7 +179,8 @@
                             <small class="text-muted text-uppercase">Statut paiement</small>
                             <span class="badge {{ payment_badge }} align-self-start">{{ payment_label }}</span>
                             {% if order.payment_paid_at %}
-                                <small class="text-muted mt-1">Payé le {{ order.payment_paid_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            <small class="text-muted mt-1">Payé le {{ order.payment_paid_at.strftime('%d/%m/%Y %H:%M')
+                                }}</small>
                             {% endif %}
                         </div>
                     </div>
@@ -178,69 +197,72 @@
                 </div>
                 <div class="card-body">
                     {% if order.items %}
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Produit</th>
-                                        <!-- ✅ CORRECTION : Prix seulement pour commandes client -->
-                                        {% if order.order_type == 'customer_order' %}
-                                            <th class="text-end">Prix Unitaire</th>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Produit</th>
+                                    <!-- ✅ CORRECTION : Prix seulement pour commandes client -->
+                                    {% if order.order_type == 'customer_order' %}
+                                    <th class="text-end">Prix Unitaire</th>
+                                    {% endif %}
+                                    <th class="text-end">Quantité</th>
+                                    <!-- ✅ CORRECTION : Sous-total seulement pour commandes client -->
+                                    {% if order.order_type == 'customer_order' %}
+                                    <th class="text-end">Sous-total</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ item.product.name }}</strong>
+                                        {% if item.product.sku %}
+                                        <br><small class="text-muted">SKU: {{ item.product.sku }}</small>
                                         {% endif %}
-                                        <th class="text-end">Quantité</th>
-                                        <!-- ✅ CORRECTION : Sous-total seulement pour commandes client -->
-                                        {% if order.order_type == 'customer_order' %}
-                                            <th class="text-end">Sous-total</th>
-                                        {% endif %}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in order.items %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ item.product.name }}</strong>
-                                            {% if item.product.sku %}
-                                                <br><small class="text-muted">SKU: {{ item.product.sku }}</small>
-                                            {% endif %}
-                                        </td>
-                                        <!-- ✅ CORRECTION : Prix seulement pour commandes client -->
-                                        {% if order.order_type == 'customer_order' %}
-                                            <td class="text-end">{{ "%.2f"|format(item.price_at_order|float) }} DA</td>
-                                        {% endif %}
-                                        <td class="text-end">{{ item.quantity }} {{ item.product.unit }}</td>
-                                        <!-- ✅ CORRECTION : Sous-total seulement pour commandes client -->
-                                        {% if order.order_type == 'customer_order' %}
-                                            <td class="text-end fw-semibold">{{ "%.2f"|format(item.get_subtotal()|float) }} DA</td>
-                                        {% endif %}
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                                <!-- ✅ CORRECTION : Totaux seulement pour commandes client -->
-                                {% if order.order_type == 'customer_order' %}
-                                    <tfoot class="table-light">
-                                        <tr>
-                                            <td colspan="3" class="text-end fw-bold">Sous-Total Articles :</td>
-                                            <td class="text-end fw-bold">{{ "%.2f"|format(order.get_items_total()|float) }} DA</td>
-                                        </tr>
-                                        {% if order.delivery_cost and order.delivery_cost > 0 %}
-                                        <tr>
-                                            <td colspan="3" class="text-end fw-bold">Frais de Livraison :</td>
-                                            <td class="text-end fw-bold">{{ "%.2f"|format(order.delivery_cost|float) }} DA</td>
-                                        </tr>
-                                        {% endif %}
-                                        <tr class="table-success">
-                                            <td colspan="3" class="text-end fw-bold fs-5">Total Commande :</td>
-                                            <td class="text-end fw-bold fs-5">{{ "%.2f"|format(order.total_amount|float) }} DA</td>
-                                        </tr>
-                                    </tfoot>
+                                    </td>
+                                    <!-- ✅ CORRECTION : Prix seulement pour commandes client -->
+                                    {% if order.order_type == 'customer_order' %}
+                                    <td class="text-end">{{ "%.2f"|format(item.price_at_order|float) }} DA</td>
+                                    {% endif %}
+                                    <td class="text-end">{{ item.quantity }} {{ item.product.unit }}</td>
+                                    <!-- ✅ CORRECTION : Sous-total seulement pour commandes client -->
+                                    {% if order.order_type == 'customer_order' %}
+                                    <td class="text-end fw-semibold">{{ "%.2f"|format(item.get_subtotal()|float) }} DA
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <!-- ✅ CORRECTION : Totaux seulement pour commandes client -->
+                            {% if order.order_type == 'customer_order' %}
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold">Sous-Total Articles :</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(order.get_items_total()|float) }} DA
+                                    </td>
+                                </tr>
+                                {% if order.delivery_cost and order.delivery_cost > 0 %}
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold">Frais de Livraison :</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(order.delivery_cost|float) }} DA</td>
+                                </tr>
                                 {% endif %}
-                            </table>
-                        </div>
+                                <tr class="table-success">
+                                    <td colspan="3" class="text-end fw-bold fs-5">Total Commande :</td>
+                                    <td class="text-end fw-bold fs-5">{{ "%.2f"|format(order.total_amount|float) }} DA
+                                    </td>
+                                </tr>
+                            </tfoot>
+                            {% endif %}
+                        </table>
+                    </div>
                     {% else %}
-                        <div class="text-center py-4">
-                            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
-                            <p class="text-muted mt-2">Aucun article dans cette commande.</p>
-                        </div>
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">Aucun article dans cette commande.</p>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -265,69 +287,74 @@
                     <h5 class="card-title mb-0">
                         <i class="bi bi-exclamation-triangle me-2"></i>Problèmes de Qualité
                     </h5>
-                    <a href="{{ url_for('orders.report_order_issue', order_id=order.id) }}" class="btn btn-sm btn-warning">
+                    <a href="{{ url_for('orders.report_order_issue', order_id=order.id) }}"
+                        class="btn btn-sm btn-warning">
                         <i class="bi bi-flag me-1"></i>Signaler un Problème
                     </a>
                 </div>
                 <div class="card-body">
                     {% if order.issues %}
-                        {% for issue in order.issues %}
-                            <div class="alert {% if issue.is_resolved %}alert-success{% else %}alert-warning{% endif %} mb-3">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="alert-heading mb-1">
-                                            <i class="bi bi-{% if issue.is_resolved %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
-                                            {{ issue.get_issue_type_display() }}
-                                            {% if issue.is_resolved %}
-                                                <span class="badge bg-success ms-2">Résolu</span>
-                                            {% else %}
-                                                <span class="badge bg-warning ms-2">En cours</span>
-                                            {% endif %}
-                                        </h6>
-                                        
-                                        {% if issue.description %}
-                                            <p class="mb-2">{{ issue.description }}</p>
-                                        {% endif %}
-                                        
-                                        <div class="small text-muted">
-                                            <i class="bi bi-person me-1"></i>
-                                            Employé : {{ issue.employee.name if issue.employee else 'N/A' }}
-                                            <span class="ms-3">
-                                                <i class="bi bi-calendar me-1"></i>
-                                                Signalé le {{ issue.detected_at.strftime('%d/%m/%Y à %H:%M') }}
-                                            </span>
-                                        </div>
-                                        
-                                        {% if issue.is_resolved and issue.resolved_at %}
-                                            <div class="small text-success mt-1">
-                                                <i class="bi bi-check-circle me-1"></i>
-                                                Résolu le {{ issue.resolved_at.strftime('%d/%m/%Y à %H:%M') }}
-                                                {% if issue.resolution_notes %}
-                                                    - {{ issue.resolution_notes }}
-                                                {% endif %}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    
-                                    {% if not issue.is_resolved %}
-                                        <div class="ms-3">
-                                            <form method="POST" action="{{ url_for('orders.resolve_order_issue', order_id=order.id, issue_id=issue.id) }}" style="display: inline;">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <input type="hidden" name="resolution_notes" value="Résolu manuellement">
-                                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Marquer ce problème comme résolu ?')">
-                                                    <i class="bi bi-check me-1"></i>Résoudre
-                                                </button>
-                                            </form>
-                                        </div>
+                    {% for issue in order.issues %}
+                    <div class="alert {% if issue.is_resolved %}alert-success{% else %}alert-warning{% endif %} mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="alert-heading mb-1">
+                                    <i
+                                        class="bi bi-{% if issue.is_resolved %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                                    {{ issue.get_issue_type_display() }}
+                                    {% if issue.is_resolved %}
+                                    <span class="badge bg-success ms-2">Résolu</span>
+                                    {% else %}
+                                    <span class="badge bg-warning ms-2">En cours</span>
+                                    {% endif %}
+                                </h6>
+
+                                {% if issue.description %}
+                                <p class="mb-2">{{ issue.description }}</p>
+                                {% endif %}
+
+                                <div class="small text-muted">
+                                    <i class="bi bi-person me-1"></i>
+                                    Employé : {{ issue.employee.name if issue.employee else 'N/A' }}
+                                    <span class="ms-3">
+                                        <i class="bi bi-calendar me-1"></i>
+                                        Signalé le {{ issue.detected_at.strftime('%d/%m/%Y à %H:%M') }}
+                                    </span>
+                                </div>
+
+                                {% if issue.is_resolved and issue.resolved_at %}
+                                <div class="small text-success mt-1">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Résolu le {{ issue.resolved_at.strftime('%d/%m/%Y à %H:%M') }}
+                                    {% if issue.resolution_notes %}
+                                    - {{ issue.resolution_notes }}
                                     {% endif %}
                                 </div>
+                                {% endif %}
                             </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="text-center py-3">
-                            <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
-                            <p class="text-muted mt-2 mb-0">Aucun problème signalé sur cette commande</p>
+
+                            {% if not issue.is_resolved %}
+                            <div class="ms-3">
+                                <form method="POST"
+                                    action="{{ url_for('orders.resolve_order_issue', order_id=order.id, issue_id=issue.id) }}"
+                                    style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="resolution_notes" value="Résolu manuellement">
+                                    <button type="submit" class="btn btn-sm btn-success"
+                                        onclick="return confirm('Marquer ce problème comme résolu ?')">
+                                        <i class="bi bi-check me-1"></i>Résoudre
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
                         </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                        <p class="text-muted mt-2 mb-0">Aucun problème signalé sur cette commande</p>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -343,7 +370,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             {% if order.user %}
-                                <p><strong>Saisie par :</strong> {{ order.user.username }}</p>
+                            <p><strong>Saisie par :</strong> {{ order.user.username }}</p>
                             {% endif %}
                         </div>
                         <div class="col-md-6">
@@ -370,28 +397,25 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-3">
                     <label for="modal-amount-input" class="form-label fw-semibold">Montant reçu</label>
-                    <input type="number"
-                           class="form-control"
-                           id="modal-amount-input"
-                           name="amount_received"
-                           step="0.01"
-                           min="0"
-                           placeholder="0.00"
-                           required>
+                    <input type="number" class="form-control" id="modal-amount-input" name="amount_received" step="0.01"
+                        min="0" placeholder="0.00" required>
                 </div>
                 <div class="alert alert-secondary">
                     <div>Total commande : <strong>{{ "%.2f"|format(order.total_amount|float) }} DA</strong></div>
                     <div>Déjà encaissé : <strong>{{ "%.2f"|format(order.amount_paid_value) }} DA</strong></div>
-                    <div>Solde actuel : <strong id="modal-balance-value" data-balance="{{ "%.2f"|format(order.balance_due_value) }}">{{ "%.2f"|format(order.balance_due_value) }} DA</strong></div>
+                    <div>Solde actuel : <strong id="modal-balance-value" data-balance="{{ "
+                            %.2f"|format(order.balance_due_value) }}">{{ "%.2f"|format(order.balance_due_value) }}
+                            DA</strong></div>
                     <hr class="my-2">
-                    <div>Solde après paiement : <strong id="modal-balance-after">{{ "%.2f"|format(order.balance_due_value) }} DA</strong></div>
+                    <div>Solde après paiement : <strong id="modal-balance-after">{{
+                            "%.2f"|format(order.balance_due_value) }} DA</strong></div>
                     <div>Monnaie à rendre : <strong id="modal-change-display">0.00 DA</strong></div>
                 </div>
                 {% if not cash_session_open %}
-                    <div class="alert alert-warning mb-0">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        Aucune session de caisse ouverte. Ouvrez une caisse pour enregistrer le paiement.
-                    </div>
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Aucune session de caisse ouverte. Ouvrez une caisse pour enregistrer le paiement.
+                </div>
                 {% endif %}
             </div>
             <div class="modal-footer">
@@ -411,41 +435,41 @@
 {{ super() }}
 {% if order.order_type == 'customer_order' %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const modalElement = document.getElementById('paymentModal');
-    if (!modalElement) {
-        return;
-    }
-    const amountInput = document.getElementById('modal-amount-input');
-    const balanceElement = document.getElementById('modal-balance-value');
-    const balanceAfterElement = document.getElementById('modal-balance-after');
-    const changeDisplay = document.getElementById('modal-change-display');
-    const outstanding = parseFloat(balanceElement.dataset.balance || '0') || 0;
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalElement = document.getElementById('paymentModal');
+        if (!modalElement) {
+            return;
+        }
+        const amountInput = document.getElementById('modal-amount-input');
+        const balanceElement = document.getElementById('modal-balance-value');
+        const balanceAfterElement = document.getElementById('modal-balance-after');
+        const changeDisplay = document.getElementById('modal-change-display');
+        const outstanding = parseFloat(balanceElement.dataset.balance || '0') || 0;
 
-    function refreshPaymentDisplays(amount) {
-        const numericAmount = parseFloat(amount || '0') || 0;
-        const balanceAfter = Math.max(outstanding - numericAmount, 0);
-        const change = numericAmount > outstanding ? numericAmount - outstanding : 0;
-        balanceAfterElement.textContent = balanceAfter.toFixed(2) + ' DA';
-        changeDisplay.textContent = change.toFixed(2) + ' DA';
-    }
+        function refreshPaymentDisplays(amount) {
+            const numericAmount = parseFloat(amount || '0') || 0;
+            const balanceAfter = Math.max(outstanding - numericAmount, 0);
+            const change = numericAmount > outstanding ? numericAmount - outstanding : 0;
+            balanceAfterElement.textContent = balanceAfter.toFixed(2) + ' DA';
+            changeDisplay.textContent = change.toFixed(2) + ' DA';
+        }
 
-    modalElement.addEventListener('shown.bs.modal', function() {
-        amountInput.value = outstanding.toFixed(2);
+        modalElement.addEventListener('shown.bs.modal', function () {
+            amountInput.value = outstanding.toFixed(2);
+            refreshPaymentDisplays(amountInput.value);
+            amountInput.select();
+        });
+
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            amountInput.value = outstanding.toFixed(2);
+            refreshPaymentDisplays(amountInput.value);
+        });
+
+        amountInput.addEventListener('input', function () {
+            refreshPaymentDisplays(this.value);
+        });
         refreshPaymentDisplays(amountInput.value);
-        amountInput.select();
     });
-
-    modalElement.addEventListener('hidden.bs.modal', function() {
-        amountInput.value = outstanding.toFixed(2);
-        refreshPaymentDisplays(amountInput.value);
-    });
-
-    amountInput.addEventListener('input', function() {
-        refreshPaymentDisplays(this.value);
-    });
-    refreshPaymentDisplays(amountInput.value);
-});
 </script>
 {% endif %}
 {% endblock %}
