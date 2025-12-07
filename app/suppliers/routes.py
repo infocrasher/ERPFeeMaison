@@ -101,7 +101,7 @@ def new_supplier():
 @login_required
 @admin_required
 def view_supplier(supplier_id):
-    """Voir les détails d'un fournisseur"""
+    """Voir les détails d'un fournisseur avec statistiques financières"""
     supplier = Supplier.query.get_or_404(supplier_id)
     
     # Récupérer les achats récents
@@ -109,9 +109,88 @@ def view_supplier(supplier_id):
         db.text('created_at DESC')
     ).limit(10).all()
     
+    # --- FILTRAGE PAR DATE ---
+    from datetime import datetime
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    start_date = None
+    end_date = None
+
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        except ValueError:
+            pass
+            
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+        except ValueError:
+            pass
+
+    # --- CALCUL DES STATISTIQUES FINANCIÈRES ---
+    from app.purchases.models import Purchase, PurchaseStatus
+    from sqlalchemy import func
+
+    # Statuts valides (on exclut brouillon, annulé)
+    valid_statuses = [
+        PurchaseStatus.ORDERED, 
+        PurchaseStatus.PARTIALLY_RECEIVED, 
+        PurchaseStatus.RECEIVED, 
+        PurchaseStatus.INVOICED
+    ]
+    
+    # 1. Chiffre d'Affaires (Total des achats validés)
+    turnover_query = db.session.query(func.sum(Purchase.total_amount)).filter(
+        Purchase.supplier_id == supplier.id,
+        Purchase.status.in_(valid_statuses)
+    )
+    if start_date:
+        turnover_query = turnover_query.filter(Purchase.requested_date >= start_date)
+    if end_date:
+        turnover_query = turnover_query.filter(Purchase.requested_date <= end_date)
+    
+    total_volume = float(turnover_query.scalar() or 0)
+
+    # 2. Total Payé (Achats validés et marqués comme payés)
+    paid_query = db.session.query(func.sum(Purchase.total_amount)).filter(
+        Purchase.supplier_id == supplier.id,
+        Purchase.status.in_(valid_statuses),
+        Purchase.is_paid == True
+    )
+    if start_date:
+        paid_query = paid_query.filter(Purchase.requested_date >= start_date)
+    if end_date:
+        paid_query = paid_query.filter(Purchase.requested_date <= end_date)
+
+    total_paid = float(paid_query.scalar() or 0)
+
+    # 3. Dette Fournisseur (Achats validés NON payés)
+    # Note: On considère comme dette tout ce qui est commandé/reçu/facturé mais pas encore payé
+    debt_query = db.session.query(func.sum(Purchase.total_amount)).filter(
+        Purchase.supplier_id == supplier.id,
+        Purchase.status.in_(valid_statuses),
+        or_(Purchase.is_paid == False, Purchase.is_paid == None)
+    )
+    if start_date:
+        debt_query = debt_query.filter(Purchase.requested_date >= start_date)
+    if end_date:
+        debt_query = debt_query.filter(Purchase.requested_date <= end_date)
+
+    total_debt = float(debt_query.scalar() or 0)
+    
     return render_template('suppliers/view.html', 
                          supplier=supplier, 
-                         recent_purchases=recent_purchases)
+                         recent_purchases=recent_purchases,
+                         stats={
+                             'total_volume': total_volume,
+                             'total_paid': total_paid,
+                             'total_debt': total_debt
+                         },
+                         filters={
+                             'start_date': start_date_str,
+                             'end_date': end_date_str
+                         })
 
 
 @suppliers.route('/<int:supplier_id>/edit', methods=['GET', 'POST'])
