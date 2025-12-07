@@ -104,11 +104,6 @@ def view_supplier(supplier_id):
     """Voir les détails d'un fournisseur avec statistiques financières"""
     supplier = Supplier.query.get_or_404(supplier_id)
     
-    # Récupérer les achats récents
-    recent_purchases = supplier.purchases.order_by(
-        db.text('created_at DESC')
-    ).limit(10).all()
-    
     # --- FILTRAGE PAR DATE ---
     from datetime import datetime
     start_date_str = request.args.get('start_date')
@@ -128,10 +123,22 @@ def view_supplier(supplier_id):
         except ValueError:
             pass
 
-    # --- CALCUL DES STATISTIQUES FINANCIÈRES ---
+    # --- REQUÊTE UNIFIÉE (ID ou NOM) ---
+    # Pour inclure les anciens achats qui n'ont pas l'ID mais ont le nom
     from app.purchases.models import Purchase, PurchaseStatus
-    from sqlalchemy import func
+    from sqlalchemy import func, or_
+    
+    base_filter = or_(
+        Purchase.supplier_id == supplier.id,
+        Purchase.supplier_name.ilike(supplier.company_name) # ilike pour insensible à la casse
+    )
+    
+    # Récupérer les achats récents (avec le filtre élargi)
+    recent_purchases = Purchase.query.filter(base_filter).order_by(
+        Purchase.created_at.desc()
+    ).limit(10).all()
 
+    # --- CALCUL DES STATISTIQUES FINANCIÈRES ---
     # Statuts valides (on exclut brouillon, annulé)
     valid_statuses = [
         PurchaseStatus.ORDERED, 
@@ -142,7 +149,7 @@ def view_supplier(supplier_id):
     
     # 1. Chiffre d'Affaires (Total des achats validés)
     turnover_query = db.session.query(func.sum(Purchase.total_amount)).filter(
-        Purchase.supplier_id == supplier.id,
+        base_filter,
         Purchase.status.in_(valid_statuses)
     )
     if start_date:
@@ -154,7 +161,7 @@ def view_supplier(supplier_id):
 
     # 2. Total Payé (Achats validés et marqués comme payés)
     paid_query = db.session.query(func.sum(Purchase.total_amount)).filter(
-        Purchase.supplier_id == supplier.id,
+        base_filter,
         Purchase.status.in_(valid_statuses),
         Purchase.is_paid == True
     )
@@ -166,9 +173,8 @@ def view_supplier(supplier_id):
     total_paid = float(paid_query.scalar() or 0)
 
     # 3. Dette Fournisseur (Achats validés NON payés)
-    # Note: On considère comme dette tout ce qui est commandé/reçu/facturé mais pas encore payé
     debt_query = db.session.query(func.sum(Purchase.total_amount)).filter(
-        Purchase.supplier_id == supplier.id,
+        base_filter,
         Purchase.status.in_(valid_statuses),
         or_(Purchase.is_paid == False, Purchase.is_paid == None)
     )
