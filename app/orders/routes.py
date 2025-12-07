@@ -577,9 +577,34 @@ def change_status_to_production(order_id):
 def orders_calendar():
     orders = Order.query.filter(Order.due_date.isnot(None)).all()
     events = []
+    
+    # Mapping couleurs (Bootstrap -> Hex approximatif)
+    status_colors = {
+        'pending': '#6c757d',          # Secondary
+        'in_production': '#ffc107',    # Warning
+        'ready_at_shop': '#0dcaf0',    # Info
+        'waiting_for_pickup': '#0d6efd', # Primary
+        'out_for_delivery': '#0d6efd',   # Primary
+        'delivered': '#198754',        # Success
+        'completed': '#198754',        # Success
+        'cancelled': '#dc3545'         # Danger
+    }
+
     for order in orders:
         if order.should_appear_in_calendar():
-            events.append({'id': order.id, 'title': f"#{order.id} - {order.customer_name or 'Production'}", 'start': order.due_date.isoformat(), 'url': url_for('orders.view_order', order_id=order.id), 'backgroundColor': '#ffc107' if order.status == 'in_production' else '#6c757d'})
+            color = status_colors.get(order.status, '#6c757d')
+            title = f"#{order.id} - {order.customer_name or 'Production'}"
+            if order.status == 'pending':
+                title += " (En attente)"
+            
+            events.append({
+                'id': order.id,
+                'title': title,
+                'start': order.due_date.isoformat(),
+                'url': url_for('orders.view_order', order_id=order.id),
+                'backgroundColor': color,
+                'borderColor': color
+            })
     return render_template('orders/orders_calendar.html', events=events, title="Calendrier des Commandes")
 
 @orders.route('/<int:order_id>/pay', methods=['POST'])
