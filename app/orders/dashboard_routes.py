@@ -182,7 +182,7 @@ def shop_dashboard():
     # Build base queries with optional date filter
     # 1. En Production - Commandes Client
     query_customer = Order.query.filter(
-        Order.status == 'in_production',
+        Order.status.in_(['in_production', 'pending']),
         Order.order_type == 'customer_order'
     )
     if selected_date:
@@ -200,7 +200,7 @@ def shop_dashboard():
 
     # 1b. En Production - Ordres de Production
     query_production = Order.query.filter(
-        Order.status == 'in_production',
+        Order.status.in_(['in_production', 'pending']),
         Order.order_type != 'customer_order'
     )
     if selected_date:

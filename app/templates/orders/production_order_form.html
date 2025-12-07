@@ -2,100 +2,173 @@
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
-.form-container {
-    background: #f8f9fa;
-    min-height: 100vh;
-    padding: 20px 0;
-}
+    .form-container {
+        background: #f4f6f9;
+        min-height: 100vh;
+        padding: 40px 0;
+    }
 
-.card {
-    background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-}
+    .card {
+        background: white;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        margin-bottom: 30px;
+    }
 
-.card-header {
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    padding: 15px 20px;
-    border-radius: 7px 7px 0 0;
-}
+    .card-header {
+        background: #ffffff;
+        border-bottom: 2px solid #f0f0f0;
+        padding: 20px 30px;
+        border-radius: 12px 12px 0 0;
+    }
 
-.card-body {
-    padding: 20px;
-}
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
 
-.form-control {
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    padding: 8px 12px;
-    font-size: 14px;
-}
+    .card-body {
+        padding: 30px;
+    }
 
-.form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
-}
+    /* 🔧 INPUTS PLUS GRANDS */
+    .form-control,
+    .form-select {
+        border: 1px solid #dfe6e9;
+        border-radius: 8px;
+        padding: 12px 16px;
+        /* Plus d'espace interne */
+        font-size: 16px;
+        /* Texte plus lisible */
+        min-height: 50px;
+        /* Hauteur fixe confortable */
+        transition: all 0.2s;
+        background-color: #fdfdfd;
+    }
 
-.btn-primary {
-    background: #28a745;
-    border-color: #28a745;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 4px;
-    font-weight: 500;
-}
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #28a745;
+        /* Vert pour Production */
+        background-color: #fff;
+        box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1);
+    }
 
-.btn-primary:hover {
-    background: #218838;
-    border-color: #1e7e34;
-}
+    /* LABELS PLUS LISIBLES */
+    .form-label {
+        font-size: 0.95rem;
+        /* ~15px */
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
 
-.field-required {
-    color: #dc3545;
-}
+    /* BOUTONS PLUS GRANDS */
+    .btn-primary {
+        background: #28a745;
+        border-color: #28a745;
+        color: white;
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2);
+    }
 
-.badge-info {
-    background: #28a745;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-}
+    .btn-primary:hover {
+        background: #218838;
+        border-color: #1e7e34;
+        transform: translateY(-1px);
+    }
 
-.btn-remove {
-    color: #dc3545;
-    background: none;
-    border: none;
-    padding: 2px 6px;
-    border-radius: 4px;
-}
+    /* 🟢 SELECT2 (AUTOCOMPLETE) PLUS GRAND */
+    .select2-container .select2-selection--single {
+        height: 50px !important;
+        /* Match form-control */
+        border: 1px solid #dfe6e9 !important;
+        border-radius: 8px !important;
+        background-color: #fdfdfd !important;
+        display: flex !important;
+        align-items: center !important;
+    }
 
-.btn-remove:hover {
-    background: #f8d7da;
-    color: #721c24;
-}
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 50px !important;
+        padding-left: 16px !important;
+        font-size: 16px !important;
+        color: #2c3e50 !important;
+    }
 
-.select2-container--default .select2-selection--single {
-    height: 38px;
-    line-height: 38px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-}
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 48px !important;
+        right: 10px !important;
+    }
 
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    padding-left: 12px;
-}
+    /* 📅 DATE PICKER PLUS CLAIR & GROS POUR TACTILE */
+    input[type="datetime-local"] {
+        font-family: 'Inter', sans-serif;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 18px;
+        /* Plus gros */
+        height: 60px !important;
+        /* Touch target plus grand */
+    }
 
-.production-summary {
-    background: #e8f5e8;
-    border: 1px solid #28a745;
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
-}
+    /* Agrandir l'icône du calendrier (Webkit/Chrome) */
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        width: 40px;
+        height: 40px;
+        opacity: 0.8;
+        filter: invert(36%) sepia(13%) saturate(2225%) hue-rotate(130deg) brightness(95%) contrast(90%);
+        /* Couleur #28a745 (vert) approximative */
+    }
+
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    /* TABLEAU / LIGNES ITEMS */
+    .item-row {
+        background: #fafafa;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px !important;
+    }
+
+    .btn-remove {
+        color: #dc3545;
+        background: #fff0f1;
+        border: 1px solid #fad7db;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s;
+    }
+
+    .btn-remove:hover {
+        background: #dc3545;
+        color: white;
+        transform: rotate(90deg);
+    }
+
+    .production-summary {
+        background: #e8f5e8;
+        border: 1px dashed #28a745;
+        border-radius: 12px;
+        padding: 30px;
+        margin-top: 30px;
+    }
 </style>
 
 <div class="form-container">
@@ -106,7 +179,8 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1 class="h3 mb-0 text-dark">
                         <i class="bi bi-gear me-2 text-success"></i>
-                        {% if edit_mode %}Modifier Ordre de Production #{{ order.id }}{% else %}Nouvel Ordre de Production{% endif %}
+                        {% if edit_mode %}Modifier Ordre de Production #{{ order.id }}{% else %}Nouvel Ordre de
+                        Production{% endif %}
                     </h1>
                     <a href="{{ url_for('orders.list_production_orders') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-list me-1"></i>Ordres de Production
@@ -115,15 +189,16 @@
 
                 <!-- Messages d'erreur -->
                 {% for field, errors in form.errors.items() %}
-                    {% for error in errors %}
-                        <div class="alert alert-danger" role="alert">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            {{ form[field].label.text if field in form else field }}: {{ error }}
-                        </div>
-                    {% endfor %}
+                {% for error in errors %}
+                <div class="alert alert-danger" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    {{ form[field].label.text if field in form else field }}: {{ error }}
+                </div>
+                {% endfor %}
                 {% endfor %}
 
-                <form method="POST" id="production-order-form" action="{% if edit_mode %}{{ url_for('orders.edit_production_order', order_id=order.id) }}{% else %}{{ url_for('orders.new_production_order') }}{% endif %}">
+                <form method="POST" id="production-order-form"
+                    action="{% if edit_mode %}{{ url_for('orders.edit_production_order', order_id=order.id) }}{% else %}{{ url_for('orders.new_production_order') }}{% endif %}">
                     {{ form.hidden_tag() }}
 
                     <!-- Paramètres Production -->
@@ -162,30 +237,33 @@
                         <div class="card-body">
                             <div id="items-container">
                                 {% for subform in form.items %}
-                                    <div class="item-row border-bottom pb-3 mb-3" data-index="{{ loop.index0 }}">
-                                        <div class="row">
-                                            <div class="col-md-8 mb-3">
-                                                {{ subform.product.label(class="form-label fw-bold") }}
-                                                <span class="field-required">*</span>
-                                                {{ subform.product(class="form-select form-control product-select", id="items-" + loop.index0|string + "-product") }}
-                                            </div>
-                                            <div class="col-md-2 mb-3">
-                                                {{ subform.quantity.label(class="form-label fw-bold") }}
-                                                <span class="field-required">*</span>
-                                                <div class="input-group">
-                                                    {{ subform.quantity(class="form-control quantity-input", min="0.01", step="0.01", id="items-" + loop.index0|string + "-quantity") }}
-                                                    <span class="input-group-text">unité(s)</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2 mb-3 d-flex align-items-end">
-                                                {% if loop.index0 > 0 %}
-                                                <button type="button" class="btn btn-remove" data-item-index="{{ loop.index0 }}">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                                {% endif %}
+                                <div class="item-row border-bottom pb-3 mb-3" data-index="{{ loop.index0 }}">
+                                    <div class="row">
+                                        <div class="col-md-8 mb-3">
+                                            {{ subform.product.label(class="form-label fw-bold") }}
+                                            <span class="field-required">*</span>
+                                            {{ subform.product(class="form-select form-control product-select",
+                                            id="items-" + loop.index0|string + "-product") }}
+                                        </div>
+                                        <div class="col-md-2 mb-3">
+                                            {{ subform.quantity.label(class="form-label fw-bold") }}
+                                            <span class="field-required">*</span>
+                                            <div class="input-group">
+                                                {{ subform.quantity(class="form-control quantity-input", min="0.01",
+                                                step="0.01", id="items-" + loop.index0|string + "-quantity") }}
+                                                <span class="input-group-text">unité(s)</span>
                                             </div>
                                         </div>
+                                        <div class="col-md-2 mb-3 d-flex align-items-end">
+                                            {% if loop.index0 > 0 %}
+                                            <button type="button" class="btn btn-remove"
+                                                data-item-index="{{ loop.index0 }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
                                     </div>
+                                </div>
                                 {% endfor %}
                             </div>
                             <button type="button" class="btn btn-outline-success" id="add-item-btn">
@@ -202,7 +280,8 @@
                             </h5>
                         </div>
                         <div class="card-body">
-                            {{ form.production_notes(class="form-control", placeholder="Instructions spéciales pour l'équipe de production...", rows="4") }}
+                            {{ form.production_notes(class="form-control", placeholder="Instructions spéciales pour
+                            l'équipe de production...", rows="4") }}
                         </div>
                     </div>
 
@@ -229,7 +308,8 @@
                             <div class="col-md-6">
                                 <div class="alert alert-info mb-0">
                                     <i class="bi bi-info-circle me-2"></i>
-                                    <strong>Note :</strong> Cet ordre de production ne génère aucun montant financier. Il s'agit uniquement d'une planification pour l'équipe de production.
+                                    <strong>Note :</strong> Cet ordre de production ne génère aucun montant financier.
+                                    Il s'agit uniquement d'une planification pour l'équipe de production.
                                 </div>
                             </div>
                         </div>
@@ -238,7 +318,8 @@
                     <!-- Boutons -->
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-check-circle me-2"></i>{% if edit_mode %}Modifier l'Ordre{% else %}Créer l'Ordre de Production{% endif %}
+                            <i class="bi bi-check-circle me-2"></i>{% if edit_mode %}Modifier l'Ordre{% else %}Créer
+                            l'Ordre de Production{% endif %}
                         </button>
                         <a href="{{ url_for('orders.list_production_orders') }}" class="btn btn-secondary btn-lg">
                             <i class="bi bi-arrow-left me-1"></i>Annuler
@@ -255,154 +336,185 @@
 {{ super() }}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!-- 📅 FLATPICKR POUR CALENDRIER GÉANT -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/fr.js"></script>
+<style>
+    /* Style pour agrandir le calendrier Flatpickr */
+    .flatpickr-calendar {
+        transform: scale(1.3);
+        /* Agrandissement global */
+        transform-origin: top left;
+        margin-top: 10px;
+        font-family: 'Inter', sans-serif !important;
+    }
+
+    .flatpickr-day {
+        font-size: 16px;
+        height: 40px;
+        line-height: 40px;
+    }
+</style>
 <script>
-$(document).ready(function() {
-    
-    function initializeSelect2(element) {
-        $(element).select2({
-            width: '100%',
-            placeholder: "-- Choisir un produit --",
-            allowClear: true
-        });
-    }
-
-    function updateProductionSummary() {
-        let totalItems = 0;
-        let totalQuantity = 0;
-        
-        document.querySelectorAll('.item-row').forEach(function(row) {
-            const index = row.getAttribute('data-index');
-            const productSelect = document.getElementById('items-' + index + '-product');
-            const quantityInput = document.getElementById('items-' + index + '-quantity');
-
-            if (productSelect && productSelect.value) {
-                totalItems++;
-                let quantity = parseFloat(quantityInput.value) || 0;
-                totalQuantity += quantity;
-            }
+    $(document).ready(function () {
+        // Initialisation Flatpickr sur le champ date
+        flatpickr("input[type='datetime-local']", {
+            enableTime: true,
+            dateFormat: "Y-m-d\\TH:i", /* Format compatible datetime-local */
+            altInput: true,
+            altFormat: "d/m/Y H:i", /* Format affiché joli */
+            locale: "fr",
+            time_24hr: true,
+            disableMobile: "true" /* Force le thème Flatpickr même sur mobile */
         });
 
-        document.getElementById('total-items').textContent = totalItems;
-        document.getElementById('total-quantity').textContent = totalQuantity.toFixed(2) + ' unités';
-        
-        // Mettre à jour la priorité affichée
-        const prioritySelect = document.querySelector('select[name="priority"]');
-        if (prioritySelect) {
-            const priorityText = prioritySelect.options[prioritySelect.selectedIndex].text;
-            document.getElementById('priority-display').textContent = priorityText;
-        }
-    }
 
-    function attachEventListeners(element) {
-        const productSelect = element.querySelector('.product-select');
-        if (productSelect) {
-            $(productSelect).on('change', function() {
-                updateProductionSummary();
+        function initializeSelect2(element) {
+            $(element).select2({
+                width: '100%',
+                placeholder: "-- Choisir un produit --",
+                allowClear: true
             });
         }
 
-        const quantityInput = element.querySelector('.quantity-input');
-        if (quantityInput) {
-            quantityInput.addEventListener('input', updateProductionSummary);
-        }
+        function updateProductionSummary() {
+            let totalItems = 0;
+            let totalQuantity = 0;
 
-        const removeBtn = element.querySelector('.btn-remove');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', function() {
-                const index = this.getAttribute('data-item-index');
-                removeItem(index);
+            document.querySelectorAll('.item-row').forEach(function (row) {
+                const index = row.getAttribute('data-index');
+                const productSelect = document.getElementById('items-' + index + '-product');
+                const quantityInput = document.getElementById('items-' + index + '-quantity');
+
+                if (productSelect && productSelect.value) {
+                    totalItems++;
+                    let quantity = parseFloat(quantityInput.value) || 0;
+                    totalQuantity += quantity;
+                }
             });
-        }
-    }
 
-    function addItem() {
-        const container = document.getElementById('items-container');
-        let templateRow = container.querySelector('.item-row');
-        if (!templateRow) return;
-        
-        const newIndex = container.querySelectorAll('.item-row').length;
-        const newItem = templateRow.cloneNode(true);
+            document.getElementById('total-items').textContent = totalItems;
+            document.getElementById('total-quantity').textContent = totalQuantity.toFixed(2) + ' unités';
 
-        newItem.setAttribute('data-index', newIndex);
-        $(newItem).find('.product-select').select2('destroy');
-
-        newItem.querySelectorAll('select, input').forEach(function(input) {
-            if (input.name) {
-                input.name = input.name.replace(/items-\d+-/, 'items-' + newIndex + '-');
-            }
-            if (input.id) {
-                input.id = input.id.replace(/items-\d+-/, 'items-' + newIndex + '-');
-            }
-            if (input.tagName.toLowerCase() === 'select') {
-                input.selectedIndex = 0;
-                input.value = '';
-            } else {
-                input.value = '';
-            }
-        });
-
-        let removeButton = newItem.querySelector('.btn-remove');
-        if (!removeButton) {
-            const removeCol = newItem.querySelector('.col-md-2.d-flex.align-items-end');
-            if(removeCol) {
-               removeCol.innerHTML = '<button type="button" class="btn btn-remove" data-item-index="' + newIndex + '"><i class="bi bi-trash"></i></button>';
-               removeButton = removeCol.querySelector('.btn-remove');
+            // Mettre à jour la priorité affichée
+            const prioritySelect = document.querySelector('select[name="priority"]');
+            if (prioritySelect) {
+                const priorityText = prioritySelect.options[prioritySelect.selectedIndex].text;
+                document.getElementById('priority-display').textContent = priorityText;
             }
         }
-        if(removeButton) {
-           removeButton.setAttribute('data-item-index', newIndex);
-        }
 
-        container.appendChild(newItem);
-        document.getElementById('items-count').textContent = (newIndex + 1) + ' article(s)';
-        
-        const newSelect = newItem.querySelector('.product-select');
-        initializeSelect2(newSelect);
-        
-        attachEventListeners(newItem);
-        updateProductionSummary();
-    }
-
-    function removeItem(index) {
-        const item = document.querySelector('.item-row[data-index="' + index + '"]');
-        if (item) {
-            item.remove();
-            
-            document.querySelectorAll('.item-row').forEach((row, newIdx) => {
-                row.setAttribute('data-index', newIdx);
-                row.querySelectorAll('select, input, button').forEach(el => {
-                    const name = el.name;
-                    if(name) el.name = name.replace(/items-\d+-/, 'items-' + newIdx + '-');
-                    const id = el.id;
-                    if(id) el.id = id.replace(/items-\d+-/, 'items-' + newIdx + '-');
-                    const dataIdx = el.getAttribute('data-item-index');
-                    if(dataIdx) el.setAttribute('data-item-index', newIdx);
+        function attachEventListeners(element) {
+            const productSelect = element.querySelector('.product-select');
+            if (productSelect) {
+                $(productSelect).on('change', function () {
+                    updateProductionSummary();
                 });
+            }
+
+            const quantityInput = element.querySelector('.quantity-input');
+            if (quantityInput) {
+                quantityInput.addEventListener('input', updateProductionSummary);
+            }
+
+            const removeBtn = element.querySelector('.btn-remove');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function () {
+                    const index = this.getAttribute('data-item-index');
+                    removeItem(index);
+                });
+            }
+        }
+
+        function addItem() {
+            const container = document.getElementById('items-container');
+            let templateRow = container.querySelector('.item-row');
+            if (!templateRow) return;
+
+            const newIndex = container.querySelectorAll('.item-row').length;
+            const newItem = templateRow.cloneNode(true);
+
+            newItem.setAttribute('data-index', newIndex);
+            $(newItem).find('.product-select').select2('destroy');
+
+            newItem.querySelectorAll('select, input').forEach(function (input) {
+                if (input.name) {
+                    input.name = input.name.replace(/items-\d+-/, 'items-' + newIndex + '-');
+                }
+                if (input.id) {
+                    input.id = input.id.replace(/items-\d+-/, 'items-' + newIndex + '-');
+                }
+                if (input.tagName.toLowerCase() === 'select') {
+                    input.selectedIndex = 0;
+                    input.value = '';
+                } else {
+                    input.value = '';
+                }
             });
 
-            const remainingItems = document.querySelectorAll('.item-row').length;
-            document.getElementById('items-count').textContent = remainingItems + ' article(s)';
+            let removeButton = newItem.querySelector('.btn-remove');
+            if (!removeButton) {
+                const removeCol = newItem.querySelector('.col-md-2.d-flex.align-items-end');
+                if (removeCol) {
+                    removeCol.innerHTML = '<button type="button" class="btn btn-remove" data-item-index="' + newIndex + '"><i class="bi bi-trash"></i></button>';
+                    removeButton = removeCol.querySelector('.btn-remove');
+                }
+            }
+            if (removeButton) {
+                removeButton.setAttribute('data-item-index', newIndex);
+            }
+
+            container.appendChild(newItem);
+            document.getElementById('items-count').textContent = (newIndex + 1) + ' article(s)';
+
+            const newSelect = newItem.querySelector('.product-select');
+            initializeSelect2(newSelect);
+
+            attachEventListeners(newItem);
             updateProductionSummary();
         }
-    }
 
-    // Event listeners pour la priorité
-    const prioritySelect = document.querySelector('select[name="priority"]');
-    if (prioritySelect) {
-        prioritySelect.addEventListener('change', updateProductionSummary);
-    }
+        function removeItem(index) {
+            const item = document.querySelector('.item-row[data-index="' + index + '"]');
+            if (item) {
+                item.remove();
 
-    $('#add-item-btn').on('click', addItem);
+                document.querySelectorAll('.item-row').forEach((row, newIdx) => {
+                    row.setAttribute('data-index', newIdx);
+                    row.querySelectorAll('select, input, button').forEach(el => {
+                        const name = el.name;
+                        if (name) el.name = name.replace(/items-\d+-/, 'items-' + newIdx + '-');
+                        const id = el.id;
+                        if (id) el.id = id.replace(/items-\d+-/, 'items-' + newIdx + '-');
+                        const dataIdx = el.getAttribute('data-item-index');
+                        if (dataIdx) el.setAttribute('data-item-index', newIdx);
+                    });
+                });
 
-    $('.product-select').each(function() {
-        initializeSelect2(this);
+                const remainingItems = document.querySelectorAll('.item-row').length;
+                document.getElementById('items-count').textContent = remainingItems + ' article(s)';
+                updateProductionSummary();
+            }
+        }
+
+        // Event listeners pour la priorité
+        const prioritySelect = document.querySelector('select[name="priority"]');
+        if (prioritySelect) {
+            prioritySelect.addEventListener('change', updateProductionSummary);
+        }
+
+        $('#add-item-btn').on('click', addItem);
+
+        $('.product-select').each(function () {
+            initializeSelect2(this);
+        });
+
+        document.querySelectorAll('.item-row').forEach(function (row) {
+            attachEventListeners(row);
+        });
+
+        updateProductionSummary();
     });
-
-    document.querySelectorAll('.item-row').forEach(function(row) {
-        attachEventListeners(row);
-    });
-
-    updateProductionSummary();
-});
 </script>
 {% endblock %}

@@ -383,7 +383,11 @@
                 <div class="flex-grow-1" style="font-size: 1.08rem;">
                     <div class="d-flex align-items-start gap-4">
                         <div style="min-width: 250px;">
-                            <span class="fw-bold">{{ order.customer_name }}</span><br>
+                            <span class="fw-bold">{{ order.customer_name }}</span>
+                            {% if order.status == 'pending' %}
+                            <span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">En attente</span>
+                            {% endif %}
+                            <br>
                             <span class="text-muted">{{ order.customer_phone or 'N/A' }}</span>
                         </div>
                         <div class="flex-grow-1 ps-3">
@@ -420,8 +424,10 @@
                             {% endif %}
                         </div>
                         <div class="text-end ps-3" style="min-width: 250px;">
-                            <div class="text-muted fw-bold">{{ order.due_date.strftime('%H:%M') if order.due_date else
-                                'N/A' }}</div>
+                            <div class="text-muted fw-bold">
+                                {{ order.due_date.strftime('%d/%m') if order.due_date else '' }}
+                                {{ order.due_date.strftime('%H:%M') if order.due_date else 'N/A' }}
+                            </div>
                             {% if order.delivery_option == 'delivery' %}
                             {% if order.get_delivery_address %}
                             <div class="text-muted small">📍 {{ order.get_delivery_address }}</div>
@@ -471,6 +477,9 @@
                     <div class="d-flex align-items-start gap-4">
                         <div style="min-width: 250px;">
                             <span class="fw-bold">Ordre #{{ order.id }}</span>
+                            {% if order.status == 'pending' %}
+                            <span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">En attente</span>
+                            {% endif %}
                         </div>
                         <div class="flex-grow-1 ps-3">
                             {% for item in order.items %}
@@ -490,8 +499,10 @@
                             {% endfor %}
                         </div>
                         <div class="text-end ps-3" style="min-width: 250px;">
-                            <div class="text-muted fw-bold">{{ order.due_date.strftime('%H:%M') if order.due_date else
-                                'N/A' }}</div>
+                            <div class="text-muted fw-bold">
+                                {{ order.due_date.strftime('%d/%m') if order.due_date else '' }}
+                                {{ order.due_date.strftime('%H:%M') if order.due_date else 'N/A' }}
+                            </div>
                         </div>
                     </div>
                 </div>

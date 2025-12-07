@@ -1,0 +1,128 @@
+<!-- 🚨 MODAL STOCK INSUFFISANT -->
+<div class="modal fade" id="stockWarningModal" tabindex="-1" aria-labelledby="stockWarningModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title" id="stockWarningModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Stock Insuffisant
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Token CSRF caché pour la requête AJAX -->
+                <input type="hidden" id="stock-warning-csrf" value="{{ csrf_token() }}">
+
+                <div class="alert alert-warning">
+                    <strong>⚠️ Attention :</strong> Les ingrédients suivants sont manquants pour cette commande :
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Produit</th>
+                                <th>Ingrédient Manquant</th>
+                                <th>Lieu</th>
+                                <th>Besoin</th>
+                                <th>Disponible</th>
+                                <th>Manque</th>
+                            </tr>
+                        </thead>
+                        <tbody id="missing-stock-list">
+                            <!-- Rempli dynamiquement -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <p class="mb-2"><strong>Statut actuel :</strong> <span class="badge bg-secondary">En attente</span>
+                    </p>
+                    <p class="mb-0"><strong>Voulez-vous changer le statut en "En production" ?</strong></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Laisser en attente
+                </button>
+                <button type="button" class="btn btn-success" id="changeToProductionBtn">
+                    <i class="bi bi-gear me-1"></i>Mettre en production
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Afficher le modal si des warnings existent
+    document.addEventListener('DOMContentLoaded', function () {
+        const stockWarnings = {{ session.pop('missing_stock_warnings', []) | tojson
+    }};
+
+    if (stockWarnings && stockWarnings.length > 0) {
+        // Remplir le tableau
+        const tbody = document.getElementById('missing-stock-list');
+        tbody.innerHTML = '';
+
+        stockWarnings.forEach(item => {
+            const shortage = item.needed - item.available;
+            const row = `
+                    <tr>
+                        <td><strong>${item.product_name}</strong></td>
+                        <td>${item.ingredient}</td>
+                        <td><span class="badge bg-info">${item.location}</span></td>
+                        <td>${item.needed} ${item.unit}</td>
+                        <td class="text-danger">${item.available} ${item.unit}</td>
+                        <td class="text-danger fw-bold">-${shortage.toFixed(3)} ${item.unit}</td>
+                    </tr>
+                `;
+            tbody.innerHTML += row;
+        });
+
+        // Afficher le modal
+        const modal = new bootstrap.Modal(document.getElementById('stockWarningModal'));
+        modal.show();
+
+        // Gérer le bouton "Mettre en production"
+        document.getElementById('changeToProductionBtn').addEventListener('click', function () {
+            // Récupérer l'ID de la commande depuis l'URL
+            const urlParts = window.location.pathname.split('/');
+            const orderId = urlParts[urlParts.length - 1]; // Supposant /admin/orders/123
+
+            if (orderId && !isNaN(orderId)) {
+                // Récupérer le token CSRF dédié
+                const csrfToken = document.getElementById('stock-warning-csrf').value;
+
+                // Envoyer une requête pour changer le statut
+                // CORRECTION : Ajout du préfixe /admin/orders car le blueprint est enregistré sous ce préfixe
+                fetch(`/admin/orders/${orderId}/change-status-to-production`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erreur réseau ou permission');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            window.location.reload(); // Recharger simplement la page
+                        } else {
+                            alert('Erreur : ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        alert('Une erreur est survenue lors du changement de statut. Vérifiez la console.');
+                    });
+            }
+
+            modal.hide();
+        });
+    }
+    });
+</script>
