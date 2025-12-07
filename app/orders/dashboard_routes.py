@@ -32,7 +32,8 @@ def production_dashboard():
     ).order_by(Order.due_date.asc()).all()
     
     # Calcul des stats pour l'en-tête
-    now = datetime.now()
+    # Force UTC+1 (Algérie/France Hivers) car le serveur est en UTC
+    now = datetime.utcnow() + timedelta(hours=1)
     orders_on_time = 0
     orders_soon = 0
     orders_overdue = 0
