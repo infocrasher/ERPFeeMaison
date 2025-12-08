@@ -405,10 +405,45 @@ def mark_as_paid(id):
 @admin_required
 def mark_as_unpaid(id):
     purchase = Purchase.query.get_or_404(id)
+    
+    # Suppression de l'écriture comptable correspondante AVANT de modifier le bon
+    try:
+        from app.accounting.models import JournalEntry, JournalEntryLine
+        entry = JournalEntry.query.filter_by(reference=f"ACH-{purchase.id}").first()
+        if entry:
+            # Si l'écriture est validée, la dévalider d'abord
+            if entry.is_validated:
+                entry.is_validated = False
+                entry.validated_at = None
+                entry.validated_by_id = None
+                current_app.logger.info(f"Écriture comptable ACH-{purchase.id} dévalidée avant suppression.")
+            
+            # Supprimer les lignes d'écriture
+            JournalEntryLine.query.filter_by(entry_id=entry.id).delete()
+            # Supprimer l'écriture
+            db.session.delete(entry)
+            current_app.logger.info(f"Écriture comptable ACH-{purchase.id} supprimée suite au marquage non payé.")
+        else:
+            current_app.logger.warning(f"Aucune écriture comptable trouvée pour ACH-{purchase.id}")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur lors de la suppression de l'écriture comptable ACH-{purchase.id}: {e}", exc_info=True)
+        flash(f'Erreur lors de la suppression de l\'écriture comptable : {e}', 'error')
+        return redirect(url_for('purchases.view_purchase', id=id))
+    
+    # Modifier le bon d'achat
     purchase.is_paid = False
     purchase.payment_date = None
-    db.session.commit()
-    flash(f'Bon d\'achat {purchase.reference} marqué comme non payé.', 'success')
+    purchase.payment_method = None
+    
+    try:
+        db.session.commit()
+        flash(f'Bon d\'achat {purchase.reference} marqué comme non payé (écriture comptable supprimée).', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur lors du commit : {e}", exc_info=True)
+        flash(f'Erreur lors de la mise à jour : {e}', 'error')
+    
     return redirect(url_for('purchases.view_purchase', id=id))
 
 @purchases.route('/<int:id>/cancel', methods=['POST'])
@@ -708,6 +743,59 @@ def edit_purchase(id):
                 raise ValueError("Le bon d'achat doit contenir au moins un article valide.")
 
             purchase.calculate_totals()
+            
+            # === ÉTAPE 5: METTRE À JOUR L'ÉCRITURE COMPTABLE SI LE BON EST PAYÉ ===
+            if purchase.is_paid and purchase.payment_method:
+                try:
+                    from app.accounting.models import JournalEntry, JournalEntryLine, Account
+                    entry = JournalEntry.query.filter_by(reference=f"ACH-{purchase.id}").first()
+                    
+                    if entry:
+                        # Récupérer les comptes selon le mode de paiement
+                        if purchase.payment_method == 'bank':
+                            credit_account = Account.query.filter_by(code='512').first()  # Banque
+                        elif purchase.payment_method == 'cash':
+                            credit_account = Account.query.filter_by(code='530').first()  # Caisse
+                        else:  # credit
+                            credit_account = Account.query.filter_by(code='401').first()  # Fournisseurs
+                        
+                        debit_account = Account.query.filter_by(code='601').first()  # Achats
+                        
+                        if credit_account and debit_account:
+                            # Trouver les lignes d'écriture
+                            bank_line = JournalEntryLine.query.filter_by(
+                                entry_id=entry.id,
+                                account_id=credit_account.id
+                            ).first()
+                            
+                            purchase_line = JournalEntryLine.query.filter_by(
+                                entry_id=entry.id,
+                                account_id=debit_account.id
+                            ).first()
+                            
+                            if bank_line and purchase_line:
+                                # Mettre à jour les montants
+                                nouveau_montant = float(purchase.total_amount)
+                                bank_line.credit_amount = Decimal(str(nouveau_montant))
+                                purchase_line.debit_amount = Decimal(str(nouveau_montant))
+                                
+                                # Dévalider l'écriture si elle était validée (car modifiée)
+                                if entry.is_validated:
+                                    entry.is_validated = False
+                                    entry.validated_at = None
+                                    entry.validated_by_id = None
+                                
+                                current_app.logger.info(f"Écriture comptable ACH-{purchase.id} mise à jour : {nouveau_montant} DA")
+                            else:
+                                current_app.logger.warning(f"Lignes d'écriture non trouvées pour ACH-{purchase.id}")
+                        else:
+                            current_app.logger.warning(f"Comptes comptables non trouvés pour mise à jour ACH-{purchase.id}")
+                    else:
+                        current_app.logger.warning(f"Écriture comptable non trouvée pour ACH-{purchase.id} (bon payé mais pas d'écriture)")
+                except Exception as e:
+                    # Ne pas bloquer la modification du bon si l'écriture comptable échoue
+                    current_app.logger.error(f"Erreur lors de la mise à jour de l'écriture comptable ACH-{purchase.id}: {e}", exc_info=True)
+            
             db.session.commit()
             
             flash(f'Bon d\'achat {purchase.reference} modifié avec succès. Le stock et le coût moyen pondéré ont été mis à jour.', 'success')
