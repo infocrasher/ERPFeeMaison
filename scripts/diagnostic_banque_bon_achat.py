@@ -12,7 +12,7 @@ from app import create_app, db
 from app.purchases.models import Purchase, PurchaseStatus
 from app.accounting.models import JournalEntry, JournalEntryLine, Account
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def diagnostic_banque_bon_achat():
     """Diagnostic complet des incohérences entre bons d'achat et écritures comptables"""
@@ -121,9 +121,21 @@ def diagnostic_banque_bon_achat():
         print("4️⃣  BONS D'ACHAT PAYÉS PAR BANQUE (30 DERNIERS JOURS)")
         print("-" * 80)
         
-        date_limite = datetime.utcnow() - timedelta(days=30)
-        recent_purchases = [p for p in purchases_paid_bank 
-                           if p.payment_date and p.payment_date >= date_limite]
+        from datetime import timezone
+        date_limite = datetime.now(timezone.utc) - timedelta(days=30)
+        # Convertir payment_date en datetime si c'est une date
+        recent_purchases = []
+        for p in purchases_paid_bank:
+            if p.payment_date:
+                # Si payment_date est une date, la convertir en datetime
+                if isinstance(p.payment_date, datetime):
+                    payment_dt = p.payment_date
+                else:
+                    # Si c'est une date, créer un datetime à minuit UTC
+                    payment_dt = datetime.combine(p.payment_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+                
+                if payment_dt >= date_limite:
+                    recent_purchases.append(p)
         
         if not recent_purchases:
             print("   Aucun bon d'achat payé par banque dans les 30 derniers jours")
