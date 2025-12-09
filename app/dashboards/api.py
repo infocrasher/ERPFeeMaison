@@ -146,15 +146,20 @@ def daily_stock():
                     'total_value': float(product_data.total_stock_value or 0)
                 }
         
-        # Valeur totale du stock (calcul correct par emplacement)
+        # Valeur totale du stock EXACTEMENT comme dans stock overview
+        # (filtre par type de produit pour chaque emplacement)
         products = Product.query.all()
-        total_stock_value = sum(
-            float(p.valeur_stock_ingredients_magasin or 0) +
-            float(p.valeur_stock_ingredients_local or 0) +
-            float(p.valeur_stock_comptoir or 0) +
-            float(p.valeur_stock_consommables or 0)
-            for p in products
-        )
+        location_configs = [
+            {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_magasin'},
+            {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_local'},
+            {'product_type': 'finished', 'value_attr': 'valeur_stock_comptoir'},
+            {'product_type': 'consommable', 'value_attr': 'valeur_stock_consommables'}
+        ]
+        total_stock_value = 0.0
+        for config in location_configs:
+            filtered_products = [p for p in products if p.product_type == config['product_type']]
+            value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in filtered_products)
+            total_stock_value += value_total
         
         # Mouvements aujourd'hui (basé sur les commandes)
         today_movements = Order.query.filter(
@@ -199,15 +204,20 @@ def daily_stock():
             )
         ).all()
         
-        # Valeur totale du stock (calcul correct par emplacement)
+        # Valeur totale du stock EXACTEMENT comme dans stock overview
+        # (filtre par type de produit pour chaque emplacement)
         products = Product.query.all()
-        total_stock_value = sum(
-            float(p.valeur_stock_ingredients_magasin or 0) +
-            float(p.valeur_stock_ingredients_local or 0) +
-            float(p.valeur_stock_comptoir or 0) +
-            float(p.valeur_stock_consommables or 0)
-            for p in products
-        )
+        location_configs = [
+            {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_magasin'},
+            {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_local'},
+            {'product_type': 'finished', 'value_attr': 'valeur_stock_comptoir'},
+            {'product_type': 'consommable', 'value_attr': 'valeur_stock_consommables'}
+        ]
+        total_stock_value = 0.0
+        for config in location_configs:
+            filtered_products = [p for p in products if p.product_type == config['product_type']]
+            value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in filtered_products)
+            total_stock_value += value_total
         today_movements = Order.query.filter(func.date(Order.created_at) == today).count()
         
         def format_product(product):
@@ -474,15 +484,20 @@ def monthly_overview():
         )
     ).count()
     
-    # Valeur stock fin de mois (calcul correct par emplacement)
+    # Valeur stock fin de mois EXACTEMENT comme dans stock overview
+    # (filtre par type de produit pour chaque emplacement)
     products = Product.query.all()
-    stock_value = sum(
-        float(p.valeur_stock_ingredients_magasin or 0) +
-        float(p.valeur_stock_ingredients_local or 0) +
-        float(p.valeur_stock_comptoir or 0) +
-        float(p.valeur_stock_consommables or 0)
-        for p in products
-    )
+    location_configs = [
+        {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_magasin'},
+        {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_local'},
+        {'product_type': 'finished', 'value_attr': 'valeur_stock_comptoir'},
+        {'product_type': 'consommable', 'value_attr': 'valeur_stock_consommables'}
+    ]
+    stock_value = 0.0
+    for config in location_configs:
+        filtered_products = [p for p in products if p.product_type == config['product_type']]
+        value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in filtered_products)
+        stock_value += value_total
     
     # Employés actifs
     active_employees = Employee.query.filter_by(is_active=True).count()
