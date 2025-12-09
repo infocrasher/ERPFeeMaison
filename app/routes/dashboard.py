@@ -42,7 +42,16 @@ def unified_dashboard():
         target_date = date.today()
 
     context = build_dashboard_context(target_date, period)
-    return render_template('dashboard.html', data=context)
+    
+    # Empêcher la mise en cache pour forcer le recalcul
+    response = render_template('dashboard.html', data=context)
+    from flask import make_response
+    response = make_response(response)
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
+    return response
 
 
 def build_dashboard_context(target_date, period):
@@ -407,9 +416,24 @@ def build_stock_block(stock_report, today, week_start, now, trend_days):
     heatmap = compute_stock_heatmap(7)
     stock_movements = compute_stock_movements(today)
 
+    # Calculer les achats du jour : utiliser payment_date si payé, sinon created_at
+    # Un achat peut être créé un jour et payé un autre jour
     purchase_cost_today = float(
         db.session.query(func.sum(Purchase.total_amount))
-        .filter(func.date(Purchase.created_at) == today)
+        .filter(
+            db.or_(
+                # Achats payés aujourd'hui
+                db.and_(
+                    Purchase.is_paid == True,
+                    Purchase.payment_date == today
+                ),
+                # Achats créés aujourd'hui mais non payés
+                db.and_(
+                    db.or_(Purchase.is_paid == False, Purchase.is_paid.is_(None)),
+                    func.date(Purchase.created_at) == today
+                )
+            )
+        )
         .scalar() or 0
     )
     purchase_cost_week = float(
