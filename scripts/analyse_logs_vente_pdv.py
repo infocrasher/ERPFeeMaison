@@ -9,13 +9,14 @@ import os
 import re
 from datetime import datetime, timedelta
 
-def analyse_logs_vente_pdv(date_str=None, heures=None, log_file_path=None):
+def analyse_logs_vente_pdv(date_str=None, heures=None, log_file_path=None, plages=None):
     """
     Analyse les logs pour trouver les erreurs de finalisation de vente
     
     Args:
         date_str: Date au format YYYY-MM-DD (si None, utilise aujourd'hui)
         heures: Liste des heures à analyser (ex: ['21:46', '13:00'])
+        plages: Liste de plages d'heures (ex: [('12:00', '13:00'), ('21:00', '22:00')])
     """
     
     # Déterminer la date
@@ -25,7 +26,7 @@ def analyse_logs_vente_pdv(date_str=None, heures=None, log_file_path=None):
         target_date = datetime.now()
     
     # Heures par défaut si non spécifiées
-    if not heures:
+    if not heures and not plages:
         heures = ['21:46', '13:00']
     
     print("=" * 80)
@@ -33,7 +34,10 @@ def analyse_logs_vente_pdv(date_str=None, heures=None, log_file_path=None):
     print("=" * 80)
     print()
     print(f"Date cible : {target_date.strftime('%Y-%m-%d')}")
-    print(f"Heures à analyser : {', '.join(heures)}")
+    if plages:
+        print(f"Plages d'heures à analyser : {', '.join([f'{p[0]}-{p[1]}' for p in plages])}")
+    elif heures:
+        print(f"Heures à analyser : {', '.join(heures)}")
     print()
     
     # Si un fichier est spécifié, l'utiliser directement
@@ -88,8 +92,33 @@ def analyse_logs_vente_pdv(date_str=None, heures=None, log_file_path=None):
     print(f"📊 Total de lignes dans le log : {len(lines)}")
     print()
     
+    # Convertir les plages en heures si nécessaire
+    if plages:
+        heures_to_analyze = []
+        for plage_debut, plage_fin in plages:
+            # Ajouter toutes les heures de la plage (toutes les 5 minutes)
+            debut_parts = plage_debut.split(':')
+            fin_parts = plage_fin.split(':')
+            debut_h = int(debut_parts[0])
+            debut_m = int(debut_parts[1]) if len(debut_parts) > 1 else 0
+            fin_h = int(fin_parts[0])
+            fin_m = int(fin_parts[1]) if len(fin_parts) > 1 else 0
+            
+            # Créer des points d'analyse toutes les 5 minutes
+            current_h = debut_h
+            current_m = debut_m
+            while (current_h < fin_h) or (current_h == fin_h and current_m <= fin_m):
+                heures_to_analyze.append(f"{current_h:02d}:{current_m:02d}")
+                current_m += 5
+                if current_m >= 60:
+                    current_m = 0
+                    current_h += 1
+                if current_h > fin_h or (current_h == fin_h and current_m > fin_m):
+                    break
+        heures = heures_to_analyze
+    
     # Analyser chaque heure
-    for heure_str in heures:
+    for heure_str in (heures or []):
         print("=" * 80)
         print(f"ANALYSE POUR {heure_str}")
         print("=" * 80)
@@ -104,9 +133,9 @@ def analyse_logs_vente_pdv(date_str=None, heures=None, log_file_path=None):
             print(f"⚠️  Format d'heure invalide : {heure_str}")
             continue
         
-        # Fenêtre de temps à analyser (±5 minutes)
-        window_start = target_date.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0) - timedelta(minutes=5)
-        window_end = target_date.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0) + timedelta(minutes=5)
+        # Fenêtre de temps à analyser (±2 minutes pour être plus précis)
+        window_start = target_date.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0) - timedelta(minutes=2)
+        window_end = target_date.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0) + timedelta(minutes=2)
         
         print(f"Fenêtre d'analyse : {window_start.strftime('%Y-%m-%d %H:%M:%S')} → {window_end.strftime('%Y-%m-%d %H:%M:%S')}")
         print()
@@ -203,14 +232,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Analyser les logs pour les erreurs de vente PDV')
     parser.add_argument('--date', type=str, help='Date au format YYYY-MM-DD (défaut: aujourd\'hui)')
     parser.add_argument('--heures', type=str, nargs='+', help='Heures à analyser (ex: 21:46 13:00)')
+    parser.add_argument('--plages', type=str, nargs='+', help='Plages d\'heures (ex: "12:00-13:00" "21:00-22:00")')
     parser.add_argument('--file', type=str, help='Chemin vers le fichier de log')
     
     args = parser.parse_args()
     
-    if args.heures:
-        heures = args.heures
-    else:
-        heures = ['21:46', '13:00']
+    # Parser les plages si fournies
+    plages = None
+    if args.plages:
+        plages = []
+        for plage_str in args.plages:
+            if '-' in plage_str:
+                parts = plage_str.split('-')
+                if len(parts) == 2:
+                    plages.append((parts[0].strip(), parts[1].strip()))
     
-    analyse_logs_vente_pdv(date_str=args.date, heures=heures, log_file_path=args.file)
+    heures = args.heures if args.heures else None
+    
+    analyse_logs_vente_pdv(date_str=args.date, heures=heures, log_file_path=args.file, plages=plages)
 
