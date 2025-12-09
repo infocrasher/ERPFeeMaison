@@ -146,8 +146,15 @@ def daily_stock():
                     'total_value': float(product_data.total_stock_value or 0)
                 }
         
-        # Valeur totale du stock
-        total_stock_value = db.session.query(func.sum(Product.total_stock_value)).scalar() or 0
+        # Valeur totale du stock (calcul correct par emplacement)
+        products = Product.query.all()
+        total_stock_value = sum(
+            float(p.valeur_stock_ingredients_magasin or 0) +
+            float(p.valeur_stock_ingredients_local or 0) +
+            float(p.valeur_stock_comptoir or 0) +
+            float(p.valeur_stock_consommables or 0)
+            for p in products
+        )
         
         # Mouvements aujourd'hui (basé sur les commandes)
         today_movements = Order.query.filter(
