@@ -683,10 +683,49 @@ def compute_cash_history(reference_date, days):
 
 def build_attendance_block(target_date):
     total_employees = Employee.query.filter(Employee.is_active.is_(True)).count()
+    
+    # Essayer d'abord avec AttendanceSummary
     summaries = AttendanceSummary.query.filter(
         AttendanceSummary.work_date == target_date
     ).all()
 
+    # Si pas de AttendanceSummary, utiliser AttendanceRecord
+    if not summaries:
+        from app.employees.models import AttendanceRecord
+        daily_summary = AttendanceRecord.get_daily_summary(target_date)
+        
+        # Convertir le format AttendanceRecord.get_daily_summary en format similaire à AttendanceSummary
+        present = len([
+            emp_data for emp_data in daily_summary.values()
+            if emp_data.get('status') == 'present'
+        ])
+        
+        presence_rate = round((present / total_employees) * 100, 1) if total_employees else 0.0
+        
+        # Calculer les heures travaillées depuis daily_summary
+        workers_data = []
+        for emp_id, emp_data in daily_summary.items():
+            employee = emp_data.get('employee')
+            if employee:
+                total_hours = emp_data.get('total_hours', 0)
+                workers_data.append({
+                    'name': employee.name,
+                    'hours': round(total_hours, 2)
+                })
+        
+        # Trier par heures travaillées
+        top_workers_data = sorted(workers_data, key=lambda x: x['hours'], reverse=True)[:5]
+        best_employee = top_workers_data[0] if top_workers_data else None
+        
+        return {
+            'total': total_employees,
+            'present': present,
+            'presence_rate': presence_rate,
+            'top_workers': top_workers_data,
+            'best_employee': best_employee
+        }
+    
+    # Si AttendanceSummary existe, utiliser le code original
     present = len([
         summary for summary in summaries
         if not summary.is_absent and summary.is_present
