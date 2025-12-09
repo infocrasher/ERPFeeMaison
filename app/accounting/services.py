@@ -93,7 +93,7 @@ class AccountingIntegrationService:
             raise e
     
     @staticmethod
-    def create_purchase_entry(purchase_id, purchase_amount, payment_method='cash', description=None):
+    def create_purchase_entry(purchase_id, purchase_amount, payment_method='cash', description=None, payment_date=None):
         """
         Créer une écriture d'achat
         
@@ -102,8 +102,14 @@ class AccountingIntegrationService:
             purchase_amount: Montant de l'achat
             payment_method: Mode de paiement ('cash', 'bank', 'credit')
             description: Description de l'écriture
+            payment_date: Date de paiement (si None, utilise date.today())
         """
         try:
+            # Vérifier si une écriture existe déjà pour ce bon
+            existing_entry = JournalEntry.query.filter_by(reference=f"ACH-{purchase_id}").first()
+            if existing_entry:
+                raise ValueError(f"Une écriture comptable existe déjà pour ce bon d'achat (ACH-{purchase_id})")
+            
             # Récupérer le journal des achats
             journal = Journal.query.filter_by(journal_type=JournalType.ACHATS, is_active=True).first()
             if not journal:
@@ -124,10 +130,13 @@ class AccountingIntegrationService:
             if not credit_account:
                 raise ValueError(f"Compte comptable crédit ({'530' if payment_method == 'cash' else '512' if payment_method == 'bank' else '401'}) non trouvé ou inactif")
             
+            # Utiliser la date de paiement si fournie, sinon date du jour
+            entry_date = payment_date.date() if payment_date and hasattr(payment_date, 'date') else (payment_date if isinstance(payment_date, date) else date.today())
+            
             # Créer l'écriture
             entry = JournalEntry(
                 journal_id=journal.id,
-                entry_date=date.today(),
+                entry_date=entry_date,
                 description=description or f"Achat #{purchase_id}",
                 reference=f"ACH-{purchase_id}" if purchase_id and purchase_id != 999 else "TEST-ACHAT",
                 created_by_id=current_user.id if current_user.is_authenticated else 1,
@@ -162,7 +171,8 @@ class AccountingIntegrationService:
             
             db.session.add(debit_line)
             db.session.add(credit_line)
-            db.session.commit()
+            # Ne pas faire de commit ici - laisser l'appelant gérer le commit
+            db.session.flush()
             
             return entry
             

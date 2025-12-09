@@ -382,13 +382,27 @@ def mark_as_paid(id):
                 purchase_id=purchase.id,
                 purchase_amount=float(purchase.total_amount),
                 payment_method=form.payment_method.data,  # Utiliser la valeur du formulaire
-                description=f'Achat {purchase.reference} - {purchase.supplier_name}'
+                description=f'Achat {purchase.reference} - {purchase.supplier_name}',
+                payment_date=form.payment_date.data  # Utiliser la date de paiement du formulaire
             )
+            current_app.logger.info(f"Écriture comptable créée pour bon d'achat {purchase.reference} (ACH-{purchase.id})")
+        except ValueError as e:
+            # Erreur attendue (écriture existe déjà)
+            current_app.logger.warning(f"Écriture comptable existe déjà pour ACH-{purchase.id}: {e}")
+            flash(f'Attention : {str(e)}', 'warning')
         except Exception as e:
+            db.session.rollback()
             current_app.logger.error(f"Erreur intégration comptable achat (purchase_id={purchase.id}): {e}", exc_info=True)
-            # On continue même si l'intégration comptable échoue
+            flash(f'Erreur lors de la création de l\'écriture comptable : {e}', 'error')
+            return redirect(url_for('purchases.view_purchase', id=id))
         
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Erreur lors du commit : {e}", exc_info=True)
+            flash(f'Erreur lors de l\'enregistrement : {e}', 'error')
+            return redirect(url_for('purchases.view_purchase', id=id))
         payment_date_str = form.payment_date.data.strftime("%d/%m/%Y") if form.payment_date.data else "date inconnue"
         flash(f'Bon d\'achat {purchase.reference} marqué comme payé le {payment_date_str}.', 'success')
         return redirect(url_for('purchases.view_purchase', id=id))
