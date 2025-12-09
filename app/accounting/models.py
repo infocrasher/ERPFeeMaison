@@ -165,32 +165,48 @@ class JournalEntry(db.Model):
         year = self.entry_date.year if self.entry_date else datetime.now().year
         
         # Trouver le prochain numéro disponible (gérer les collisions)
+        # Utiliser une approche plus robuste : trouver le numéro maximum existant
         max_attempts = 1000  # Limite de sécurité
         attempt = 0
         
+        # Récupérer tous les numéros existants pour ce journal et cette année
+        existing_numbers = db.session.query(JournalEntry.entry_number).filter(
+            JournalEntry.journal_id == self.journal_id,
+            func.extract('year', JournalEntry.entry_date) == year,
+            JournalEntry.entry_number.like(f'{journal_code}-{year}-%')
+        ).all()
+        
+        # Extraire les numéros de séquence
+        used_numbers = set()
+        for (entry_num,) in existing_numbers:
+            try:
+                # Extraire le numéro de séquence (ex: "044" de "AC-2025-044")
+                parts = entry_num.split('-')
+                if len(parts) == 3:
+                    seq_num = int(parts[2])
+                    used_numbers.add(seq_num)
+            except (ValueError, IndexError):
+                continue
+        
+        # Trouver le premier numéro disponible
+        start_num = max(used_numbers) + 1 if used_numbers else 1
+        
         while attempt < max_attempts:
-            # Compter les écritures existantes pour ce journal et cette année
-            count = JournalEntry.query.filter(
-                JournalEntry.journal_id == self.journal_id,
-                func.extract('year', JournalEntry.entry_date) == year,
-                JournalEntry.entry_number.like(f'{journal_code}-{year}-%')
-            ).count()
+            candidate_number = f'{journal_code}-{year}-{start_num:03d}'
             
-            # Générer le numéro : VT-2024-001, AC-2024-001, etc.
-            candidate_number = f'{journal_code}-{year}-{count + 1:03d}'
-            
-            # Vérifier si ce numéro existe déjà
+            # Vérifier si ce numéro existe déjà (double vérification)
             existing = JournalEntry.query.filter_by(entry_number=candidate_number).first()
             if not existing:
                 # Numéro disponible, l'utiliser
                 self.entry_number = candidate_number
                 return
             
-            # Numéro déjà utilisé, incrémenter et réessayer
+            # Numéro déjà utilisé, passer au suivant
+            start_num += 1
             attempt += 1
         
         # Si on arrive ici, on n'a pas trouvé de numéro libre (très improbable)
-        raise ValueError(f"Impossible de générer un numéro d'écriture unique après {max_attempts} tentatives")
+        raise ValueError(f"Impossible de générer un numéro d'écriture unique après {max_attempts} tentatives. Vérifiez la base de données.")
     
     @property
     def total_debit(self):
