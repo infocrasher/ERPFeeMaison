@@ -198,7 +198,16 @@ def load_prime_cost_report(report_date):
 
 
 def build_overview_block(sales_report, today):
-    stock_value = float(db.session.query(func.sum(Product.total_stock_value)).scalar() or 0)
+    # Calculer la valeur stock comme dans stock overview (somme des valeurs par emplacement)
+    # Au lieu d'utiliser total_stock_value qui peut être obsolète
+    products = Product.query.all()
+    stock_value = sum(
+        float(p.valeur_stock_ingredients_magasin or 0) +
+        float(p.valeur_stock_ingredients_local or 0) +
+        float(p.valeur_stock_comptoir or 0) +
+        float(p.valeur_stock_consommables or 0)
+        for p in products
+    )
     return {
         'daily_revenue': float(sales_report.get('total_revenue', 0.0)),
         'daily_orders': int(sales_report.get('total_transactions', 0)),
@@ -412,7 +421,16 @@ def build_stock_block(stock_report, today, week_start, now, trend_days):
     consumption_week = compute_consumption_value(week_start, now)
     ratio = round((consumption_week / purchase_cost_week) * 100, 1) if purchase_cost_week > 0 else None
 
-    total_value = float(db.session.query(func.sum(Product.total_stock_value)).scalar() or 0)
+    # Calculer la valeur stock comme dans stock overview (somme des valeurs par emplacement)
+    # Au lieu d'utiliser total_stock_value qui peut être obsolète
+    products = Product.query.all()
+    total_value = sum(
+        float(p.valeur_stock_ingredients_magasin or 0) +
+        float(p.valeur_stock_ingredients_local or 0) +
+        float(p.valeur_stock_comptoir or 0) +
+        float(p.valeur_stock_consommables or 0)
+        for p in products
+    )
 
     return {
         'total_value': total_value,
