@@ -199,7 +199,15 @@ def daily_stock():
             )
         ).all()
         
-        total_stock_value = db.session.query(func.sum(Product.total_stock_value)).scalar() or 0
+        # Valeur totale du stock (calcul correct par emplacement)
+        products = Product.query.all()
+        total_stock_value = sum(
+            float(p.valeur_stock_ingredients_magasin or 0) +
+            float(p.valeur_stock_ingredients_local or 0) +
+            float(p.valeur_stock_comptoir or 0) +
+            float(p.valeur_stock_consommables or 0)
+            for p in products
+        )
         today_movements = Order.query.filter(func.date(Order.created_at) == today).count()
         
         def format_product(product):
@@ -466,8 +474,15 @@ def monthly_overview():
         )
     ).count()
     
-    # Valeur stock fin de mois
-    stock_value = db.session.query(func.sum(Product.total_stock_value)).scalar() or 0
+    # Valeur stock fin de mois (calcul correct par emplacement)
+    products = Product.query.all()
+    stock_value = sum(
+        float(p.valeur_stock_ingredients_magasin or 0) +
+        float(p.valeur_stock_ingredients_local or 0) +
+        float(p.valeur_stock_comptoir or 0) +
+        float(p.valeur_stock_consommables or 0)
+        for p in products
+    )
     
     # Employés actifs
     active_employees = Employee.query.filter_by(is_active=True).count()
