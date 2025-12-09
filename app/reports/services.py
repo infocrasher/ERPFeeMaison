@@ -448,17 +448,48 @@ class PrimeCostReportService:
         # Chiffre d'affaires
         revenue = DailySalesReportService.generate(report_date)['total_revenue']
         
-        # COGS (Cost of Goods Sold) - estimation via les produits vendus
-        cogs = db.session.query(
-            func.sum(OrderItem.quantity * Product.cost_price)
-        ).select_from(OrderItem).join(
-            Product, Product.id == OrderItem.product_id
-        ).join(
-            Order, Order.id == OrderItem.order_id
-        ).filter(
+        # COGS (Cost of Goods Sold) - calcul correct via recettes et ingrédients
+        # Pour chaque produit vendu :
+        # - Si le produit a une recette : calculer le coût via les ingrédients consommés
+        # - Sinon : utiliser Product.cost_price
+        from models import Recipe, RecipeIngredient
+        from decimal import Decimal
+        
+        orders = Order.query.filter(
             func.date(Order.created_at) == report_date,
             Order.status.in_(['completed', 'delivered'])
-        ).scalar() or 0
+        ).all()
+        
+        cogs = Decimal('0.0')
+        for order in orders:
+            for item in order.items:
+                product = item.product
+                if not product:
+                    continue
+                
+                quantity = Decimal(str(item.quantity))
+                
+                # Si le produit a une recette, calculer le coût via les ingrédients
+                if product.recipe_definition:
+                    recipe = product.recipe_definition
+                    yield_qty = Decimal(str(recipe.yield_quantity or 1))
+                    
+                    # Coût par unité de produit = somme des coûts des ingrédients / yield
+                    cost_per_unit = Decimal('0.0')
+                    for ingredient in recipe.ingredients:
+                        ingredient_product = ingredient.product
+                        if ingredient_product:
+                            qty_needed = Decimal(str(ingredient.quantity_needed or 0))
+                            ingredient_cost_price = Decimal(str(ingredient_product.cost_price or 0))
+                            cost_per_ingredient = (qty_needed / yield_qty) * ingredient_cost_price
+                            cost_per_unit += cost_per_ingredient
+                    
+                    cogs += quantity * cost_per_unit
+                else:
+                    # Produit sans recette : utiliser cost_price
+                    cost_price = Decimal(str(product.cost_price or 0))
+                    cogs += quantity * cost_price
+        
         cogs = float(cogs)
         
         # Coût de main d'œuvre du jour

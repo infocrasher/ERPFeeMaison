@@ -209,8 +209,6 @@ def diagnostic_problemes_kpi(target_date_str):
                 # Calculer depuis les stocks par emplacement
                 stock_total = (
                     float(product.stock_comptoir or 0) +
-                    float(product.stock_local or 0) +
-                    float(product.stock_magasin or 0) +
                     float(product.stock_ingredients_magasin or 0) +
                     float(product.stock_ingredients_local or 0) +
                     float(product.stock_consommables or 0)
