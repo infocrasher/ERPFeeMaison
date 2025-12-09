@@ -101,52 +101,68 @@ def diagnostic_kpi_dashboard(target_date_str):
             print()
         
         # ========================================================================
-        # 2. ANALYSE DES VENTES PDV (Sale)
+        # 2. ANALYSE DES VENTES PDV (Order avec order_type='in_store' ou 'pos_direct')
         # ========================================================================
         print("=" * 80)
-        print("2️⃣  VENTES PDV (Sale)")
+        print("2️⃣  VENTES PDV (Order type in_store/pos_direct)")
         print("=" * 80)
         print()
         
-        # Vérifier si le modèle Sale existe
-        try:
-            sales = Sale.query.filter(
-                func.date(Sale.created_at) == target_date
-            ).all()
+        # Ventes PDV : Order avec order_type='in_store' ou 'pos_direct'
+        pdv_orders = Order.query.filter(
+            func.date(Order.created_at) == target_date,
+            Order.order_type.in_(['in_store', 'pos_direct'])
+        ).all()
+        
+        print(f"🛒 Total ventes PDV (in_store/pos_direct) : {len(pdv_orders)}")
+        
+        if pdv_orders:
+            # CA depuis OrderItem pour les ventes PDV
+            revenue_from_pdv = db.session.query(
+                func.sum(func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0))
+            ).select_from(OrderItem).join(
+                Order, Order.id == OrderItem.order_id
+            ).filter(
+                func.date(Order.created_at) == target_date,
+                Order.order_type.in_(['in_store', 'pos_direct'])
+            ).scalar() or 0
             
-            print(f"🛒 Total ventes PDV : {len(sales)}")
+            print(f"💰 CA calculé depuis OrderItem (PDV) : {float(revenue_from_pdv):,.2f} DA")
+            print()
             
-            if sales:
-                # CA depuis Sale
-                revenue_from_sales = db.session.query(
-                    func.sum(func.coalesce(SaleItem.quantity, 0) * func.coalesce(SaleItem.unit_price, 0))
-                ).select_from(SaleItem).join(
-                    Sale, Sale.id == SaleItem.sale_id
-                ).filter(
-                    func.date(Sale.created_at) == target_date
-                ).scalar() or 0
-                
-                print(f"💰 CA calculé depuis SaleItem : {float(revenue_from_sales):,.2f} DA")
+            # Répartition par statut
+            pdv_by_status = {}
+            for order in pdv_orders:
+                status = order.status or 'unknown'
+                pdv_by_status[status] = pdv_by_status.get(status, 0) + 1
+            
+            print("   Répartition par statut :")
+            for status, count in sorted(pdv_by_status.items()):
+                print(f"      - {status}: {count}")
+            print()
+            
+            # Détail des ventes PDV
+            print("   Détail des ventes PDV :")
+            total_manual_pdv = 0
+            for order in pdv_orders[:10]:  # Limiter à 10
+                order_items = order.items.all() if hasattr(order.items, 'all') else []
+                order_total = sum(float(item.quantity or 0) * float(item.unit_price or 0) for item in order_items)
+                total_manual_pdv += order_total
+                print(f"      - Order #{order.id} ({order.order_type}): {order_total:,.2f} DA ({order.status})")
+            if len(pdv_orders) > 10:
+                print(f"      ... et {len(pdv_orders) - 10} autres")
+            print(f"   Total manuel (10 premières) : {total_manual_pdv:,.2f} DA")
+            print()
+            
+            # Vérifier si les ventes PDV sont incluses dans le CA calculé
+            pdv_completed = [o for o in pdv_orders if o.status in ['completed', 'delivered']]
+            print(f"   ✅ Ventes PDV complétées/livrées : {len(pdv_completed)}")
+            if len(pdv_completed) != len(pdv_orders):
+                print(f"   ⚠️  ATTENTION : {len(pdv_orders) - len(pdv_completed)} ventes PDV ne sont PAS complétées/livrées")
+                print("      Elles ne seront PAS incluses dans le CA du dashboard !")
                 print()
-                
-                # Détail des ventes
-                print("   Détail des ventes PDV :")
-                total_manual_sales = 0
-                for sale in sales[:10]:  # Limiter à 10
-                    sale_items = sale.items.all() if hasattr(sale.items, 'all') else []
-                    sale_total = sum(float(item.quantity or 0) * float(item.unit_price or 0) for item in sale_items)
-                    total_manual_sales += sale_total
-                    print(f"      - Sale #{sale.id}: {sale_total:,.2f} DA")
-                if len(sales) > 10:
-                    print(f"      ... et {len(sales) - 10} autres")
-                print(f"   Total manuel (10 premières) : {total_manual_sales:,.2f} DA")
-                print()
-            else:
-                print("   Aucune vente PDV trouvée")
-                print()
-        except Exception as e:
-            print(f"⚠️  Erreur lors de l'analyse des ventes PDV : {e}")
-            print("   (Le modèle Sale n'existe peut-être pas)")
+        else:
+            print("   Aucune vente PDV trouvée")
             print()
         
         # ========================================================================
