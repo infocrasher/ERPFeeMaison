@@ -16,6 +16,7 @@ from .forms import StockAdjustmentForm, QuickStockEntryForm, StockTransferForm, 
 from decorators import admin_required
 from sqlalchemy import func, and_, or_
 from datetime import datetime, timedelta
+from .utils import calculate_total_stock_value
 
 # Import du blueprint depuis __init__.py
 from . import bp as stock
@@ -81,15 +82,16 @@ def overview():
     
     product_low_cache = {}
     
-    total_value_global = 0
+    # Utiliser la fonction utilitaire partagée pour garantir la cohérence
+    total_value_global = calculate_total_stock_value()
     
+    # Calculer aussi les valeurs par emplacement pour l'affichage
     for config in location_configs:
         # ✅ CORRECTION : Filtrer les produits par type pour chaque emplacement
         filtered_products = [p for p in products if p.product_type == config['product_type']]
         
         qty_total = sum(float(getattr(p, config['stock_attr']) or 0) for p in filtered_products)
         value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in filtered_products)
-        total_value_global += value_total
         under_threshold_count = 0
         
         for product in filtered_products:

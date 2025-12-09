@@ -207,35 +207,9 @@ def load_prime_cost_report(report_date):
 
 
 def build_overview_block(sales_report, today):
-    # Calculer la valeur stock EXACTEMENT comme dans stock overview
-    # (filtre par type de produit pour chaque emplacement)
-    products = Product.query.all()
-    
-    # Même logique que stock overview
-    location_configs = [
-        {
-            'product_type': 'ingredient',
-            'value_attr': 'valeur_stock_ingredients_magasin'
-        },
-        {
-            'product_type': 'ingredient',
-            'value_attr': 'valeur_stock_ingredients_local'
-        },
-        {
-            'product_type': 'finished',
-            'value_attr': 'valeur_stock_comptoir'
-        },
-        {
-            'product_type': 'consommable',
-            'value_attr': 'valeur_stock_consommables'
-        }
-    ]
-    
-    stock_value = 0.0
-    for config in location_configs:
-        filtered_products = [p for p in products if p.product_type == config['product_type']]
-        value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in filtered_products)
-        stock_value += value_total
+    # Utiliser la fonction utilitaire partagée pour garantir la cohérence avec stock overview
+    from app.stock.utils import calculate_total_stock_value
+    stock_value = calculate_total_stock_value()
     return {
         'daily_revenue': float(sales_report.get('total_revenue', 0.0)),
         'daily_orders': int(sales_report.get('total_transactions', 0)),
@@ -464,35 +438,9 @@ def build_stock_block(stock_report, today, week_start, now, trend_days):
     consumption_week = compute_consumption_value(week_start, now)
     ratio = round((consumption_week / purchase_cost_week) * 100, 1) if purchase_cost_week > 0 else None
 
-    # Calculer la valeur stock EXACTEMENT comme dans stock overview
-    # (filtre par type de produit pour chaque emplacement)
-    products = Product.query.all()
-    
-    # Même logique que stock overview
-    location_configs = [
-        {
-            'product_type': 'ingredient',
-            'value_attr': 'valeur_stock_ingredients_magasin'
-        },
-        {
-            'product_type': 'ingredient',
-            'value_attr': 'valeur_stock_ingredients_local'
-        },
-        {
-            'product_type': 'finished',
-            'value_attr': 'valeur_stock_comptoir'
-        },
-        {
-            'product_type': 'consommable',
-            'value_attr': 'valeur_stock_consommables'
-        }
-    ]
-    
-    total_value = 0.0
-    for config in location_configs:
-        filtered_products = [p for p in products if p.product_type == config['product_type']]
-        value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in filtered_products)
-        total_value += value_total
+    # Utiliser la fonction utilitaire partagée pour garantir la cohérence avec stock overview
+    from app.stock.utils import calculate_total_stock_value
+    total_value = calculate_total_stock_value()
 
     return {
         'total_value': total_value,

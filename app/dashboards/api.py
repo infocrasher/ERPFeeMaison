@@ -146,20 +146,9 @@ def daily_stock():
                     'total_value': float(product_data.total_stock_value or 0)
                 }
         
-        # Valeur totale du stock EXACTEMENT comme dans stock overview
-        # (filtre par type de produit pour chaque emplacement)
-        products = Product.query.all()
-        location_configs = [
-            {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_magasin'},
-            {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_local'},
-            {'product_type': 'finished', 'value_attr': 'valeur_stock_comptoir'},
-            {'product_type': 'consommable', 'value_attr': 'valeur_stock_consommables'}
-        ]
-        total_stock_value = 0.0
-        for config in location_configs:
-            filtered_products = [p for p in products if p.product_type == config['product_type']]
-            value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in filtered_products)
-            total_stock_value += value_total
+        # Utiliser la fonction utilitaire partagée pour garantir la cohérence avec stock overview
+        from app.stock.utils import calculate_total_stock_value
+        total_stock_value = calculate_total_stock_value()
         
         # Mouvements aujourd'hui (basé sur les commandes)
         today_movements = Order.query.filter(
@@ -204,20 +193,9 @@ def daily_stock():
             )
         ).all()
         
-        # Valeur totale du stock EXACTEMENT comme dans stock overview
-        # (filtre par type de produit pour chaque emplacement)
-        products = Product.query.all()
-        location_configs = [
-            {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_magasin'},
-            {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_local'},
-            {'product_type': 'finished', 'value_attr': 'valeur_stock_comptoir'},
-            {'product_type': 'consommable', 'value_attr': 'valeur_stock_consommables'}
-        ]
-        total_stock_value = 0.0
-        for config in location_configs:
-            filtered_products = [p for p in products if p.product_type == config['product_type']]
-            value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in filtered_products)
-            total_stock_value += value_total
+        # Utiliser la fonction utilitaire partagée pour garantir la cohérence avec stock overview
+        from app.stock.utils import calculate_total_stock_value
+        total_stock_value = calculate_total_stock_value()
         today_movements = Order.query.filter(func.date(Order.created_at) == today).count()
         
         def format_product(product):
@@ -484,20 +462,9 @@ def monthly_overview():
         )
     ).count()
     
-    # Valeur stock fin de mois EXACTEMENT comme dans stock overview
-    # (filtre par type de produit pour chaque emplacement)
-    products = Product.query.all()
-    location_configs = [
-        {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_magasin'},
-        {'product_type': 'ingredient', 'value_attr': 'valeur_stock_ingredients_local'},
-        {'product_type': 'finished', 'value_attr': 'valeur_stock_comptoir'},
-        {'product_type': 'consommable', 'value_attr': 'valeur_stock_consommables'}
-    ]
-    stock_value = 0.0
-    for config in location_configs:
-        filtered_products = [p for p in products if p.product_type == config['product_type']]
-        value_total = sum(float(getattr(p, config['value_attr']) or 0) for p in filtered_products)
-        stock_value += value_total
+    # Utiliser la fonction utilitaire partagée pour garantir la cohérence avec stock overview
+    from app.stock.utils import calculate_total_stock_value
+    stock_value = calculate_total_stock_value()
     
     # Employés actifs
     active_employees = Employee.query.filter_by(is_active=True).count()
