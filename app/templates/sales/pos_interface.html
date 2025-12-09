@@ -1713,6 +1713,40 @@ document.addEventListener('DOMContentLoaded', function() {
         return meta ? meta.getAttribute('content') : '';
     }
 
+    // Renouveler automatiquement le token CSRF avant expiration
+    async function refreshCsrfToken() {
+        try {
+            // Récupérer un nouveau token depuis la page (recharger le meta tag)
+            const response = await fetch('/sales/pos', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            if (response.ok) {
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (newToken) {
+                    // Mettre à jour le meta tag dans la page actuelle
+                    const meta = document.querySelector('meta[name="csrf-token"]');
+                    if (meta) {
+                        meta.setAttribute('content', newToken);
+                        console.log('✅ Token CSRF renouvelé automatiquement');
+                        return newToken;
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Impossible de renouveler le token CSRF:', error);
+        }
+        return getCsrfToken(); // Fallback vers l'ancien token
+    }
+
+    // Renouveler le token toutes les 3 heures (avant expiration à 4h)
+    setInterval(() => {
+        refreshCsrfToken();
+    }, 3 * 60 * 60 * 1000); // 3 heures en millisecondes
+
     function openCustomerModal() {
         if (!customerModal) return;
         customerModal.classList.add('is-open');
@@ -1771,8 +1805,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Vérifier le status HTTP avant de parser le JSON
             if (!response.ok) {
                 let errorMessage = `Erreur HTTP ${response.status}`;
+                let errorData = null;
                 try {
-                    const errorData = await response.json();
+                    errorData = await response.json();
                     errorMessage = errorData.message || errorData.error || errorMessage;
                 } catch (e) {
                     // Si ce n'est pas du JSON, essayer de lire le texte
@@ -1783,6 +1818,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Ignorer si on ne peut pas lire
                     }
                 }
+                
+                // Si l'erreur est due à un token CSRF expiré, renouveler et réessayer
+                if (response.status === 400 && (
+                    errorMessage.includes('CSRF') || 
+                    errorMessage.includes('csrf') ||
+                    errorMessage.includes('token has expired')
+                )) {
+                    console.warn('⚠️ Token CSRF expiré, renouvellement automatique...');
+                    const newToken = await refreshCsrfToken();
+                    
+                    if (newToken && newToken !== getCsrfToken()) {
+                        // Réessayer la requête avec le nouveau token
+                        console.log('🔄 Nouvelle tentative avec token renouvelé...');
+                        return completeSale(paymentContext); // Récursion pour réessayer
+                    }
+                }
+                
                 console.error('Erreur serveur:', {
                     status: response.status,
                     statusText: response.statusText,

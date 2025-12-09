@@ -12,13 +12,19 @@ class Config:
     ORDERS_PER_PAGE = 10
     PRODUCTS_PER_PAGE = 10
     WTF_CSRF_ENABLED = True
-    WTF_CSRF_TIME_LIMIT = 3600
+    # Augmenter la durée de vie du token CSRF à 4 heures (au lieu de 1 heure)
+    # pour éviter les erreurs lors de longues sessions PDV
+    WTF_CSRF_TIME_LIMIT = 14400  # 4 heures en secondes
     
     # Configuration pointeuse ZKTeco
     # Accepte ZKTECO_IP ou ZK_IP (compatibilité)
     ZKTECO_IP = os.environ.get('ZKTECO_IP') or os.environ.get('ZK_IP', None)
     ZKTECO_PORT = int(os.environ.get('ZKTECO_PORT') or os.environ.get('ZK_PORT', 4370))
     ZKTECO_API_TOKEN = os.environ.get('ZKTECO_API_TOKEN', 'TokenSecretFeeMaison2025')
+    
+    # Configuration Synchro Pointeuse (Local -> VPS)
+    ZKTECO_SYNC_ENABLED = os.environ.get('ZKTECO_SYNC_ENABLED', 'False').lower() in ('true', '1', 't')
+    ZKTECO_VPS_URL = os.environ.get('ZKTECO_VPS_URL', 'https://erp.declaimers.com/zkteco/api/attendance')
 
 class DevelopmentConfigSQLite(Config):
     DEBUG = True
