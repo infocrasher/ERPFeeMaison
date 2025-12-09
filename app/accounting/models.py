@@ -164,15 +164,33 @@ class JournalEntry(db.Model):
         # Utiliser l'année de la date d'écriture
         year = self.entry_date.year if self.entry_date else datetime.now().year
         
-        # Compter les écritures existantes pour ce journal et cette année
-        count = JournalEntry.query.filter(
-            JournalEntry.journal_id == self.journal_id,
-            func.extract('year', JournalEntry.entry_date) == year,
-            JournalEntry.entry_number.like(f'{journal_code}-{year}-%')
-        ).count()
+        # Trouver le prochain numéro disponible (gérer les collisions)
+        max_attempts = 1000  # Limite de sécurité
+        attempt = 0
         
-        # Générer le numéro : VT-2024-001, AC-2024-001, etc.
-        self.entry_number = f'{journal_code}-{year}-{count + 1:03d}'
+        while attempt < max_attempts:
+            # Compter les écritures existantes pour ce journal et cette année
+            count = JournalEntry.query.filter(
+                JournalEntry.journal_id == self.journal_id,
+                func.extract('year', JournalEntry.entry_date) == year,
+                JournalEntry.entry_number.like(f'{journal_code}-{year}-%')
+            ).count()
+            
+            # Générer le numéro : VT-2024-001, AC-2024-001, etc.
+            candidate_number = f'{journal_code}-{year}-{count + 1:03d}'
+            
+            # Vérifier si ce numéro existe déjà
+            existing = JournalEntry.query.filter_by(entry_number=candidate_number).first()
+            if not existing:
+                # Numéro disponible, l'utiliser
+                self.entry_number = candidate_number
+                return
+            
+            # Numéro déjà utilisé, incrémenter et réessayer
+            attempt += 1
+        
+        # Si on arrive ici, on n'a pas trouvé de numéro libre (très improbable)
+        raise ValueError(f"Impossible de générer un numéro d'écriture unique après {max_attempts} tentatives")
     
     @property
     def total_debit(self):
