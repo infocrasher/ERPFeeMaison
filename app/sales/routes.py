@@ -319,11 +319,19 @@ def complete_sale():
             
             product = Product.query.get(product_id)
             if not product:
+                db.session.rollback()
+                current_app.logger.error(f"Produit {product_id} non trouvé lors de la vente")
                 return jsonify({'success': False, 'message': f'Produit {product_id} non trouvé'}), 400
             
-            # Vérifier le stock
-            if product.stock_comptoir < float(quantity):
-                return jsonify({'success': False, 'message': f'Stock insuffisant pour {product.name}'}), 400
+            # Vérifier le stock AVANT de modifier quoi que ce soit
+            current_stock = float(product.stock_comptoir or 0)
+            if current_stock < float(quantity):
+                db.session.rollback()
+                current_app.logger.warning(f"Stock insuffisant pour {product.name} (demandé: {quantity}, disponible: {current_stock})")
+                return jsonify({
+                    'success': False, 
+                    'message': f'Stock insuffisant pour {product.name} (disponible: {current_stock})'
+                }), 400
             
             # Créer l'article de commande (maintenant order.id existe)
             order_item = OrderItem(
@@ -333,13 +341,25 @@ def complete_sale():
                 unit_price=unit_price
             )
             
-            # Décrémenter le stock comptoir
-            product.update_stock_by_location('stock_comptoir', -float(quantity))
+            # Décrémenter le stock comptoir (avec gestion d'erreur)
+            try:
+                product.update_stock_by_location('stock_comptoir', -float(quantity))
+            except Exception as stock_error:
+                db.session.rollback()
+                current_app.logger.error(f"Erreur lors de la décrémentation du stock pour {product.name}: {stock_error}", exc_info=True)
+                return jsonify({
+                    'success': False, 
+                    'message': f'Erreur lors de la mise à jour du stock pour {product.name}'
+                }), 500
             
             # Décrémenter la valeur du stock
-            pmp = product.cost_price or Decimal('0.0')
-            value_decrement = quantity * pmp
-            product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_decrement
+            try:
+                pmp = product.cost_price or Decimal('0.0')
+                value_decrement = quantity * pmp
+                product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_decrement
+            except Exception as value_error:
+                current_app.logger.warning(f"Erreur lors de la décrémentation de la valeur pour {product.name}: {value_error}")
+                # Ne pas faire échouer la vente pour une erreur de valeur
             
             # DÉCRÉMENTER LES CONSOMMABLES selon la catégorie
             if product.category:
@@ -376,7 +396,15 @@ def complete_sale():
         
         # Créer le mouvement de caisse pour la vente
         cash_session = get_open_cash_session()
-        if cash_session:
+        if not cash_session:
+            db.session.rollback()
+            current_app.logger.error(f"Aucune session de caisse ouverte pour la vente (user: {current_user.id})")
+            return jsonify({
+                'success': False, 
+                'message': 'Aucune session de caisse ouverte. Veuillez ouvrir une session de caisse.'
+            }), 400
+        
+        try:
             amount_for_cash = amount_received if amount_received <= total_amount else total_amount
             cash_movement = CashMovement(
                 session_id=cash_session.id,
@@ -388,8 +416,37 @@ def complete_sale():
                 employee_id=current_user.id
             )
             db.session.add(cash_movement)
+        except Exception as cash_error:
+            db.session.rollback()
+            current_app.logger.error(f"Erreur lors de la création du mouvement de caisse: {cash_error}", exc_info=True)
+            return jsonify({
+                'success': False, 
+                'message': 'Erreur lors de l\'enregistrement du mouvement de caisse'
+            }), 500
         
-        db.session.commit()
+        # Commit final avec gestion d'erreur détaillée
+        try:
+            db.session.commit()
+            current_app.logger.info(f"Vente #{order.id} finalisée avec succès (montant: {total_amount} DA)")
+        except Exception as commit_error:
+            db.session.rollback()
+            import traceback
+            error_details = traceback.format_exc()
+            current_app.logger.error(f"Erreur lors du commit de la vente: {commit_error}", exc_info=True)
+            current_app.logger.error(f"Détails commit: {error_details}")
+            
+            # Message d'erreur spécifique selon le type d'erreur
+            if "constraint" in str(commit_error).lower() or "unique" in str(commit_error).lower():
+                error_message = "Erreur de contrainte base de données. La vente n'a pas été enregistrée."
+            elif "timeout" in str(commit_error).lower() or "lock" in str(commit_error).lower():
+                error_message = "Erreur de connexion base de données. Veuillez réessayer."
+            else:
+                error_message = f"Erreur lors de l'enregistrement: {str(commit_error)}"
+            
+            return jsonify({
+                'success': False, 
+                'message': error_message
+            }), 500
         
         # Intégration POS : Impression ticket + ouverture tiroir pour vente complète
         try:
@@ -424,8 +481,30 @@ def complete_sale():
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erreur lors de la finalisation de la vente: {str(e)}")
-        return jsonify({'success': False, 'message': f'Erreur: {str(e)}'}), 500
+        import traceback
+        error_details = traceback.format_exc()
+        current_app.logger.error(f"Erreur lors de la finalisation de la vente: {str(e)}", exc_info=True)
+        current_app.logger.error(f"Détails de l'erreur: {error_details}")
+        
+        # Messages d'erreur plus spécifiques selon le type d'erreur
+        error_message = "Erreur lors de la finalisation de la vente"
+        if "stock" in str(e).lower() or "insufficient" in str(e).lower():
+            error_message = "Stock insuffisant pour un ou plusieurs produits"
+        elif "constraint" in str(e).lower() or "unique" in str(e).lower():
+            error_message = "Erreur de contrainte base de données (doublon possible)"
+        elif "foreign key" in str(e).lower():
+            error_message = "Erreur de référence (produit ou client introuvable)"
+        elif "timeout" in str(e).lower() or "lock" in str(e).lower():
+            error_message = "Erreur de connexion base de données (réessayez)"
+        elif "session" in str(e).lower() or "cash" in str(e).lower():
+            error_message = "Erreur de session de caisse"
+        
+        return jsonify({
+            'success': False, 
+            'message': error_message,
+            'error_type': type(e).__name__,
+            'error_details': str(e) if current_app.debug else None
+        }), 500
 
 @sales.route('/history')
 @login_required
