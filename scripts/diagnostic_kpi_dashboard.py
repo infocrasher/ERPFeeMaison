@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import create_app
 from extensions import db
 from models import Order, OrderItem, Product
-from app.sales.models import Sale, SaleItem, CashMovement
+from app.sales.models import CashMovement
 from sqlalchemy import func, and_, or_
 
 def diagnostic_kpi_dashboard(target_date_str):
@@ -237,14 +237,13 @@ def diagnostic_kpi_dashboard(target_date_str):
         
         print(f"📅 Date : {target_date.strftime('%d/%m/%Y')}")
         print(f"📋 Commandes (Order) : {len(all_orders)} total, {len(completed_orders)} complétées")
-        print(f"💰 CA depuis OrderItem : {float(revenue_from_orders):,.2f} DA")
+        print(f"💰 CA depuis OrderItem (completed/delivered) : {float(revenue_from_orders):,.2f} DA")
         
-        try:
-            if sales:
-                print(f"🛒 Ventes PDV (Sale) : {len(sales)}")
-                print(f"💰 CA depuis SaleItem : {float(revenue_from_sales):,.2f} DA")
-        except:
-            pass
+        if pdv_orders:
+            pdv_completed = [o for o in pdv_orders if o.status in ['completed', 'delivered']]
+            print(f"🛒 Ventes PDV : {len(pdv_orders)} total, {len(pdv_completed)} complétées")
+            if len(pdv_completed) != len(pdv_orders):
+                print(f"   ⚠️  {len(pdv_orders) - len(pdv_completed)} ventes PDV non complétées (exclues du CA)")
         
         print()
         print("💡 VÉRIFICATIONS À FAIRE :")
