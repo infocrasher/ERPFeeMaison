@@ -9,7 +9,7 @@ import os
 import re
 from datetime import datetime, timedelta
 
-def analyse_logs_vente_pdv(date_str=None, heures=None):
+def analyse_logs_vente_pdv(date_str=None, heures=None, log_file_path=None):
     """
     Analyse les logs pour trouver les erreurs de finalisation de vente
     
@@ -36,22 +36,31 @@ def analyse_logs_vente_pdv(date_str=None, heures=None):
     print(f"Heures à analyser : {', '.join(heures)}")
     print()
     
-    # Chemins possibles des logs
-    log_paths = [
-        '/var/log/erp/app.log',
-        '/opt/erp/app/logs/app.log',
-        '/var/log/gunicorn/erp.log',
-        '/var/log/nginx/error.log',
-        'logs/app.log',
-        'app.log'
-    ]
-    
-    # Chercher le fichier de log
-    log_file = None
-    for path in log_paths:
-        if os.path.exists(path):
-            log_file = path
-            break
+    # Si un fichier est spécifié, l'utiliser directement
+    if log_file_path:
+        log_file = log_file_path
+        if not os.path.exists(log_file):
+            print(f"❌ Fichier de log spécifié non trouvé : {log_file}")
+            return
+    else:
+        # Chemins possibles des logs
+        log_paths = [
+            '/var/log/erp/error.log',  # Logs Gunicorn (erreurs)
+            '/var/log/erp/access.log',  # Logs Gunicorn (accès)
+            '/var/log/erp/app.log',
+            '/opt/erp/app/logs/app.log',
+            '/var/log/gunicorn/erp.log',
+            '/var/log/nginx/erp_error.log',
+            'logs/app.log',
+            'app.log'
+        ]
+        
+        # Chercher le fichier de log
+        log_file = None
+        for path in log_paths:
+            if os.path.exists(path):
+                log_file = path
+                break
     
     if not log_file:
         print("❌ Aucun fichier de log trouvé dans les emplacements standards")
@@ -198,14 +207,10 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
-    if args.file:
-        # Utiliser le fichier spécifié
-        log_paths = [args.file]
-    
     if args.heures:
         heures = args.heures
     else:
         heures = ['21:46', '13:00']
     
-    analyse_logs_vente_pdv(date_str=args.date, heures=heures)
+    analyse_logs_vente_pdv(date_str=args.date, heures=heures, log_file_path=args.file)
 
