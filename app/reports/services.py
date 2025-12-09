@@ -493,7 +493,9 @@ class PrimeCostReportService:
         cogs = float(cogs)
         
         # Coût de main d'œuvre du jour
-        # Utiliser AttendanceSummary qui a work_date et worked_hours
+        # Utiliser AttendanceSummary si disponible, sinon AttendanceRecord
+        from app.employees.models import AttendanceSummary, AttendanceRecord
+        
         labor_cost = db.session.query(
             func.sum((AttendanceSummary.worked_hours + AttendanceSummary.overtime_hours) * Employee.hourly_rate)
         ).select_from(AttendanceSummary).join(
@@ -502,6 +504,17 @@ class PrimeCostReportService:
             AttendanceSummary.work_date == report_date
         ).scalar() or 0
         labor_cost = float(labor_cost)
+        
+        # Si pas de AttendanceSummary, calculer depuis AttendanceRecord
+        if labor_cost == 0:
+            daily_summary = AttendanceRecord.get_daily_summary(report_date)
+            labor_cost = 0.0
+            for emp_id, emp_data in daily_summary.items():
+                employee = emp_data.get('employee')
+                if employee:
+                    total_hours = emp_data.get('total_hours', 0)
+                    hourly_rate = float(employee.hourly_rate or 0)
+                    labor_cost += total_hours * hourly_rate
         
         # Calculs
         prime_cost = cogs + labor_cost
