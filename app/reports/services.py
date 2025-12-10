@@ -88,19 +88,17 @@ def _get_order_revenue_date(order):
     - CA comptabilisé le 15/12 (date de livraison), pas le 01/12 (date de création)
     
     Args:
-        order: Instance de Order
+        order: Instance de Order (avec delivery_debts chargé via eager loading)
         
     Returns:
         date: Date à utiliser pour le calcul du revenu (toujours date livraison)
     """
-    # Vérifier s'il y a une dette (payée ou non payée)
-    # Si oui, utiliser la date de création de la dette (date où livreur assigné = date livraison réelle)
-    debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
-    
-    if debt and debt.created_at:
-        # Utiliser la date de création de la dette (date où livreur assigné = date livraison réelle)
-        # Peu importe si la dette est payée ou non
-        return debt.created_at.date()
+    # Utiliser la relation delivery_debts si elle est chargée (évite requête séparée)
+    # Sinon fallback sur requête séparée pour compatibilité
+    if hasattr(order, 'delivery_debts') and order.delivery_debts:
+        debt = order.delivery_debts[0] if isinstance(order.delivery_debts, list) else order.delivery_debts.first()
+        if debt and debt.created_at:
+            return debt.created_at.date()
     
     # Sinon : utiliser due_date de la commande (date prévue de livraison)
     # Pas created_at car une commande peut être créée le 01/12 pour être livrée le 15/12
@@ -129,48 +127,47 @@ def _compute_revenue(report_date=None, start_date=None, end_date=None):
     Returns:
         float: Chiffre d'affaires calculé (0.0 si aucune vente)
     """
-    # Requête optimisée avec LEFT JOIN pour éviter le N+1 problem
-    # On calcule la date de revenu directement dans SQL avec CASE
-    revenue_date_expr = case(
-        # Si une dette existe, utiliser created_at de la dette (date livraison réelle)
-        (func.date(DeliveryDebt.created_at).isnot(None), func.date(DeliveryDebt.created_at)),
-        # Sinon utiliser due_date de la commande (date prévue livraison)
-        (Order.due_date.isnot(None), func.date(Order.due_date)),
-        # Fallback sur created_at si due_date est NULL
-        else_=func.date(Order.created_at)
-    )
+    # OPTIMISATION: Charger toutes les commandes avec eager loading pour éviter N+1
+    # On charge DeliveryDebt en une seule requête
+    # Note: Order.items est lazy='dynamic', donc on ne peut pas utiliser joinedload dessus
+    from sqlalchemy.orm import joinedload
     
-    # Construire la requête de base avec JOIN
-    # Utiliser func.coalesce pour gérer les valeurs NULL
-    base_query = db.session.query(
-        revenue_date_expr.label('revenue_date'),
-        func.sum(
-            func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
-        ).label('amount')
-    ).join(
-        OrderItem, OrderItem.order_id == Order.id
-    ).outerjoin(
-        DeliveryDebt, DeliveryDebt.order_id == Order.id
+    # Charger toutes les commandes avec DeliveryDebt en une seule requête
+    orders = Order.query.options(
+        joinedload(Order.delivery_debts)
     ).filter(
         Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
-    ).group_by(
-        revenue_date_expr
-    )
+    ).all()
     
-    # Appliquer le filtre de date selon les paramètres
-    # Dans HAVING, on doit répéter l'expression car on ne peut pas utiliser le label
-    if report_date:
-        query = base_query.having(revenue_date_expr == report_date)
-    elif start_date and end_date:
-        query = base_query.having(
-            and_(revenue_date_expr >= start_date, revenue_date_expr <= end_date)
+    total_revenue = 0.0
+    
+    for order in orders:
+        # Calculer le montant de la commande
+        # order.items est lazy='dynamic', donc on doit utiliser .all()
+        order_amount = sum(
+            float(item.quantity or 0) * float(item.unit_price or 0)
+            for item in order.items.all()
         )
-    else:
-        query = base_query
-    
-    # Exécuter la requête et sommer les résultats
-    results = query.all()
-    total_revenue = sum(float(row.amount or 0) for row in results)
+        
+        if order_amount == 0:
+            continue
+        
+        # Déterminer la date à utiliser pour cette commande
+        order_date = _get_order_revenue_date(order)
+        
+        # Vérifier si cette commande doit être incluse dans la période
+        include_order = False
+        
+        if report_date:
+            include_order = (order_date == report_date)
+        elif start_date and end_date:
+            include_order = (start_date <= order_date <= end_date)
+        else:
+            # Si aucune période spécifiée, inclure toutes les commandes
+            include_order = True
+        
+        if include_order:
+            total_revenue += order_amount
     
     return float(total_revenue)
 
