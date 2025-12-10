@@ -25,7 +25,7 @@ def test_ca_dette_livreur():
         print("=" * 80)
         print()
         
-        # Date de la dette (02/12/2025)
+        # Date de la dette (05/12/2025)
         date_dette = date(2025, 12, 5)
         date_aujourdhui = date.today()
         
@@ -33,7 +33,7 @@ def test_ca_dette_livreur():
         print(f"📅 Date d'aujourd'hui : {date_aujourdhui}")
         print()
         
-        # Trouver toutes les dettes créées le 02/12/2025
+        # Trouver toutes les dettes créées le 05/12/2025
         dettes = DeliveryDebt.query.filter(
             db.func.date(DeliveryDebt.created_at) == date_dette
         ).all()
@@ -71,7 +71,7 @@ def test_ca_dette_livreur():
             
             print()
         
-        # Calculer le CA pour le 02/12/2025 (date de la dette)
+        # Calculer le CA pour le 05/12/2025 (date de la dette)
         ca_date_dette = _compute_revenue(report_date=date_dette)
         print(f"💰 CA calculé pour le {date_dette} : {ca_date_dette:,.2f} DA")
         
@@ -96,13 +96,16 @@ def test_ca_dette_livreur():
         dettes_payees = [d for d in dettes if d.paid]
         if dettes_payees:
             print("=" * 80)
-            print("✅ DETTES PAYÉES (devraient être dans le CA de la date de paiement)")
+            print("✅ DETTES PAYÉES (devraient être dans le CA de la date de livraison, pas paiement)")
             print("=" * 80)
             for debt in dettes_payees:
                 revenue_date = _get_order_revenue_date(debt.order)
                 print(f"   Dette #{debt.id} - Commande #{debt.order_id} : {debt.amount} DA")
                 print(f"   → Date paiement : {debt.paid_at.date() if debt.paid_at else 'N/A'}")
-                print(f"   → Date revenu : {revenue_date} {'✅' if revenue_date == (debt.paid_at.date() if debt.paid_at else None) else '❌'}")
+                # La date de revenu devrait être la date de livraison (création dette), pas la date de paiement
+                expected_date = debt.created_at.date() if debt.created_at else None
+                print(f"   → Date revenu : {revenue_date} {'✅' if revenue_date == expected_date else '❌'}")
+                print(f"   → Attendu (date livraison) : {expected_date}")
             print()
         
         print("=" * 80)
@@ -114,8 +117,8 @@ def test_ca_dette_livreur():
         print("   → Le CA d'aujourd'hui ne devrait PAS l'inclure")
         print()
         print("2. Après avoir encaissé la dette :")
-        print("   → Le CA du 02/12 devrait diminuer (ou rester si d'autres ventes)")
-        print("   → Le CA d'aujourd'hui devrait augmenter de {montant dette} DA")
+        print("   → Le CA du 05/12 devrait RESTER IDENTIQUE (date de livraison)")
+        print("   → Le CA d'aujourd'hui ne devrait PAS changer (CA à date livraison)")
         print()
         print("3. Relancer ce script après l'encaissement pour vérifier")
         print()
