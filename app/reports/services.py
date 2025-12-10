@@ -5,9 +5,9 @@ Contient toute la logique métier pour les calculs et analyses
 
 from datetime import datetime, date, timedelta
 from decimal import Decimal
-from sqlalchemy import func, and_, or_, extract, case
+from sqlalchemy import func, and_, or_, extract
 from extensions import db
-from models import Product, Order, OrderItem, Category, DeliveryDebt
+from models import Product, Order, OrderItem, Category
 from app.sales.models import CashRegisterSession, CashMovement
 from app.employees.models import Employee, WorkHours, PayrollEntry, PayrollPeriod, AttendanceSummary
 from app.inventory.models import DailyWaste
@@ -72,52 +72,11 @@ def _load_benchmarks():
 # FONCTIONS UTILITAIRES POUR LES RAPPORTS
 # ============================================================================
 
-def _get_order_revenue_date(order):
-    """
-    Détermine la date de revenu pour une commande selon la logique :
-    - Le CA est TOUJOURS comptabilisé à la date de livraison (prévue ou réelle)
-    - Peu importe quand la dette est payée, le CA reste à la date de livraison
-    - Cela permet la cohérence avec le Prime Cost (ingrédients et main-d'œuvre du même jour)
-    
-    LOGIQUE :
-    - Si commande a une dette (payée ou non) : utilise created_at de DeliveryDebt (date où livreur assigné = date livraison réelle)
-    - Sinon : utilise due_date de la commande (date prévue de livraison)
-    
-    Exemple :
-    - Commande créée le 01/12, due_date le 15/12, livreur assigné le 15/12
-    - CA comptabilisé le 15/12 (date de livraison), pas le 01/12 (date de création)
-    
-    Args:
-        order: Instance de Order (avec delivery_debts chargé via eager loading)
-        
-    Returns:
-        date: Date à utiliser pour le calcul du revenu (toujours date livraison)
-    """
-    # Utiliser la relation delivery_debts si elle est chargée (évite requête séparée)
-    # Sinon fallback sur requête séparée pour compatibilité
-    if hasattr(order, 'delivery_debts') and order.delivery_debts:
-        debt = order.delivery_debts[0] if isinstance(order.delivery_debts, list) else order.delivery_debts.first()
-        if debt and debt.created_at:
-            return debt.created_at.date()
-    
-    # Sinon : utiliser due_date de la commande (date prévue de livraison)
-    # Pas created_at car une commande peut être créée le 01/12 pour être livrée le 15/12
-    return order.due_date.date() if order.due_date else order.created_at.date()
-
-
 def _compute_revenue(report_date=None, start_date=None, end_date=None):
     """
     Fonction utilitaire pour calculer le chiffre d'affaires de manière cohérente.
     Utilise sum(OrderItem.quantity * OrderItem.unit_price) pour garantir la cohérence.
     Gère les valeurs NULL via coalesce pour éviter les erreurs de calcul.
-    
-    LOGIQUE DE DATE :
-    - Le CA est TOUJOURS comptabilisé à la date de livraison (prévue ou réelle)
-    - Si commande a une dette (payée ou non) : utilise created_at de DeliveryDebt (date où livreur assigné = date livraison réelle)
-    - Sinon : utilise due_date de la commande (date prévue de livraison)
-    - Peu importe quand la dette est payée, le CA reste à la date de livraison
-    - Cela permet la cohérence avec le Prime Cost (ingrédients et main-d'œuvre du même jour)
-    - Exemple : Commande créée le 01/12, due_date le 15/12 → CA comptabilisé le 15/12
     
     Args:
         report_date: Date unique pour un rapport quotidien
@@ -127,49 +86,27 @@ def _compute_revenue(report_date=None, start_date=None, end_date=None):
     Returns:
         float: Chiffre d'affaires calculé (0.0 si aucune vente)
     """
-    # OPTIMISATION: Charger toutes les commandes avec eager loading pour éviter N+1
-    # On charge DeliveryDebt en une seule requête
-    # Note: Order.items est lazy='dynamic', donc on ne peut pas utiliser joinedload dessus
-    from sqlalchemy.orm import joinedload
-    
-    # Charger toutes les commandes avec DeliveryDebt en une seule requête
-    orders = Order.query.options(
-        joinedload(Order.delivery_debts)
+    query = db.session.query(
+        func.sum(
+            func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
+        )
+    ).select_from(OrderItem).join(
+        Order, Order.id == OrderItem.order_id
     ).filter(
         Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
-    ).all()
+    )
     
-    total_revenue = 0.0
-    
-    for order in orders:
-        # Calculer le montant de la commande
-        # order.items est lazy='dynamic', donc on doit utiliser .all()
-        order_amount = sum(
-            float(item.quantity or 0) * float(item.unit_price or 0)
-            for item in order.items.all()
+    # Filtrage par date
+    if report_date:
+        query = query.filter(func.date(Order.created_at) == report_date)
+    elif start_date and end_date:
+        query = query.filter(
+            func.date(Order.created_at) >= start_date,
+            func.date(Order.created_at) <= end_date
         )
-        
-        if order_amount == 0:
-            continue
-        
-        # Déterminer la date à utiliser pour cette commande
-        order_date = _get_order_revenue_date(order)
-        
-        # Vérifier si cette commande doit être incluse dans la période
-        include_order = False
-        
-        if report_date:
-            include_order = (order_date == report_date)
-        elif start_date and end_date:
-            include_order = (start_date <= order_date <= end_date)
-        else:
-            # Si aucune période spécifiée, inclure toutes les commandes
-            include_order = True
-        
-        if include_order:
-            total_revenue += order_amount
     
-    return float(total_revenue)
+    result = query.scalar() or 0
+    return float(result)
 
 
 def _compute_growth_rate(current_value, previous_value):
@@ -375,124 +312,79 @@ class DailySalesReportService:
         if not report_date:
             report_date = date.today()
         
-        # Récupérer toutes les commandes livrées/complétées
-        # On filtrera ensuite par date de revenu (paiement ou livraison)
-        all_orders = Order.query.filter(
+        # Ventes du jour
+        orders = Order.query.filter(
+            func.date(Order.created_at) == report_date,
             Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
         ).all()
-        
-        # Filtrer les commandes selon la date de revenu
-        orders = []
-        for order in all_orders:
-            revenue_date = _get_order_revenue_date(order)
-            if revenue_date == report_date:
-                orders.append(order)
         
         # Calculs de base (utilisation de la fonction utilitaire pour cohérence)
         total_revenue = _compute_revenue(report_date=report_date)
         total_transactions = len(orders)
         average_basket = total_revenue / total_transactions if total_transactions > 0 else 0
         
-        # Top 5 produits (calcul en Python avec la nouvelle logique de date)
-        product_stats = {}
-        for order in orders:
-            for item in order.items:
-                product_id = item.product_id
-                product = Product.query.get(product_id)
-                if not product:
-                    continue
-                
-                if product_id not in product_stats:
-                    product_stats[product_id] = {
-                        'name': product.name,
-                        'quantity': 0.0,
-                        'revenue': 0.0
-                    }
-                
-                product_stats[product_id]['quantity'] += float(item.quantity or 0)
-                product_stats[product_id]['revenue'] += float(item.quantity or 0) * float(item.unit_price or 0)
-        
-        # Trier par revenu et prendre le top 5
-        top_products_list = sorted(
-            product_stats.values(),
-            key=lambda x: x['revenue'],
-            reverse=True
-        )[:5]
+        # Top 5 produits
+        top_products_rows = db.session.query(
+            Product.name,
+            func.sum(OrderItem.quantity).label('quantity'),
+            func.sum(OrderItem.quantity * OrderItem.unit_price).label('revenue')
+        ).select_from(Product).join(
+            OrderItem, OrderItem.product_id == Product.id
+        ).join(
+            Order, Order.id == OrderItem.order_id
+        ).filter(
+            func.date(Order.created_at) == report_date,
+            Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
+        ).group_by(Product.id, Product.name).order_by(
+            func.sum(OrderItem.quantity * OrderItem.unit_price).desc()
+        ).limit(5).all()
         top_products_json = [
             {
-                'name': p['name'],
-                'quantity': p['quantity'],
-                'revenue': p['revenue']
-            } for p in top_products_list
+                'name': row.name,
+                'quantity': float(row.quantity or 0),
+                'revenue': float(row.revenue or 0)
+            } for row in top_products_rows
         ]
         
-        # Ventes par catégorie (calcul en Python avec la nouvelle logique de date)
-        category_stats = {}
-        for order in orders:
-            for item in order.items:
-                product = Product.query.get(item.product_id)
-                if not product or not product.category:
-                    continue
-                
-                category_id = product.category_id
-                category_name = product.category.name
-                
-                if category_id not in category_stats:
-                    category_stats[category_id] = {
-                        'name': category_name,
-                        'revenue': 0.0
-                    }
-                
-                category_stats[category_id]['revenue'] += float(item.quantity or 0) * float(item.unit_price or 0)
-        
+        # Ventes par catégorie
+        sales_by_category_rows = db.session.query(
+            Category.name,
+            func.sum(OrderItem.quantity * OrderItem.unit_price).label('revenue')
+        ).select_from(Category).join(
+            Product, Product.category_id == Category.id
+        ).join(
+            OrderItem, OrderItem.product_id == Product.id
+        ).join(
+            Order, Order.id == OrderItem.order_id
+        ).filter(
+            func.date(Order.created_at) == report_date,
+            Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
+        ).group_by(Category.id, Category.name).all()
         sales_by_category_json = [
             {
-                'name': c['name'],
-                'revenue': c['revenue']
-            } for c in category_stats.values()
+                'name': row.name,
+                'revenue': float(row.revenue or 0)
+            } for row in sales_by_category_rows
         ]
         
-        # Ventes par heure (calcul en Python avec la nouvelle logique de date)
-        hourly_stats = {}
-        for order in orders:
-            # Utiliser la date de revenu pour déterminer l'heure
-            revenue_date = _get_order_revenue_date(order)
-            if revenue_date != report_date:
-                continue
-            
-            # Pour l'heure, utiliser l'heure de la date de revenu (date de livraison)
-            revenue_date = _get_order_revenue_date(order)
-            # Récupérer l'heure depuis la date de revenu
-            debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
-            if debt and debt.created_at and revenue_date == debt.created_at.date():
-                hour = debt.created_at.hour
-            elif order.due_date and revenue_date == order.due_date.date():
-                hour = order.due_date.hour
-            else:
-                hour = order.created_at.hour
-            
-            if hour not in hourly_stats:
-                hourly_stats[hour] = {
-                    'hour': hour,
-                    'transactions': 0,
-                    'revenue': 0.0
-                }
-            
-            hourly_stats[hour]['transactions'] += 1
-            for item in order.items:
-                hourly_stats[hour]['revenue'] += float(item.quantity or 0) * float(item.unit_price or 0)
-        
-        hourly_sales_json = sorted(
-            [
-                {
-                    'hour': int(h),
-                    'transactions': stats['transactions'],
-                    'revenue': stats['revenue']
-                }
-                for h, stats in hourly_stats.items()
-            ],
-            key=lambda x: x['hour']
-        )
+        # Ventes par heure (cohérence avec OrderItem)
+        hourly_sales_rows = db.session.query(
+            extract('hour', Order.created_at).label('hour'),
+            func.count(func.distinct(Order.id)).label('transactions'),
+            func.sum(OrderItem.quantity * OrderItem.unit_price).label('revenue')
+        ).select_from(Order).join(
+            OrderItem, OrderItem.order_id == Order.id
+        ).filter(
+            func.date(Order.created_at) == report_date,
+            Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
+        ).group_by('hour').order_by('hour').all()
+        hourly_sales_json = [
+            {
+                'hour': int(row.hour or 0),
+                'transactions': int(row.transactions or 0),
+                'revenue': float(row.revenue or 0)
+            } for row in hourly_sales_rows
+        ]
         
         # ============================================================================
         # MÉTADONNÉES IA
