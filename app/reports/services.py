@@ -5,7 +5,7 @@ Contient toute la logique métier pour les calculs et analyses
 
 from datetime import datetime, date, timedelta
 from decimal import Decimal
-from sqlalchemy import func, and_, or_, extract
+from sqlalchemy import func, and_, or_, extract, case
 from extensions import db
 from models import Product, Order, OrderItem, Category, DeliveryDebt
 from app.sales.models import CashRegisterSession, CashMovement
@@ -129,39 +129,48 @@ def _compute_revenue(report_date=None, start_date=None, end_date=None):
     Returns:
         float: Chiffre d'affaires calculé (0.0 si aucune vente)
     """
-    # Récupérer toutes les commandes livrées/complétées
-    orders = Order.query.filter(
+    # Requête optimisée avec LEFT JOIN pour éviter le N+1 problem
+    # On calcule la date de revenu directement dans SQL avec CASE
+    revenue_date_expr = case(
+        # Si une dette existe, utiliser created_at de la dette (date livraison réelle)
+        (func.date(DeliveryDebt.created_at).isnot(None), func.date(DeliveryDebt.created_at)),
+        # Sinon utiliser due_date de la commande (date prévue livraison)
+        (Order.due_date.isnot(None), func.date(Order.due_date)),
+        # Fallback sur created_at si due_date est NULL
+        else_=func.date(Order.created_at)
+    )
+    
+    # Construire la requête de base avec JOIN
+    # Utiliser func.coalesce pour gérer les valeurs NULL
+    base_query = db.session.query(
+        revenue_date_expr.label('revenue_date'),
+        func.sum(
+            func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
+        ).label('amount')
+    ).join(
+        OrderItem, OrderItem.order_id == Order.id
+    ).outerjoin(
+        DeliveryDebt, DeliveryDebt.order_id == Order.id
+    ).filter(
         Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
-    ).all()
+    ).group_by(
+        revenue_date_expr
+    )
     
-    total_revenue = 0.0
-    
-    for order in orders:
-        # Calculer le montant de la commande
-        order_amount = sum(
-            float(item.quantity or 0) * float(item.unit_price or 0)
-            for item in order.items
+    # Appliquer le filtre de date selon les paramètres
+    # Dans HAVING, on doit répéter l'expression car on ne peut pas utiliser le label
+    if report_date:
+        query = base_query.having(revenue_date_expr == report_date)
+    elif start_date and end_date:
+        query = base_query.having(
+            and_(revenue_date_expr >= start_date, revenue_date_expr <= end_date)
         )
-        
-        if order_amount == 0:
-            continue
-        
-        # Déterminer la date à utiliser pour cette commande
-        order_date = _get_order_revenue_date(order)
-        
-        # Vérifier si cette commande doit être incluse dans la période
-        include_order = False
-        
-        if report_date:
-            include_order = (order_date == report_date)
-        elif start_date and end_date:
-            include_order = (start_date <= order_date <= end_date)
-        else:
-            # Si aucune période spécifiée, inclure toutes les commandes
-            include_order = True
-        
-        if include_order:
-            total_revenue += order_amount
+    else:
+        query = base_query
+    
+    # Exécuter la requête et sommer les résultats
+    results = query.all()
+    total_revenue = sum(float(row.amount or 0) for row in results)
     
     return float(total_revenue)
 
