@@ -26,7 +26,7 @@ def test_ca_dette_livreur():
         print()
         
         # Date de la dette (02/12/2025)
-        date_dette = date(2025, 12, 2)
+        date_dette = date(2025, 12, 5)
         date_aujourdhui = date.today()
         
         print(f"📅 Date de la dette : {date_dette}")
@@ -39,10 +39,10 @@ def test_ca_dette_livreur():
         ).all()
         
         if not dettes:
-            print("❌ Aucune dette trouvée pour le 02/12/2025")
+            print("❌ Aucune dette trouvée pour le 05/12/2025")
             return
         
-        print(f"📋 Dettes trouvées le 02/12/2025 : {len(dettes)}")
+        print(f"📋 Dettes trouvées le 05/12/2025 : {len(dettes)}")
         print()
         
         for debt in dettes:
@@ -84,7 +84,7 @@ def test_ca_dette_livreur():
         dettes_non_payees = [d for d in dettes if not d.paid]
         if dettes_non_payees:
             print("=" * 80)
-            print("📝 DETTES NON PAYÉES (devraient être dans le CA du 02/12)")
+            print("📝 DETTES NON PAYÉES (devraient être dans le CA du 05/12)")
             print("=" * 80)
             for debt in dettes_non_payees:
                 revenue_date = _get_order_revenue_date(debt.order)
@@ -109,8 +109,8 @@ def test_ca_dette_livreur():
         print("💡 INSTRUCTIONS POUR TESTER")
         print("=" * 80)
         print()
-        print("1. Si vous avez une dette NON PAYÉE du 02/12/2025 :")
-        print("   → Le CA du 02/12 devrait inclure cette dette")
+        print("1. Si vous avez une dette NON PAYÉE du 05/12/2025 :")
+        print("   → Le CA du 05/12 devrait inclure cette dette")
         print("   → Le CA d'aujourd'hui ne devrait PAS l'inclure")
         print()
         print("2. Après avoir encaissé la dette :")
