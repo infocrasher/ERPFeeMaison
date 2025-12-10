@@ -80,6 +80,59 @@ def test_ca_dette_livreur():
         print(f"💰 CA calculé pour aujourd'hui ({date_aujourdhui}) : {ca_aujourdhui:,.2f} DA")
         print()
         
+        # DÉTAIL : Vérifier toutes les commandes du 05/12 pour comprendre le CA
+        print("=" * 80)
+        print("📊 DÉTAIL DU CA DU 05/12/2025")
+        print("=" * 80)
+        print()
+        
+        # Récupérer toutes les commandes qui contribuent au CA du 05/12
+        all_orders_05_12 = Order.query.filter(
+            Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
+        ).all()
+        
+        orders_contributing = []
+        for order in all_orders_05_12:
+            revenue_date = _get_order_revenue_date(order)
+            if revenue_date == date_dette:
+                order_amount = sum(
+                    float(item.quantity or 0) * float(item.unit_price or 0)
+                    for item in order.items
+                )
+                orders_contributing.append({
+                    'order': order,
+                    'amount': order_amount,
+                    'revenue_date': revenue_date
+                })
+        
+        print(f"📋 Commandes contribuant au CA du {date_dette} : {len(orders_contributing)}")
+        print()
+        
+        total_verif = 0.0
+        for item in orders_contributing:
+            order = item['order']
+            amount = item['amount']
+            total_verif += amount
+            
+            # Vérifier si c'est une commande avec dette
+            debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
+            debt_info = ""
+            if debt:
+                debt_info = f" (Dette #{debt.id}: {debt.amount} DA, {'Payée' if debt.paid else 'Non payée'})"
+            
+            print(f"   Commande #{order.id}: {amount:,.2f} DA{debt_info}")
+            print(f"      - Date création: {order.created_at.date()}")
+            print(f"      - Date livraison (due_date): {order.due_date.date() if order.due_date else 'N/A'}")
+            if debt:
+                print(f"      - Date création dette: {debt.created_at.date() if debt.created_at else 'N/A'}")
+            print(f"      - Date revenu calculée: {item['revenue_date']}")
+            print()
+        
+        print(f"💰 Total vérifié: {total_verif:,.2f} DA")
+        print(f"💰 CA calculé: {ca_date_dette:,.2f} DA")
+        print(f"   {'✅ Cohérent' if abs(total_verif - ca_date_dette) < 0.01 else '❌ Incohérent'}")
+        print()
+        
         # Vérifier les dettes non payées
         dettes_non_payees = [d for d in dettes if not d.paid]
         if dettes_non_payees:
