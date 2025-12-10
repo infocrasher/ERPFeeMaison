@@ -75,34 +75,30 @@ def _load_benchmarks():
 def _get_order_revenue_date(order):
     """
     Détermine la date de revenu pour une commande selon la logique :
-    - Si commande payée directement : utilise payment_paid_at (date d'encaissement)
-    - Si commande a une dette payée : utilise paid_at de DeliveryDebt (date d'encaissement dette)
-    - Si commande a une dette non payée : utilise created_at de DeliveryDebt (date de livraison)
-    - Sinon : utilise created_at de la commande (fallback)
+    - Le CA est TOUJOURS comptabilisé à la date de création/livraison de la commande
+    - Peu importe quand la dette est payée, le CA reste à la date de livraison
+    - Cela permet la cohérence avec le Prime Cost (ingrédients et main-d'œuvre du même jour)
+    
+    LOGIQUE :
+    - Si commande a une dette (payée ou non) : utilise created_at de DeliveryDebt (date de livraison)
+    - Sinon : utilise created_at de la commande (date de création)
     
     Args:
         order: Instance de Order
         
     Returns:
-        date: Date à utiliser pour le calcul du revenu
+        date: Date à utiliser pour le calcul du revenu (toujours date création/livraison)
     """
-    # 1. Si la commande est payée directement : utiliser payment_paid_at
-    if order.payment_paid_at:
-        return order.payment_paid_at.date()
-    
-    # 2. Vérifier s'il y a une dette (payée ou non payée)
+    # Vérifier s'il y a une dette (payée ou non payée)
+    # Si oui, utiliser la date de création de la dette (date de livraison)
     debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
     
-    if debt:
-        # 2a. Si la dette est payée : utiliser paid_at (date d'encaissement)
-        if debt.paid and debt.paid_at:
-            return debt.paid_at.date()
-        
-        # 2b. Si la dette n'est pas payée : utiliser created_at (date de livraison)
-        if not debt.paid and debt.created_at:
-            return debt.created_at.date()
+    if debt and debt.created_at:
+        # Utiliser la date de création de la dette (date de livraison)
+        # Peu importe si la dette est payée ou non
+        return debt.created_at.date()
     
-    # 3. Fallback : utiliser created_at de la commande
+    # Sinon : utiliser created_at de la commande (date de création)
     return order.created_at.date()
 
 
@@ -113,9 +109,11 @@ def _compute_revenue(report_date=None, start_date=None, end_date=None):
     Gère les valeurs NULL via coalesce pour éviter les erreurs de calcul.
     
     LOGIQUE DE DATE :
-    - Si commande payée : utilise payment_paid_at (date d'encaissement)
-    - Si commande non payée avec dette livreur : utilise created_at de DeliveryDebt (date de livraison)
-    - Sinon : utilise created_at de la commande (fallback)
+    - Le CA est TOUJOURS comptabilisé à la date de création/livraison de la commande
+    - Si commande a une dette (payée ou non) : utilise created_at de DeliveryDebt (date de livraison)
+    - Sinon : utilise created_at de la commande (date de création)
+    - Peu importe quand la dette est payée, le CA reste à la date de livraison
+    - Cela permet la cohérence avec le Prime Cost (ingrédients et main-d'œuvre du même jour)
     
     Args:
         report_date: Date unique pour un rapport quotidien
@@ -450,22 +448,14 @@ class DailySalesReportService:
             if revenue_date != report_date:
                 continue
             
-            # Pour l'heure, utiliser l'heure de la date de revenu
+            # Pour l'heure, utiliser l'heure de la date de revenu (date de livraison/création)
             revenue_date = _get_order_revenue_date(order)
             # Récupérer l'heure depuis la date de revenu
-            if order.payment_paid_at and revenue_date == order.payment_paid_at.date():
-                hour = order.payment_paid_at.hour
+            debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
+            if debt and debt.created_at and revenue_date == debt.created_at.date():
+                hour = debt.created_at.hour
             else:
-                debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
-                if debt:
-                    if debt.paid and debt.paid_at and revenue_date == debt.paid_at.date():
-                        hour = debt.paid_at.hour
-                    elif not debt.paid and debt.created_at and revenue_date == debt.created_at.date():
-                        hour = debt.created_at.hour
-                    else:
-                        hour = order.created_at.hour
-                else:
-                    hour = order.created_at.hour
+                hour = order.created_at.hour
             
             if hour not in hourly_stats:
                 hourly_stats[hour] = {
