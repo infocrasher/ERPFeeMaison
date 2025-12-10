@@ -202,10 +202,11 @@ def create_delivery_order():
         if not customer_name or not customer_phone or not customer_address:
             return jsonify({'success': False, 'message': 'Nom, téléphone et adresse sont obligatoires'}), 400
         
-        # Créer la commande de type 'in_store' avec statut 'ready_at_shop'
+        # Créer la commande de type 'customer_order' car c'est une commande client avec livraison
+        # 'in_store' est réservé aux ventes directes au comptoir sans client spécifique
         order = Order(
             user_id=current_user.id,
-            order_type='in_store',
+            order_type='customer_order',  # CORRECTION: customer_order au lieu de in_store
             customer_name=customer_name,
             customer_phone=customer_phone,
             customer_address=customer_address,
@@ -259,11 +260,10 @@ def create_delivery_order():
             db.session.add(order_item)
             db.session.add(product)
         
-        # Utiliser calculate_total_amount() pour inclure les frais de livraison dans total_amount
-        # Cela garantit la cohérence avec les autres commandes
+        # Maintenant que c'est customer_order, utiliser calculate_total_amount() pour inclure les frais de livraison
+        # Cela garantit la cohérence avec les autres commandes customer_order
         order.total_amount = total_amount  # Montant produits seulement (sans livraison)
-        # Note: calculate_total_amount() ajouterait les frais de livraison, mais pour les commandes PDV,
-        # on garde total_amount = produits seulement pour que le calcul dans assign_deliveryman() soit correct
+        order.calculate_total_amount()  # Ajoute les frais de livraison au total
         db.session.commit()
         
         return jsonify({
