@@ -75,31 +75,36 @@ def _load_benchmarks():
 def _get_order_revenue_date(order):
     """
     Détermine la date de revenu pour une commande selon la logique :
-    - Le CA est TOUJOURS comptabilisé à la date de création/livraison de la commande
+    - Le CA est TOUJOURS comptabilisé à la date de livraison (prévue ou réelle)
     - Peu importe quand la dette est payée, le CA reste à la date de livraison
     - Cela permet la cohérence avec le Prime Cost (ingrédients et main-d'œuvre du même jour)
     
     LOGIQUE :
-    - Si commande a une dette (payée ou non) : utilise created_at de DeliveryDebt (date de livraison)
-    - Sinon : utilise created_at de la commande (date de création)
+    - Si commande a une dette (payée ou non) : utilise created_at de DeliveryDebt (date où livreur assigné = date livraison réelle)
+    - Sinon : utilise due_date de la commande (date prévue de livraison)
+    
+    Exemple :
+    - Commande créée le 01/12, due_date le 15/12, livreur assigné le 15/12
+    - CA comptabilisé le 15/12 (date de livraison), pas le 01/12 (date de création)
     
     Args:
         order: Instance de Order
         
     Returns:
-        date: Date à utiliser pour le calcul du revenu (toujours date création/livraison)
+        date: Date à utiliser pour le calcul du revenu (toujours date livraison)
     """
     # Vérifier s'il y a une dette (payée ou non payée)
-    # Si oui, utiliser la date de création de la dette (date de livraison)
+    # Si oui, utiliser la date de création de la dette (date où livreur assigné = date livraison réelle)
     debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
     
     if debt and debt.created_at:
-        # Utiliser la date de création de la dette (date de livraison)
+        # Utiliser la date de création de la dette (date où livreur assigné = date livraison réelle)
         # Peu importe si la dette est payée ou non
         return debt.created_at.date()
     
-    # Sinon : utiliser created_at de la commande (date de création)
-    return order.created_at.date()
+    # Sinon : utiliser due_date de la commande (date prévue de livraison)
+    # Pas created_at car une commande peut être créée le 01/12 pour être livrée le 15/12
+    return order.due_date.date() if order.due_date else order.created_at.date()
 
 
 def _compute_revenue(report_date=None, start_date=None, end_date=None):
@@ -109,11 +114,12 @@ def _compute_revenue(report_date=None, start_date=None, end_date=None):
     Gère les valeurs NULL via coalesce pour éviter les erreurs de calcul.
     
     LOGIQUE DE DATE :
-    - Le CA est TOUJOURS comptabilisé à la date de création/livraison de la commande
-    - Si commande a une dette (payée ou non) : utilise created_at de DeliveryDebt (date de livraison)
-    - Sinon : utilise created_at de la commande (date de création)
+    - Le CA est TOUJOURS comptabilisé à la date de livraison (prévue ou réelle)
+    - Si commande a une dette (payée ou non) : utilise created_at de DeliveryDebt (date où livreur assigné = date livraison réelle)
+    - Sinon : utilise due_date de la commande (date prévue de livraison)
     - Peu importe quand la dette est payée, le CA reste à la date de livraison
     - Cela permet la cohérence avec le Prime Cost (ingrédients et main-d'œuvre du même jour)
+    - Exemple : Commande créée le 01/12, due_date le 15/12 → CA comptabilisé le 15/12
     
     Args:
         report_date: Date unique pour un rapport quotidien
@@ -448,12 +454,14 @@ class DailySalesReportService:
             if revenue_date != report_date:
                 continue
             
-            # Pour l'heure, utiliser l'heure de la date de revenu (date de livraison/création)
+            # Pour l'heure, utiliser l'heure de la date de revenu (date de livraison)
             revenue_date = _get_order_revenue_date(order)
             # Récupérer l'heure depuis la date de revenu
             debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
             if debt and debt.created_at and revenue_date == debt.created_at.date():
                 hour = debt.created_at.hour
+            elif order.due_date and revenue_date == order.due_date.date():
+                hour = order.due_date.hour
             else:
                 hour = order.created_at.hour
             
