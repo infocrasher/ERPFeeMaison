@@ -28,14 +28,19 @@ def creer_commande_test_dette():
         print()
         
         # Demander la date de livraison souhaitée
-        print("📅 Date de livraison souhaitée (format: YYYY-MM-DD, ex: 2025-12-02):")
+        print("📅 Date de livraison souhaitée (format: YYYY-MM-DD, ex: 2025-12-03):")
         date_input = input("> ").strip()
+        
+        # Si pas de date fournie, utiliser 03/12/2025 par défaut
+        if not date_input:
+            date_input = "2025-12-03"
+            print(f"   → Utilisation de la date par défaut: {date_input}")
         
         try:
             target_date = datetime.strptime(date_input, "%Y-%m-%d")
         except ValueError:
-            print("❌ Format de date invalide. Utilisation de la date d'il y a 8 jours par défaut.")
-            target_date = datetime.now() - timedelta(days=8)
+            print("❌ Format de date invalide. Utilisation de 2025-12-03 par défaut.")
+            target_date = datetime(2025, 12, 3)
         
         print(f"📅 Date de livraison : {target_date.date()}")
         print()
@@ -58,10 +63,10 @@ def creer_commande_test_dette():
         print(f"🚚 Livreur utilisé : {deliveryman.name} (ID: {deliveryman.id})")
         print()
         
-        # Montant de la commande
+        # Montant de la commande (300 DA comme demandé)
         quantity = 2
         unit_price = Decimal('150.00')
-        total_amount = quantity * unit_price
+        total_amount = Decimal('300.00')  # Montant fixe de 300 DA
         
         print(f"💰 Montant commande : {total_amount} DA ({quantity} x {unit_price} DA)")
         print()
