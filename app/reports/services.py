@@ -75,8 +75,9 @@ def _load_benchmarks():
 def _get_order_revenue_date(order):
     """
     Détermine la date de revenu pour une commande selon la logique :
-    - Si commande payée : utilise payment_paid_at (date d'encaissement)
-    - Si commande non payée avec dette livreur : utilise created_at de DeliveryDebt (date de livraison)
+    - Si commande payée directement : utilise payment_paid_at (date d'encaissement)
+    - Si commande a une dette payée : utilise paid_at de DeliveryDebt (date d'encaissement dette)
+    - Si commande a une dette non payée : utilise created_at de DeliveryDebt (date de livraison)
     - Sinon : utilise created_at de la commande (fallback)
     
     Args:
@@ -85,18 +86,21 @@ def _get_order_revenue_date(order):
     Returns:
         date: Date à utiliser pour le calcul du revenu
     """
-    # 1. Si la commande est payée : utiliser payment_paid_at
+    # 1. Si la commande est payée directement : utiliser payment_paid_at
     if order.payment_paid_at:
         return order.payment_paid_at.date()
     
-    # 2. Si la commande a une dette non payée : utiliser la date de création de la dette
-    unpaid_debt = DeliveryDebt.query.filter_by(
-        order_id=order.id,
-        paid=False
-    ).first()
+    # 2. Vérifier s'il y a une dette (payée ou non payée)
+    debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
     
-    if unpaid_debt and unpaid_debt.created_at:
-        return unpaid_debt.created_at.date()
+    if debt:
+        # 2a. Si la dette est payée : utiliser paid_at (date d'encaissement)
+        if debt.paid and debt.paid_at:
+            return debt.paid_at.date()
+        
+        # 2b. Si la dette n'est pas payée : utiliser created_at (date de livraison)
+        if not debt.paid and debt.created_at:
+            return debt.created_at.date()
     
     # 3. Fallback : utiliser created_at de la commande
     return order.created_at.date()
@@ -139,23 +143,7 @@ def _compute_revenue(report_date=None, start_date=None, end_date=None):
             continue
         
         # Déterminer la date à utiliser pour cette commande
-        order_date = None
-        
-        # 1. Si la commande est payée : utiliser payment_paid_at
-        if order.payment_paid_at:
-            order_date = order.payment_paid_at.date()
-        else:
-            # 2. Si la commande a une dette non payée : utiliser la date de création de la dette
-            unpaid_debt = DeliveryDebt.query.filter_by(
-                order_id=order.id,
-                paid=False
-            ).first()
-            
-            if unpaid_debt and unpaid_debt.created_at:
-                order_date = unpaid_debt.created_at.date()
-            else:
-                # 3. Fallback : utiliser created_at de la commande
-                order_date = order.created_at.date()
+        order_date = _get_order_revenue_date(order)
         
         # Vérifier si cette commande doit être incluse dans la période
         include_order = False
@@ -463,12 +451,19 @@ class DailySalesReportService:
                 continue
             
             # Pour l'heure, utiliser l'heure de la date de revenu
-            if order.payment_paid_at:
+            revenue_date = _get_order_revenue_date(order)
+            # Récupérer l'heure depuis la date de revenu
+            if order.payment_paid_at and revenue_date == order.payment_paid_at.date():
                 hour = order.payment_paid_at.hour
             else:
-                unpaid_debt = DeliveryDebt.query.filter_by(order_id=order.id, paid=False).first()
-                if unpaid_debt and unpaid_debt.created_at:
-                    hour = unpaid_debt.created_at.hour
+                debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
+                if debt:
+                    if debt.paid and debt.paid_at and revenue_date == debt.paid_at.date():
+                        hour = debt.paid_at.hour
+                    elif not debt.paid and debt.created_at and revenue_date == debt.created_at.date():
+                        hour = debt.created_at.hour
+                    else:
+                        hour = order.created_at.hour
                 else:
                     hour = order.created_at.hour
             
