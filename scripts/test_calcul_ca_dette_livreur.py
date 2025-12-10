@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""
+Script de test pour vérifier le calcul du CA avec les dettes livreurs
+"""
+import sys
+import os
+from datetime import date, datetime
+
+# Ajouter le répertoire parent au path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app import create_app
+from extensions import db
+from models import Order, DeliveryDebt
+from app.reports.services import _compute_revenue, _get_order_revenue_date
+
+def test_ca_dette_livreur():
+    """Test le calcul du CA pour une dette livreur"""
+    
+    app = create_app()
+    
+    with app.app_context():
+        print("=" * 80)
+        print("TEST CALCUL CA - DETTE LIVREUR")
+        print("=" * 80)
+        print()
+        
+        # Date de la dette (02/12/2025)
+        date_dette = date(2025, 12, 2)
+        date_aujourdhui = date.today()
+        
+        print(f"📅 Date de la dette : {date_dette}")
+        print(f"📅 Date d'aujourd'hui : {date_aujourdhui}")
+        print()
+        
+        # Trouver toutes les dettes créées le 02/12/2025
+        dettes = DeliveryDebt.query.filter(
+            db.func.date(DeliveryDebt.created_at) == date_dette
+        ).all()
+        
+        if not dettes:
+            print("❌ Aucune dette trouvée pour le 02/12/2025")
+            return
+        
+        print(f"📋 Dettes trouvées le 02/12/2025 : {len(dettes)}")
+        print()
+        
+        for debt in dettes:
+            order = debt.order
+            print(f"🔍 DETTE #{debt.id}")
+            print(f"   Commande : #{order.id}")
+            print(f"   Montant : {debt.amount} DA")
+            print(f"   Statut paiement : {'✅ Payée' if debt.paid else '❌ Non payée'}")
+            print(f"   Date création dette : {debt.created_at.date()}")
+            
+            if order.payment_paid_at:
+                print(f"   Date paiement commande : {order.payment_paid_at.date()}")
+            else:
+                print(f"   Date paiement commande : Non payée")
+            
+            print(f"   Date création commande : {order.created_at.date()}")
+            
+            # Calculer la date de revenu
+            revenue_date = _get_order_revenue_date(order)
+            print(f"   📊 DATE DE REVENU CALCULÉE : {revenue_date}")
+            
+            if debt.paid:
+                print(f"   ✅ Dette payée le : {debt.paid_at.date() if debt.paid_at else 'N/A'}")
+            else:
+                print(f"   ⚠️  Dette NON payée")
+            
+            print()
+        
+        # Calculer le CA pour le 02/12/2025 (date de la dette)
+        ca_date_dette = _compute_revenue(report_date=date_dette)
+        print(f"💰 CA calculé pour le {date_dette} : {ca_date_dette:,.2f} DA")
+        
+        # Calculer le CA pour aujourd'hui
+        ca_aujourdhui = _compute_revenue(report_date=date_aujourdhui)
+        print(f"💰 CA calculé pour aujourd'hui ({date_aujourdhui}) : {ca_aujourdhui:,.2f} DA")
+        print()
+        
+        # Vérifier les dettes non payées
+        dettes_non_payees = [d for d in dettes if not d.paid]
+        if dettes_non_payees:
+            print("=" * 80)
+            print("📝 DETTES NON PAYÉES (devraient être dans le CA du 02/12)")
+            print("=" * 80)
+            for debt in dettes_non_payees:
+                revenue_date = _get_order_revenue_date(debt.order)
+                print(f"   Dette #{debt.id} - Commande #{debt.order_id} : {debt.amount} DA")
+                print(f"   → Date revenu : {revenue_date} {'✅' if revenue_date == date_dette else '❌'}")
+            print()
+        
+        # Vérifier les dettes payées
+        dettes_payees = [d for d in dettes if d.paid]
+        if dettes_payees:
+            print("=" * 80)
+            print("✅ DETTES PAYÉES (devraient être dans le CA de la date de paiement)")
+            print("=" * 80)
+            for debt in dettes_payees:
+                revenue_date = _get_order_revenue_date(debt.order)
+                print(f"   Dette #{debt.id} - Commande #{debt.order_id} : {debt.amount} DA")
+                print(f"   → Date paiement : {debt.paid_at.date() if debt.paid_at else 'N/A'}")
+                print(f"   → Date revenu : {revenue_date} {'✅' if revenue_date == (debt.paid_at.date() if debt.paid_at else None) else '❌'}")
+            print()
+        
+        print("=" * 80)
+        print("💡 INSTRUCTIONS POUR TESTER")
+        print("=" * 80)
+        print()
+        print("1. Si vous avez une dette NON PAYÉE du 02/12/2025 :")
+        print("   → Le CA du 02/12 devrait inclure cette dette")
+        print("   → Le CA d'aujourd'hui ne devrait PAS l'inclure")
+        print()
+        print("2. Après avoir encaissé la dette :")
+        print("   → Le CA du 02/12 devrait diminuer (ou rester si d'autres ventes)")
+        print("   → Le CA d'aujourd'hui devrait augmenter de {montant dette} DA")
+        print()
+        print("3. Relancer ce script après l'encaissement pour vérifier")
+        print()
+
+if __name__ == '__main__':
+    test_ca_dette_livreur()
+
