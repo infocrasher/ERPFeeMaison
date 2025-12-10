@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import create_app
 from extensions import db
 from models import Order, OrderItem, Product, DeliveryDebt
-from app.sales.models import Deliveryman
+from app.deliverymen.models import Deliveryman
 
 def creer_commande_test_dette():
     """Crée une commande de test avec une dette livreur à une date antérieure"""
