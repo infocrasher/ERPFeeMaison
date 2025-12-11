@@ -284,8 +284,9 @@ def daily_sales():
         func.date(CashMovement.created_at) == today
     ).all()
     
-    cash_in = sum(float(m.amount) for m in today_movements if m.movement_type == 'in')
-    cash_out = sum(float(m.amount) for m in today_movements if m.movement_type == 'out')
+    # CashMovement n'a pas d'attribut movement_type, le champ est `type`
+    cash_in = sum(float(m.amount) for m in today_movements if (m.type or '').lower() == 'in')
+    cash_out = sum(float(m.amount) for m in today_movements if (m.type or '').lower() == 'out')
     
     return jsonify({
         'success': True,

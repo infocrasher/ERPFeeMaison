@@ -247,13 +247,10 @@ def create_delivery_order():
                 unit_price=unit_price
             )
             
-            # Décrémenter le stock comptoir (réservation temporaire)
+            # Décrémenter le stock comptoir ET la valeur (update_stock_by_location gère les deux)
+            # Note: update_stock_by_location utilise cost_price pour calculer la valeur à décrémenter
+            # et met à jour valeur_stock_comptoir ET total_stock_value de manière synchronisée
             product.update_stock_by_location('stock_comptoir', -float(quantity))
-            
-            # Décrémenter la valeur du stock
-            pmp = product.cost_price or Decimal('0.0')
-            value_decrement = quantity * pmp
-            product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_decrement
             
             total_amount += quantity * unit_price
             
@@ -341,7 +338,8 @@ def complete_sale():
                 unit_price=unit_price
             )
             
-            # Décrémenter le stock comptoir (avec gestion d'erreur)
+            # Décrémenter le stock comptoir ET la valeur (update_stock_by_location gère les deux)
+            # Note: update_stock_by_location met à jour valeur_stock_comptoir ET total_stock_value de manière synchronisée
             try:
                 product.update_stock_by_location('stock_comptoir', -float(quantity))
             except Exception as stock_error:
@@ -351,15 +349,6 @@ def complete_sale():
                     'success': False, 
                     'message': f'Erreur lors de la mise à jour du stock pour {product.name}'
                 }), 500
-            
-            # Décrémenter la valeur du stock
-            try:
-                pmp = product.cost_price or Decimal('0.0')
-                value_decrement = quantity * pmp
-                product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_decrement
-            except Exception as value_error:
-                current_app.logger.warning(f"Erreur lors de la décrémentation de la valeur pour {product.name}: {value_error}")
-                # Ne pas faire échouer la vente pour une erreur de valeur
             
             # DÉCRÉMENTER LES CONSOMMABLES selon la catégorie
             if product.category:

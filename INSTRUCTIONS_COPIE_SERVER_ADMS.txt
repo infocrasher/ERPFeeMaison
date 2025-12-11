@@ -1,0 +1,142 @@
+📋 INSTRUCTIONS : Copier server_adms.py sur le PC magasin
+================================================================
+
+🎯 DEUX VERSIONS DISPONIBLES :
+
+1. server_adms.py 
+   ✅ Scan séquentiel (plus lent mais plus fiable)
+   ⏱️  Durée scan: ~30-60 secondes
+   
+2. server_adms_fast.py
+   ✅ Scan multithread (RAPIDE)
+   ⏱️  Durée scan: ~5-10 secondes
+   🚀 RECOMMANDÉ pour test
+
+================================================================
+
+🔧 ÉTAPE 1 : SAUVEGARDER L'ANCIEN (sur PC magasin)
+----------------------------------------------------------------
+
+cd C:\Users\pos\Desktop\ERP_AGENT
+copy server_adms.py server_adms_OLD.py
+
+================================================================
+
+🔧 ÉTAPE 2A : COPIER LA VERSION STANDARD
+----------------------------------------------------------------
+
+1. Ouvrir ce fichier sur votre Mac/autre PC:
+   /Users/sofiane/Documents/Save FM/fee_maison_gestion_cursor/server_adms.py
+
+2. Copier TOUT le contenu (Ctrl+A, Ctrl+C)
+
+3. Sur le PC magasin (192.168.8.101):
+   - Ouvrir C:\Users\pos\Desktop\ERP_AGENT\server_adms.py
+   - Remplacer TOUT le contenu (Ctrl+A, Ctrl+V)
+   - Enregistrer (Ctrl+S)
+
+================================================================
+
+🔧 ÉTAPE 2B : OU COPIER LA VERSION RAPIDE (Recommandé pour test)
+----------------------------------------------------------------
+
+1. Ouvrir ce fichier sur votre Mac/autre PC:
+   /Users/sofiane/Documents/Save FM/fee_maison_gestion_cursor/server_adms_fast.py
+
+2. Copier TOUT le contenu (Ctrl+A, Ctrl+C)
+
+3. Sur le PC magasin:
+   - Ouvrir C:\Users\pos\Desktop\ERP_AGENT\server_adms.py
+   - Remplacer TOUT le contenu (Ctrl+A, Ctrl+V)
+   - Enregistrer (Ctrl+S)
+
+================================================================
+
+🧪 ÉTAPE 3 : TESTER (sur PC magasin)
+----------------------------------------------------------------
+
+cd C:\Users\pos\Desktop\ERP_AGENT
+python server_adms.py
+
+RÉSULTAT ATTENDU:
+------------------------------------------------------------------
+🔍 Recherche rapide de la pointeuse (MAC: 8C:AA:B5:D7:44:29)...
+✅ Pointeuse trouvée en cache: 192.168.8.100
+OU
+✅ Pointeuse détectée: 192.168.8.100
+
+🔌 Connexion au WL30 (192.168.8.100)...
+✅ Connecté à la pointeuse !
+📥 Lecture des pointages...
+📊 15 pointages trouvés en mémoire.
+------------------------------------------------------------------
+
+================================================================
+
+❌ SI ÇA NE MARCHE TOUJOURS PAS
+================================================================
+
+DIAGNOSTIC 1 : Vérifier que vous êtes sur le bon réseau
+----------------------------------------------------------------
+Sur PC magasin:
+    ipconfig
+
+Doit afficher : 192.168.8.101 (ou autre IP 192.168.8.x)
+
+Si affiche autre chose (ex: 192.168.1.x), vous n'êtes PAS sur 
+le réseau de la pointeuse !
+
+
+DIAGNOSTIC 2 : Vérifier que la pointeuse est accessible
+----------------------------------------------------------------
+Sur PC magasin:
+    arp -a | findstr "8c-aa-b5-d7-44-29"
+
+Si ça affiche une ligne avec une IP → La pointeuse est visible !
+Si rien → La pointeuse n'est pas sur le réseau (éteinte ou déconnectée)
+
+
+DIAGNOSTIC 3 : Trouver manuellement l'IP actuelle
+----------------------------------------------------------------
+Sur PC magasin:
+    arp -a
+
+Chercher dans la liste l'adresse MAC : 8c-aa-b5-d7-44-29
+Noter l'IP correspondante (ex: 192.168.8.103)
+
+Puis modifier temporairement dans server_adms.py:
+    ZK_IP_FALLBACK = "192.168.8.103"  # Mettre l'IP trouvée
+
+Et relancer:
+    python server_adms.py
+
+================================================================
+
+✅ SI ÇA MARCHE
+================================================================
+
+1. Vérifier que les pointages arrivent dans l'ERP:
+   https://erp.declaimers.com/employees/attendance/live
+
+2. La tâche planifiée Windows utilisera automatiquement
+   la nouvelle version (aucune modification nécessaire)
+
+3. Tester à nouveau demain pour vérifier que le script
+   trouve bien la pointeuse même si l'IP a changé
+
+================================================================
+
+📞 SUPPORT
+================================================================
+
+Si après tous ces tests ça ne marche toujours pas, envoyer:
+
+1. La sortie complète de: python server_adms.py
+2. La sortie de: ipconfig
+3. La sortie de: arp -a
+4. La sortie de: ping 192.168.8.104
+
+================================================================
+
+
+

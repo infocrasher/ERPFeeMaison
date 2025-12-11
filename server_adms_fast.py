@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Script de synchronisation pointeuse ZKTeco → ERP
-Version améliorée avec détection automatique d'IP
+Version RAPIDE avec scan multithread
 """
 
 from zk import ZK
@@ -11,9 +11,9 @@ import sys
 import subprocess
 import re
 import platform
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ================= CONFIGURATION =================
-# 🔧 AMÉLIORATION : Détection automatique de l'IP par MAC
 POINTEUSE_MAC = "8C:AA:B5:D7:44:29"  # MAC de la pointeuse
 ZK_IP_FALLBACK = "192.168.8.104"  # IP par défaut si détection échoue
 ZK_PORT = 4370
@@ -31,20 +31,32 @@ def normalize_mac(mac):
     return mac.upper().replace(":", "").replace("-", "")
 
 
-def detect_pointeuse_ip():
+def ping_ip(ip):
+    """Ping une IP unique (pour multithreading)"""
+    try:
+        system = platform.system()
+        if system == "Windows":
+            subprocess.run(['ping', '-n', '1', '-w', '100', ip], 
+                          capture_output=True, timeout=0.3)
+        else:
+            subprocess.run(['ping', '-c', '1', '-W', '1', ip], 
+                          capture_output=True, timeout=0.3)
+        return True
+    except:
+        return False
+
+
+def detect_pointeuse_ip_fast():
     """
-    Détecte automatiquement l'IP de la pointeuse par sa MAC
-    Scanne la plage DHCP 192.168.8.100-200
-    Retourne l'IP détectée ou l'IP par défaut si non trouvée
+    Détecte l'IP de la pointeuse RAPIDEMENT avec scan multithread
     """
-    print(f"🔍 Recherche de la pointeuse (MAC: {POINTEUSE_MAC})...")
-    print(f"   Scan de la plage 192.168.8.100-200...")
+    print(f"🔍 Recherche rapide de la pointeuse (MAC: {POINTEUSE_MAC})...")
     
     try:
         system = platform.system()
         target_mac = normalize_mac(POINTEUSE_MAC)
         
-        # 1. D'abord, vérifier la table ARP actuelle (rapide)
+        # 1. Vérifier cache ARP actuel
         result = subprocess.run(['arp', '-a'], capture_output=True, text=True, timeout=5)
         lines = result.stdout.split('\n')
         
@@ -59,31 +71,22 @@ def detect_pointeuse_ip():
                 mac = match.group(2)
                 
                 if normalize_mac(mac) == target_mac:
-                    print(f"✅ Pointeuse trouvée dans cache ARP: {ip}")
+                    print(f"✅ Pointeuse trouvée en cache: {ip}")
                     return ip
         
-        # 2. Si pas trouvée, scanner la plage DHCP (192.168.8.100-200)
-        print(f"   Pas dans cache ARP, scan actif en cours...")
+        # 2. Scan multithread de la plage (RAPIDE !)
+        print(f"   Scan rapide 192.168.8.100-200 (multithread)...")
+        ips = [f"192.168.8.{i}" for i in range(100, 201)]
         
-        for i in range(100, 201):  # 192.168.8.100 à 192.168.8.200
-            ip = f"192.168.8.{i}"
-            try:
-                # Ping rapide (timeout 200ms par IP)
-                if system == "Windows":
-                    subprocess.run(['ping', '-n', '1', '-w', '200', ip], 
-                                  capture_output=True, timeout=0.5)
-                else:
-                    subprocess.run(['ping', '-c', '1', '-W', '1', ip], 
-                                  capture_output=True, timeout=0.5)
-            except:
-                pass  # Ignorer les timeouts individuels
-            
-            # Afficher progression tous les 20 IPs
-            if i % 20 == 0:
-                print(f"   ... scan en cours ({i}/200)")
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            futures = {executor.submit(ping_ip, ip): ip for ip in ips}
+            for future in as_completed(futures):
+                pass  # On attend juste que tous les pings se terminent
         
-        # 3. Relire la table ARP après le scan
-        time.sleep(0.5)
+        print(f"   Scan terminé, lecture table ARP...")
+        
+        # 3. Relire table ARP
+        time.sleep(0.3)
         result = subprocess.run(['arp', '-a'], capture_output=True, text=True, timeout=5)
         lines = result.stdout.split('\n')
         
@@ -98,25 +101,24 @@ def detect_pointeuse_ip():
                 mac = match.group(2)
                 
                 if normalize_mac(mac) == target_mac:
-                    print(f"✅ Pointeuse détectée à l'IP: {ip}")
+                    print(f"✅ Pointeuse détectée: {ip}")
                     return ip
         
-        print(f"⚠️  Pointeuse non trouvée après scan, utilisation IP par défaut: {ZK_IP_FALLBACK}")
+        print(f"⚠️  Pointeuse non trouvée, IP par défaut: {ZK_IP_FALLBACK}")
         return ZK_IP_FALLBACK
         
     except Exception as e:
-        print(f"⚠️  Erreur détection IP: {e}")
-        print(f"   Utilisation IP par défaut: {ZK_IP_FALLBACK}")
+        print(f"⚠️  Erreur: {e}")
+        print(f"   IP par défaut: {ZK_IP_FALLBACK}")
         return ZK_IP_FALLBACK
 
 
 def main():
-    # 🔧 AMÉLIORATION : Détecter l'IP automatiquement
-    ZK_IP = detect_pointeuse_ip()
+    # Détection rapide
+    ZK_IP = detect_pointeuse_ip_fast()
     
     print(f"🔌 Connexion au WL30 ({ZK_IP})...")
     
-    # Configuration pour WL30 (TCP sans password)
     zk = ZK(ZK_IP, port=ZK_PORT, timeout=10, password=0, force_udp=False, ommit_ping=False)
     conn = None
 
@@ -124,10 +126,8 @@ def main():
         conn = zk.connect()
         print("✅ Connecté à la pointeuse !")
         
-        # Désactiver pour éviter les conflits pendant la lecture
         conn.disable_device()
         
-        # 1. RECUPERER LES LOGS
         print("📥 Lecture des pointages...")
         try:
             attendance = conn.get_attendance()
@@ -137,12 +137,6 @@ def main():
                 print("📤 Envoi vers l'ERP...")
                 count_ok = 0
                 for punch in attendance:
-                    # ---------------------------------------------------------
-                    # 🔧 CORRECTION MAJEURE ICI (Selon votre photo)
-                    # Code 1 = Entrée (Check-In)
-                    # Code 2 = Sortie (Check-Out)
-                    # Code 0 = Entrée par défaut (souvent)
-                    # ---------------------------------------------------------
                     punch_code = str(punch.punch)
                     
                     if punch_code == '2':
@@ -150,9 +144,8 @@ def main():
                     elif punch_code == '1':
                         punch_type = "in"
                     elif punch_code == '0':
-                        punch_type = "in" # Par défaut
+                        punch_type = "in"
                     else:
-                        # Autres codes (Pauses, etc.) -> On traite comme IN par défaut ou on ignore
                         punch_type = "in" 
                     
                     payload = {
@@ -169,7 +162,7 @@ def main():
                     try:
                         resp = requests.post(API_URL, json=payload, headers=headers, timeout=5)
                         if resp.status_code == 200:
-                            print(".", end="", flush=True) # Petit point = Succès
+                            print(".", end="", flush=True)
                             count_ok += 1
                         else:
                             print(f"x({resp.status_code})", end="", flush=True)
@@ -183,10 +176,9 @@ def main():
         except Exception as e:
             print(f"⚠️ Erreur lecture logs : {e}")
 
-        # 2. WORKAROUND WL30 (Scan Utilisateurs - Optionnel)
         print("👤 Vérification des utilisateurs...")
         users_count = 0
-        for uid in range(1, 10): # Scan partiel rapide
+        for uid in range(1, 10):
             try:
                 if conn.get_user_template(uid, 0):
                     users_count += 1
@@ -200,10 +192,9 @@ def main():
     except Exception as e:
         print(f"\n❌ ERREUR CRITIQUE : {e}")
         print("\n💡 VÉRIFICATIONS:")
-        print("1. La pointeuse est-elle allumée et connectée au réseau ?")
-        print("2. Êtes-vous sur le même réseau (192.168.8.x) ?")
-        print(f"3. Pouvez-vous pinguer l'IP: {ZK_IP} ?")
-        print(f"   Commande: ping {ZK_IP}")
+        print("1. La pointeuse est-elle allumée ?")
+        print("2. Même réseau (192.168.8.x) ?")
+        print(f"3. Test: ping {ZK_IP}")
         
     finally:
         if conn:
@@ -216,14 +207,17 @@ def main():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🚀 SYNCHRONISATION POINTEUSE → ERP")
-    print("   Version avec détection automatique d'IP")
+    print("🚀 SYNCHRONISATION POINTEUSE → ERP (VERSION RAPIDE)")
     print("=" * 60)
     print()
     
+    start_time = time.time()
     main()
+    elapsed = time.time() - start_time
     
-    # On laisse la fenêtre ouverte 5 secondes pour lire
+    print(f"\n⏱️  Temps total: {elapsed:.1f}s")
     print("\n⏳ Fermeture dans 5 secondes...")
     time.sleep(5)
+
+
 

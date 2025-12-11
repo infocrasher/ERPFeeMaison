@@ -760,42 +760,31 @@ class Order(db.Model):
     def _decrement_stock_with_value_on_delivery(self):
         """
         Décrémente le stock de vente (comptoir) ET sa valeur correspondante lors d'une vente.
+        Note: update_stock_by_location gère automatiquement la décrémentation de 
+        valeur_stock_comptoir ET total_stock_value de manière synchronisée.
         """
         for item in self.items:
             product_fini = item.product
             if product_fini:
-                # 1. On décrémente la quantité en stock
+                # Décrémenter quantité ET valeur (update_stock_by_location gère les deux)
                 quantity_to_decrement = float(item.quantity)
                 product_fini.update_stock_by_location('stock_comptoir', -quantity_to_decrement)
-
-                # 2. On calcule la valeur de ce qui a été vendu en se basant sur le PMP du produit fini
-                pmp_produit_fini = product_fini.cost_price or Decimal('0.0')
-                value_to_decrement = Decimal(quantity_to_decrement) * pmp_produit_fini
-
-                # 3. On décrémente la valeur totale du stock du produit
-                product_fini.total_stock_value = (product_fini.total_stock_value or Decimal('0.0')) - value_to_decrement
-
                 # Le PMP du produit fini ne change pas lors d'une sortie de stock.
     
     def restore_stock_on_cancellation(self):
         """
         Restaure le stock comptoir lors de l'annulation d'une commande de livraison PDV.
         Réincrémente le stock et la valeur pour chaque produit.
+        Note: update_stock_by_location gère automatiquement l'incrémentation de 
+        valeur_stock_comptoir ET total_stock_value de manière synchronisée.
         """
+        from extensions import db
         for item in self.items:
             product_fini = item.product
             if product_fini:
-                # 1. Réincrémenter la quantité en stock
+                # Réincrémenter quantité ET valeur (update_stock_by_location gère les deux)
                 quantity_to_restore = float(item.quantity)
                 product_fini.update_stock_by_location('stock_comptoir', quantity_to_restore)
-
-                # 2. Calculer la valeur à restaurer basée sur le PMP actuel
-                pmp_produit_fini = product_fini.cost_price or Decimal('0.0')
-                value_to_restore = Decimal(quantity_to_restore) * pmp_produit_fini
-
-                # 3. Réincrémenter la valeur totale du stock du produit
-                product_fini.total_stock_value = (product_fini.total_stock_value or Decimal('0.0')) + value_to_restore
-
                 # Le PMP ne change pas lors d'une restauration
                 db.session.add(product_fini)
     

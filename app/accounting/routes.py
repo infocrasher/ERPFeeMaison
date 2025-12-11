@@ -1451,4 +1451,47 @@ def api_accounts():
         'code': account.code,
         'name': account.name,
         'full_name': f"{account.code} - {account.name}"
-    } for account in accounts]) 
+    } for account in accounts])
+
+# ==================== OUTILS DE MAINTENANCE ====================
+
+@bp.route('/maintenance/cleanup_entries')
+@login_required
+@admin_required
+def cleanup_purchase_entries():
+    """Nettoyer les écritures d'achat orphelines ou incorrectes"""
+    from app.purchases.models import Purchase
+    
+    deleted_count = 0
+    fixed_amount_count = 0
+    
+    # 1. Trouver les écritures d'achat (Ref commence par ACH-)
+    entries = JournalEntry.query.filter(JournalEntry.reference.like('ACH-%')).all()
+    
+    for entry in entries:
+        try:
+            # Extraire ID achat
+            purchase_id = int(entry.reference.replace('ACH-', ''))
+            purchase = Purchase.query.get(purchase_id)
+            
+            # Cas 1: Achat supprimé ou marqué non payé -> Supprimer écriture
+            if not purchase or not purchase.is_paid:
+                JournalEntryLine.query.filter_by(entry_id=entry.id).delete()
+                db.session.delete(entry)
+                deleted_count += 1
+                continue
+                
+            # Cas 2: Montant incohérent (Différence > 1.00 DA)
+            if abs(float(entry.total_credit) - float(purchase.total_amount)) > 1.0:
+                JournalEntryLine.query.filter_by(entry_id=entry.id).delete()
+                db.session.delete(entry)
+                fixed_amount_count += 1
+                
+        except (ValueError, TypeError):
+            continue
+            
+    db.session.commit()
+    
+    msg = f"Nettoyage terminé : {deleted_count} écritures orphelines supprimées, {fixed_amount_count} écritures avec montant incorrect supprimées."
+    flash(msg, 'success')
+    return redirect(url_for('accounting.dashboard')) 

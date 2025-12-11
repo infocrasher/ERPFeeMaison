@@ -496,11 +496,17 @@ def cancel_purchase(id):
                 product.update_stock_by_location('consommables', -quantity_to_reverse)
 
             elif product.product_type == 'ingredient':
-                product.update_stock_by_location(item.stock_location, -quantity_to_reverse)
-                value_to_reverse = item.quantity_ordered * item.unit_price
-                product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_to_reverse
+                # Utiliser unit_cost_override avec le prix d'achat original pour que
+                # update_stock_by_location décrémente la bonne valeur
+                unit_price_original = float(item.unit_price or 0)
+                product.update_stock_by_location(
+                    item.stock_location, 
+                    -quantity_to_reverse,
+                    unit_cost_override=unit_price_original
+                )
                 
-                new_total_stock_qty = Decimal(product.total_stock_all_locations)
+                # Recalculer le PMP après la décrémentation
+                new_total_stock_qty = Decimal(str(product.total_stock_all_locations))
                 if new_total_stock_qty > 0:
                     if product.total_stock_value < 0:
                         product.total_stock_value = Decimal('0.0')
@@ -570,18 +576,17 @@ def edit_purchase(id):
                         current_app.logger.info(f"DEBUG - Consommable annulé: {product.name}, Stock après: {product.stock_consommables}")
                     
                     elif product.product_type == 'ingredient':
-                        # Pour les ingrédients, on décrémente stock ET valeur
-                        product.update_stock_by_location(stock_location_key, -quantity_to_reverse)
-                        product.total_stock_value = (product.total_stock_value or Decimal('0.0')) - value_to_reverse
-                        
-                        # Décrémenter la valeur par emplacement
-                        if stock_location_key == "stock_ingredients_magasin":
-                            product.valeur_stock_ingredients_magasin = float(getattr(product, "valeur_stock_ingredients_magasin", 0.0)) - float(value_to_reverse)
-                        elif stock_location_key == "stock_ingredients_local":
-                            product.valeur_stock_ingredients_local = float(getattr(product, "valeur_stock_ingredients_local", 0.0)) - float(value_to_reverse)
+                        # Utiliser unit_cost_override avec le prix d'achat original
+                        # update_stock_by_location gère la décrémentation de stock ET valeur de manière synchronisée
+                        unit_price_original = float(item.unit_price or 0)
+                        product.update_stock_by_location(
+                            stock_location_key, 
+                            -quantity_to_reverse,
+                            unit_cost_override=unit_price_original
+                        )
                         
                         # Recalculer le PMP
-                        new_total_stock_qty = Decimal(product.total_stock_all_locations)
+                        new_total_stock_qty = Decimal(str(product.total_stock_all_locations))
                         if new_total_stock_qty > 0:
                             if product.total_stock_value < 0:
                                 product.total_stock_value = Decimal('0.0')

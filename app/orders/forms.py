@@ -31,7 +31,7 @@ class OrderItemForm(FlaskForm):
     quantity = DecimalField(
         'Quantité',
         validators=[DataRequired("La quantité est requise.")],
-        default=1
+        # default=1  <-- Removed
     )
 
 class CustomerOrderItemForm(FlaskForm):
@@ -47,7 +47,7 @@ class CustomerOrderItemForm(FlaskForm):
     quantity = DecimalField(
         'Quantité',
         validators=[DataRequired("La quantité est requise.")],
-        default=1
+        # default=1 <-- Removed
     )
 
 class ProductionOrderItemForm(FlaskForm):
@@ -63,7 +63,7 @@ class ProductionOrderItemForm(FlaskForm):
     quantity = DecimalField(
         'Quantité',
         validators=[DataRequired("La quantité est requise.")],
-        default=1
+        # default=1 <-- Removed
     )
 
 class OrderForm(FlaskForm):

@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_consumables_module'
-down_revision = '7950b875b780'  # Migration initiale VPS
+down_revision = 'd95e533afe39'  # Rebased on local root (was VPS initial reference)
 branch_labels = None
 depends_on = None
 

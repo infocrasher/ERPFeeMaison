@@ -5,6 +5,7 @@ from sqlalchemy import text
 from extensions import db, csrf
 from app.employees.models import Employee, AttendanceRecord
 import json
+import requests
 
 @zkteco.route('/')
 def root():
@@ -70,6 +71,32 @@ def attendance():
             try:
                 # Essayer de parser les données JSON
                 if data:
+                    # 🚀 LOGIQUE DE RELAIS VERS LE VPS (Si activé dans config)
+                    if current_app.config.get('ZKTECO_SYNC_ENABLED'):
+                        try:
+                            vps_url = current_app.config.get('ZKTECO_VPS_URL')
+                            current_app.logger.info(f"🔄 Relai activé : Envoi vers {vps_url}")
+                            
+                            # Copier les headers pertinents
+                            headers = {
+                                'Authorization': request.headers.get('Authorization', ''),
+                                'Content-Type': request.headers.get('Content-Type', 'application/json'),
+                                'User-Agent': 'FeeMaison-LocalBridge'
+                            }
+                            
+                            # Envoyer au VPS avec un timeout court pour ne pas bloquer
+                            resp = requests.post(
+                                vps_url, 
+                                data=data, 
+                                headers=headers, 
+                                timeout=5,
+                                verify=False # Au cas où SSL auto-signé ou expiré
+                            )
+                            current_app.logger.info(f"✅ Réponse du VPS: {resp.status_code}")
+                            
+                        except Exception as e:
+                            current_app.logger.error(f"❌ Échec du relai vers VPS: {str(e)}")
+
                     try:
                         json_data = json.loads(data.decode('utf-8'))
                         current_app.logger.info(f"Données JSON parsées: {json_data}")
