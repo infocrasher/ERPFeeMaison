@@ -14,7 +14,6 @@ from models import Order, OrderItem, Product, Recipe, RecipeIngredient, Delivery
 from datetime import datetime, date
 from decimal import Decimal
 from sqlalchemy import func
-from sqlalchemy.orm import joinedload
 
 def analyser_cogs_excessif(target_date_str):
     """Analyse pourquoi le COGS est excessif"""
@@ -43,13 +42,7 @@ def analyser_cogs_excessif(target_date_str):
         orders_created = Order.query.filter(
             func.date(Order.created_at) == target_date,
             Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
-        ).options(
-            joinedload(Order.items)
         ).all()
-        
-        # Charger les delivery_debts séparément pour éviter problème avec backref
-        for order in orders_created:
-            order.delivery_debts_list = DeliveryDebt.query.filter_by(order_id=order.id).all()
         
         print(f"   Total commandes créées : {len(orders_created)}")
         
@@ -93,30 +86,17 @@ def analyser_cogs_excessif(target_date_str):
         # Charger toutes les commandes complétées
         all_orders = Order.query.filter(
             Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
-        ).options(
-            joinedload(Order.items)
         ).all()
-        
-        # Charger les delivery_debts pour toutes les commandes
-        order_ids = [order.id for order in all_orders]
-        all_debts = DeliveryDebt.query.filter(DeliveryDebt.order_id.in_(order_ids)).all()
-        debts_by_order = {}
-        for debt in all_debts:
-            if debt.order_id not in debts_by_order:
-                debts_by_order[debt.order_id] = []
-            debts_by_order[debt.order_id].append(debt)
         
         orders_delivered = []
         cogs_delivered = Decimal('0.0')
         
         def get_order_revenue_date(order):
             """Même logique que _get_order_revenue_date"""
-            # Utiliser les dettes chargées séparément
-            debts = debts_by_order.get(order.id, [])
-            if debts:
-                debt = debts[0]
-                if debt and debt.created_at:
-                    return debt.created_at.date()
+            # Chercher une dette pour cette commande
+            debt = DeliveryDebt.query.filter_by(order_id=order.id).first()
+            if debt and debt.created_at:
+                return debt.created_at.date()
             return order.due_date.date() if order.due_date else order.created_at.date()
         
         for order in all_orders:
