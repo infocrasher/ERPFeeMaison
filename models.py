@@ -624,29 +624,37 @@ class Order(db.Model):
         Incrémente le stock comptoir ET sa valeur pour les produits finis.
         Calcule aussi le PMP du produit fini.
         UTILISÉ UNIQUEMENT POUR LES ORDRES DE PRODUCTION POUR LE COMPTOIR.
+        
+        IMPORTANT: On utilise unit_cost_override pour que update_stock_by_location
+        utilise le coût de la recette (et non le cost_price actuel du produit).
+        Cela évite la double comptabilisation et garantit la cohérence entre
+        valeur_stock_comptoir et total_stock_value.
         """
         from extensions import db
         for item in self.items:
             product_fini = item.product
             if product_fini and product_fini.recipe_definition:
-                # 1. Incrémenter la quantité en stock comptoir
-                quantity_to_increment = float(item.quantity)
-                product_fini.update_stock_by_location('stock_comptoir', quantity_to_increment)
-                
-                # 2. Calculer la valeur à ajouter (basée sur le coût de production)
+                # 1. Calculer le coût unitaire basé sur la recette
                 cost_per_unit = product_fini.recipe_definition.cost_per_unit
-                value_to_increment = cost_per_unit * Decimal(str(quantity_to_increment))
+                quantity_to_increment = float(item.quantity)
                 
-                # 3. Incrémenter la valeur totale du stock
-                product_fini.total_stock_value = (product_fini.total_stock_value or Decimal('0.0')) + value_to_increment
+                # 2. Incrémenter le stock comptoir avec le coût de la recette
+                # unit_cost_override garantit que la valeur ajoutée est basée sur le coût de production
+                product_fini.update_stock_by_location(
+                    'stock_comptoir', 
+                    quantity_to_increment,
+                    unit_cost_override=float(cost_per_unit)
+                )
                 
-                # 4. Recalculer le PMP du produit fini
+                # 3. Recalculer le PMP du produit fini
+                # total_stock_value et valeur_stock_comptoir sont déjà mis à jour par update_stock_by_location
                 new_total_stock_qty = Decimal(str(product_fini.total_stock_all_locations))
                 if new_total_stock_qty > 0:
                     product_fini.cost_price = product_fini.total_stock_value / new_total_stock_qty
                 
                 db.session.add(product_fini)
-                print(f"INCREMENT COMPTOIR: {quantity_to_increment} {product_fini.unit} de {product_fini.name} (Valeur: {value_to_increment:.2f} DA)")
+                value_added = cost_per_unit * Decimal(str(quantity_to_increment))
+                print(f"INCREMENT COMPTOIR: {quantity_to_increment} {product_fini.unit} de {product_fini.name} (Valeur: {value_added:.2f} DA)")
     
     def _increment_stock_value_only_for_customer_order(self):
         """
