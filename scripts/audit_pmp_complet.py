@@ -95,7 +95,7 @@ def audit_pmp_complet():
         
         purchase_items = PurchaseItem.query.filter_by(product_id=product.id).join(
             Purchase, Purchase.id == PurchaseItem.purchase_id
-        ).order_by(Purchase.purchase_date.asc()).all()
+        ).order_by(Purchase.created_at.asc()).all()
         
         print(f"   Total bons d'achat : {len(purchase_items)}")
         print()
@@ -116,7 +116,7 @@ def audit_pmp_complet():
                     total_quantity += qty
                     total_value += qty * unit_price
                 
-                date_str = purchase.purchase_date.strftime('%d/%m/%Y') if purchase.purchase_date else 'N/A'
+                date_str = purchase.created_at.strftime('%d/%m/%Y') if purchase.created_at else 'N/A'
                 ref = (purchase.reference or 'N/A')[:23]
                 status = purchase.status or 'N/A'
                 
@@ -216,7 +216,7 @@ def audit_pmp_complet():
             # Récupérer le dernier achat
             last_purchase = PurchaseItem.query.filter_by(product_id=p.id).join(
                 Purchase
-            ).order_by(Purchase.purchase_date.desc()).first()
+            ).order_by(Purchase.created_at.desc()).first()
             
             if last_purchase:
                 last_price = float(last_purchase.unit_price or 0)
