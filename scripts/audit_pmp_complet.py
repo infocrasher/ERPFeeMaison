@@ -109,8 +109,10 @@ def audit_pmp_complet():
             
             for item in purchase_items:
                 purchase = item.purchase
-                qty = Decimal(str(item.quantity or 0))
-                unit_price = Decimal(str(item.unit_price or 0))
+                # Utiliser original_quantity si disponible, sinon quantity_ordered
+                qty = Decimal(str(item.original_quantity or item.quantity_ordered or 0))
+                # Utiliser original_unit_price si disponible, sinon unit_price
+                unit_price = Decimal(str(item.original_unit_price or item.unit_price or 0))
                 
                 if qty > 0 and unit_price > 0:
                     total_quantity += qty
@@ -118,7 +120,7 @@ def audit_pmp_complet():
                 
                 date_str = purchase.created_at.strftime('%d/%m/%Y') if purchase.created_at else 'N/A'
                 ref = (purchase.reference or 'N/A')[:23]
-                status = purchase.status or 'N/A'
+                status = str(purchase.status.value if purchase.status else 'N/A')
                 
                 print(f"   {date_str:<12} {ref:<25} {qty:<10.0f} {unit_price:<12.2f} {qty * unit_price:<15.2f} {status:<12}")
             
