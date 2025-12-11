@@ -10,8 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from app import create_app
 from extensions import db
-from models import Order, OrderItem, Product, Recipe, RecipeIngredient
-from app.deliverymen.models import DeliveryDebt
+from models import Order, OrderItem, Product, Recipe, RecipeIngredient, DeliveryDebt
 from datetime import datetime, date
 from decimal import Decimal
 from sqlalchemy import func
