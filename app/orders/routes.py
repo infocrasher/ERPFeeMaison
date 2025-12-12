@@ -85,7 +85,10 @@ def new_customer_order():
                 order_type='customer_order',
                 customer_name=form.customer_name.data,
                 customer_phone=form.customer_phone.data,
-                customer_address=form.customer_address.data,
+                # FIX: Utiliser la zone (Commune) comme adresse si l'adresse est vide
+                # car le formulaire n'a pas de champ adresse explicite pour l'instant
+                customer_address=form.customer_address.data or form.delivery_zone.data,
+                delivery_zone=form.delivery_zone.data,
                 delivery_option=form.delivery_option.data,
                 due_date=form.due_date.data,
                 delivery_cost=form.delivery_cost.data,
