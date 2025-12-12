@@ -378,6 +378,17 @@ def edit_customer_order(order_id):
             order.customer_address = form.customer_address.data
             order.delivery_zone = form.delivery_zone.data
             order.delivery_option = form.delivery_option.data
+            
+            # FILTRE STATUS (12/12/2025) : Mise à jour auto du statut pour éviter les commandes fantômes
+            # Si on passe en livraison alors qu'on attendait le retrait -> Prêt à livrer
+            if order.delivery_option == 'delivery' and order.status == 'waiting_for_pickup':
+                order.status = 'ready_at_shop'
+                flash('Statut mis à jour automatiquement vers "Prêt à livrer"', 'info')
+            
+            # Si on passe en retrait alors qu'on était prêt à livrer -> En attente de retrait
+            elif order.delivery_option == 'pickup' and order.status == 'ready_at_shop':
+                order.status = 'waiting_for_pickup'
+                flash('Statut mis à jour automatiquement vers "En attente de retrait"', 'info')
             order.due_date = form.due_date.data  # Modifier la date
             order.delivery_cost = form.delivery_cost.data or Decimal('0.00')
             order.notes = form.notes.data
