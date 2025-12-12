@@ -15,13 +15,10 @@ orders = Blueprint('orders', __name__)
 def check_stock_availability(form_items):
     """
     Vérifie la disponibilité des ingrédients pour une liste d'articles de commande.
-    Retourne (True, []) si tout est disponible.
-    Retourne (False, details) si stock insuffisant, avec détails des manquants.
+    Retourne True si tout est disponible, False sinon, et flashe des messages d'erreur.
     """
     print("\n--- DEBUT DE LA VERIFICATION DE STOCK ---")
     is_sufficient = True
-    missing_details = []
-
     for item_data in form_items:
         product_id = item_data.get('product')
         quantity_ordered = float(item_data.get('quantity', 0))
@@ -34,34 +31,48 @@ def check_stock_availability(form_items):
                 recipe = product_fini.recipe_definition
                 labo_key = recipe.production_location
                 labo_name = "Labo A (Stock Magasin)" if labo_key == 'ingredients_magasin' else "Labo B (Stock Local)"
-                
+                print(f"    -> Recette trouvée: '{recipe.name}'. Doit être produit dans: {labo_name} (colonne: {labo_key})")
+
                 for ingredient_in_recipe in recipe.ingredients.all():
+                    # --- DEBUT DE LA CORRECTION ---
+                    
+                    # 1. Calcul de la quantité d'ingrédient nécessaire pour UNE SEULE unité de produit fini
+                    # Ex: (4000g de semoule) / (12 galettes) = 333.33g de semoule par galette
                     qty_per_unit = float(ingredient_in_recipe.quantity_needed) / float(recipe.yield_quantity)
+                    
+                    # 2. Calcul du besoin total pour la commande actuelle
+                    # Ex: (333.33g par galette) * (20 galettes commandées) = 6666.6g
                     needed_qty = qty_per_unit * quantity_ordered
                     
+                    # --- FIN DE LA CORRECTION ---
+
                     ingredient_product = ingredient_in_recipe.product
                     
+                    print(f"    - Ingrédient requis: {ingredient_product.name}")
+                    print(f"      - Quantité par unité de recette: {qty_per_unit:.3f}g") # Log mis à jour
+                    print(f"      - Quantité totale nécessaire pour la commande: {needed_qty:.3f}g") # Log mis à jour
+
+                    # Correction du mapping pour le stock
                     location_map = {
                         "ingredients_magasin": "stock_ingredients_magasin",
                         "ingredients_local": "stock_ingredients_local"
                     }
                     stock_attr = location_map.get(labo_key, labo_key)
                     available_stock = ingredient_product.get_stock_by_location(stock_attr)
+                    print(f"      - Stock disponible dans '{stock_attr}': {available_stock or 0:.3f}g")
                     
                     if not available_stock or available_stock < needed_qty:
                         is_sufficient = False
-                        missing_details.append({
-                            'product_name': product_fini.name,
-                            'ingredient': ingredient_product.name,
-                            'location': labo_name,
-                            'needed': round(needed_qty, 3),
-                            'available': round(available_stock or 0, 3),
-                            'unit': ingredient_product.unit
-                        })
-                        print(f"      - !!! STOCK INSUFFISANT : {ingredient_product.name} !!!")
-
+                        print(f"      - !!! STOCK INSUFFISANT !!!")
+                        flash(f"Stock insuffisant pour '{ingredient_product.name}' dans {labo_name}. "
+                              f"Besoin: {needed_qty:.3f}g, Dispo: {available_stock or 0:.3f}g", 'danger')
+                    else:
+                        print(f"      - Stock OK.")
+            else:
+                print(f"    -> Pas de recette trouvée pour ce produit. Vérification ignorée.")
+    
     print(f"\n--- FIN DE LA VERIFICATION. Résultat final : {is_sufficient} ---")
-    return is_sufficient, missing_details
+    return is_sufficient
 # ### FIN DU BLOC A AJOUTER ###
 
 
@@ -74,10 +85,7 @@ def new_customer_order():
     if form.validate_on_submit():
         try:
             # On appelle notre nouvelle fonction de vérification
-            stock_is_sufficient, missing_details = check_stock_availability(form.items.data)
-            if not stock_is_sufficient and missing_details:
-                from flask import session
-                session['missing_stock_warnings'] = missing_details
+            stock_is_sufficient = check_stock_availability(form.items.data)
             initial_status = 'in_production' if stock_is_sufficient else 'pending'
 
             order = Order(
@@ -85,10 +93,7 @@ def new_customer_order():
                 order_type='customer_order',
                 customer_name=form.customer_name.data,
                 customer_phone=form.customer_phone.data,
-                # FIX: Utiliser la zone (Commune) comme adresse si l'adresse est vide
-                # car le formulaire n'a pas de champ adresse explicite pour l'instant
-                customer_address=form.customer_address.data or form.delivery_zone.data,
-                delivery_zone=form.delivery_zone.data,
+                customer_address=form.customer_address.data,
                 delivery_option=form.delivery_option.data,
                 due_date=form.due_date.data,
                 delivery_cost=form.delivery_cost.data,
@@ -170,10 +175,7 @@ def new_production_order():
     if form.validate_on_submit():
         try:
             # On appelle notre nouvelle fonction de vérification
-            stock_is_sufficient, missing_details = check_stock_availability(form.items.data)
-            if not stock_is_sufficient and missing_details:
-                from flask import session
-                session['missing_stock_warnings'] = missing_details
+            stock_is_sufficient = check_stock_availability(form.items.data)
             initial_status = 'in_production' if stock_is_sufficient else 'pending'
 
             order = Order(
@@ -362,10 +364,7 @@ def edit_customer_order(order_id):
     if form.validate_on_submit():
         try:
             # Vérifier les stocks avant de modifier
-            stock_is_sufficient, missing_details = check_stock_availability(form.items.data)
-            if not stock_is_sufficient and missing_details:
-                from flask import session
-                session['missing_stock_warnings'] = missing_details
+            stock_is_sufficient = check_stock_availability(form.items.data)
             
             # Supprimer les anciens items
             for item in order.items:
@@ -378,20 +377,17 @@ def edit_customer_order(order_id):
             order.customer_address = form.customer_address.data
             order.delivery_zone = form.delivery_zone.data
             order.delivery_option = form.delivery_option.data
-            
-            # FILTRE STATUS (12/12/2025) : Mise à jour auto du statut pour éviter les commandes fantômes
-            # Si on passe en livraison alors qu'on attendait le retrait -> Prêt à livrer
-            if order.delivery_option == 'delivery' and order.status == 'waiting_for_pickup':
-                order.status = 'ready_at_shop'
-                flash('Statut mis à jour automatiquement vers "Prêt à livrer"', 'info')
-            
-            # Si on passe en retrait alors qu'on était prêt à livrer -> En attente de retrait
-            elif order.delivery_option == 'pickup' and order.status == 'ready_at_shop':
-                order.status = 'waiting_for_pickup'
-                flash('Statut mis à jour automatiquement vers "En attente de retrait"', 'info')
             order.due_date = form.due_date.data  # Modifier la date
             order.delivery_cost = form.delivery_cost.data or Decimal('0.00')
             order.notes = form.notes.data
+
+            # 🔄 SYNCHRONISATION AUTOMATIQUE STATUT <-> LIVRAISON
+            if order.delivery_option == 'delivery' and order.status == 'waiting_for_pickup':
+                order.status = 'ready_at_shop'
+                flash('Statut mis à jour : En attente -> Prêt (Livraison)', 'info')
+            elif order.delivery_option == 'pickup' and order.status == 'ready_at_shop':
+                order.status = 'waiting_for_pickup'
+                flash('Statut mis à jour : Prêt -> En attente (Retrait)', 'info')
             
             # Ajouter les nouveaux items
             for item_data in form.items.data:
@@ -478,10 +474,7 @@ def edit_production_order(order_id):
     if form.validate_on_submit():
         try:
             # Vérifier les stocks avant de modifier
-            stock_is_sufficient, missing_details = check_stock_availability(form.items.data)
-            if not stock_is_sufficient and missing_details:
-                from flask import session
-                session['missing_stock_warnings'] = missing_details
+            stock_is_sufficient = check_stock_availability(form.items.data)
             
             # Supprimer les anciens items
             for item in order.items:
@@ -570,55 +563,15 @@ def edit_order_status(order_id):
         return redirect(url_for('orders.view_order', order_id=order.id))
     return render_template('orders/order_status_form.html', form=form, order=order, title='Modifier le Statut')
 
-@orders.route('/<int:order_id>/change-status-to-production', methods=['POST'])
-@login_required
-@admin_required
-def change_status_to_production(order_id):
-    """Change order status from 'pending' to 'in_production' via AJAX"""
-    order = db.session.get(Order, order_id) or abort(404)
-    
-    if order.status == 'pending':
-        order.status = 'in_production'
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Statut changé en production'})
-    else:
-        return jsonify({'success': False, 'message': f'Le statut actuel est "{order.status}", impossible de changer'})
-
-
 @orders.route('/calendar')
 @login_required
 @admin_required
 def orders_calendar():
     orders = Order.query.filter(Order.due_date.isnot(None)).all()
     events = []
-    
-    # Mapping couleurs (Bootstrap -> Hex approximatif)
-    status_colors = {
-        'pending': '#6c757d',          # Secondary
-        'in_production': '#ffc107',    # Warning
-        'ready_at_shop': '#0dcaf0',    # Info
-        'waiting_for_pickup': '#0d6efd', # Primary
-        'out_for_delivery': '#0d6efd',   # Primary
-        'delivered': '#198754',        # Success
-        'completed': '#198754',        # Success
-        'cancelled': '#dc3545'         # Danger
-    }
-
     for order in orders:
         if order.should_appear_in_calendar():
-            color = status_colors.get(order.status, '#6c757d')
-            title = f"#{order.id} - {order.customer_name or 'Production'}"
-            if order.status == 'pending':
-                title += " (En attente)"
-            
-            events.append({
-                'id': order.id,
-                'title': title,
-                'start': order.due_date.isoformat(),
-                'url': url_for('orders.view_order', order_id=order.id),
-                'backgroundColor': color,
-                'borderColor': color
-            })
+            events.append({'id': order.id, 'title': f"#{order.id} - {order.customer_name or 'Production'}", 'start': order.due_date.isoformat(), 'url': url_for('orders.view_order', order_id=order.id), 'backgroundColor': '#ffc107' if order.status == 'in_production' else '#6c757d'})
     return render_template('orders/orders_calendar.html', events=events, title="Calendrier des Commandes")
 
 @orders.route('/<int:order_id>/pay', methods=['POST'])

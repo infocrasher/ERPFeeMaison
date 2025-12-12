@@ -172,8 +172,8 @@
                                         <span class="hours-badge">
                                             <i class="fas fa-hourglass-half"></i>
                                             {% if data.total_hours > 0 %}
-                                            {{ data.total_hours|int }}h{{ "%02d"|format(((data.total_hours % 1) *
-                                            60)|int) }}m
+                                            {{ data.total_hours|int }}h{{ "%02d"|format(((data.total_hours %
+                                            1) * 60)|int) }}m
                                             {% else %}
                                             0h00m
                                             {% endif %}
