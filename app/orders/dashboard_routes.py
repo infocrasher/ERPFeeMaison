@@ -109,6 +109,13 @@ def production_dashboard():
         products_list = []
         for item in order_items:
             if item.product:
+                # FILTRE PRODUCTION (Demandé le 12/12/2025)
+                # Si le produit fini est marqué comme "Peut être acheté" (can_be_purchased=True),
+                # on ne l'affiche pas en production (ex: Canettes, Jus...).
+                # On suppose qu'il est géré par le stock magasin/frigo, pas par les cuisiniers.
+                if item.product.can_be_purchased:
+                    continue
+                    
                 qty = int(item.quantity) if float(item.quantity).is_integer() else float(item.quantity)
                 products_list.append({
                     'name': item.product.name,
