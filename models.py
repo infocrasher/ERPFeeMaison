@@ -696,8 +696,13 @@ class Order(db.Model):
             if stock_comptoir_avant != stock_comptoir_apres_total_stock:
                 current_app.logger.error(f"TRACE - Stock comptoir modifié APRÈS lecture initiale! Avant: {stock_comptoir_avant}, Après: {stock_comptoir_apres_total_stock}")
             
-            # Incrémenter la valeur totale du stock (pour la comptabilité)
-            product_fini.total_stock_value = (product_fini.total_stock_value or Decimal('0.0')) + value_to_increment
+            # CORRECTION BUG PMP DOUBLING (12/12/2025)
+            # On ne doit PAS incrémenter la valeur du stock global pour une commande client
+            # car la quantité physique n'est pas incrémentée (réservée).
+            # Si on augmente la valeur sans augmenter la quantité, le PMP explose.
+            
+            # product_fini.total_stock_value = (product_fini.total_stock_value or Decimal('0.0')) + value_to_increment
+            current_app.logger.info(f"FIX PMP - Commande #{self.id}: Pas de mise à jour de total_stock_value pour éviter doublon.")
             
             # Vérifier le stock_comptoir après modification de total_stock_value
             stock_comptoir_apres_total_stock = float(product_fini.stock_comptoir or 0.0)
@@ -707,6 +712,10 @@ class Order(db.Model):
                 current_app.logger.error(f"TRACE - Stack: {''.join(stack)}")
             
             # Recalculer le PMP du produit fini
+            # CORRECTION BUG PMP DOUBLING
+            # On ne doit PAS recalculer le PMP ici car le stock n'a pas changé.
+            # Le PMP doit rester stable (basé sur la production/achat stocké).
+            
             # IMPORTANT: Pour les commandes client, on ne doit PAS inclure le stock_comptoir
             # dans le calcul du PMP car ces produits sont réservés, pas disponibles à la vente
             # On calcule le stock total SANS le stock_comptoir pour le PMP
@@ -724,8 +733,9 @@ class Order(db.Model):
             if stock_comptoir_avant != stock_comptoir_apres_calc_pmp:
                 current_app.logger.error(f"TRACE - Stock comptoir modifié APRÈS calcul PMP (avant modification cost_price)! Avant: {stock_comptoir_avant}, Après: {stock_comptoir_apres_calc_pmp}")
             
-            if stock_pour_pmp > 0:
-                product_fini.cost_price = product_fini.total_stock_value / stock_pour_pmp
+            # if stock_pour_pmp > 0:
+            #    product_fini.cost_price = product_fini.total_stock_value / stock_pour_pmp
+            current_app.logger.info(f"FIX PMP - Commande #{self.id}: Pas de recalcul de cost_price pour éviter doublon.")
             
             # Vérifier le stock_comptoir après modification de cost_price
             stock_comptoir_apres_cost_price = float(product_fini.stock_comptoir or 0.0)
