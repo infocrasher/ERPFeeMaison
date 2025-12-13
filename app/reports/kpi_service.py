@@ -2,7 +2,7 @@ from datetime import datetime, date, timedelta
 from sqlalchemy import func, case
 from extensions import db
 from models import Order, OrderItem, Product
-from app.employees.models import Employee, AttendanceSummary
+from app.employees.models import Employee, AttendanceSummary, AttendanceRecord
 from app.sales.models import CashMovement
 from app.purchases.models import Purchase
 from app.inventory.models import DailyWaste
@@ -88,17 +88,18 @@ class RealKpiService:
             cogs_ingredients = cogs_query.scalar() or 0.0
 
         # B. Coût Main d'Oeuvre (Labor Cost)
-        # Basé sur les présences du jour
+        # Basé sur les présences du jour (Temps Réel)
         labor_cost = 0.0
-        attendances = AttendanceSummary.query.filter_by(work_date=target_date).all()
         
-        for att in attendances:
-            emp = att.employee
-            if not emp:
-                continue
-                
-            hours = float(att.worked_hours or 0)
-            if hours <= 0:
+        # On utilise get_daily_summary pour avoir les heures calculées à la volée
+        # au lieu de AttendanceSummary qui peut être vide
+        daily_attendance = AttendanceRecord.get_daily_summary(target_date)
+        
+        for emp_data in daily_attendance.values():
+            emp = emp_data['employee']
+            hours = float(emp_data['total_hours'] or 0)
+            
+            if not emp or hours <= 0:
                 continue
                 
             # Calcul du taux horaire
