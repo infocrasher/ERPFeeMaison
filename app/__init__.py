@@ -311,11 +311,9 @@ def create_app(config_name=None):
     app.register_blueprint(reports, url_prefix='/admin/reports')
     print("📊 Module Rapports enregistré")
     
-    # ⏸️ MODULE AI DÉSACTIVÉ TEMPORAIREMENT (ralentit le dashboard)
-    # Pour réactiver : décommenter les 3 lignes ci-dessous
-    # from app.ai import ai
-    # app.register_blueprint(ai, url_prefix='/ai')
-    # print("🤖 Module AI enregistré (Prophet + LLM)")
-    print("⏸️ Module AI désactivé (performance)")
+    # ✅ MODULE AI RÉACTIVÉ
+    from app.ai import ai
+    app.register_blueprint(ai, url_prefix='/ai')
+    print("🤖 Module AI enregistré (Prophet + LLM)")
 
     return app
