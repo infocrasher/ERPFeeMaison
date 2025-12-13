@@ -869,12 +869,12 @@ def build_metric_cards(overview, prime_cost, sales_block, stock_summary, cash_bl
             'tone': 'success'
         },
         {
-            'label': 'COGS (Coûts)',
+            'label': 'Prime Cost (Coût de Revient)',
             'value': cogs_total,
             'unit': 'DA',
             'delta': None,
             'breakdown': [
-                {'label': 'Mat', 'value': real_kpis['cogs']['ingredients']},
+                {'label': 'COGS (Mat)', 'value': real_kpis['cogs']['ingredients']},
                 {'label': 'MO', 'value': real_kpis['cogs']['labor']}
             ],
             'icon': 'bi-tools',
