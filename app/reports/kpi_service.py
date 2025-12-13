@@ -37,9 +37,11 @@ class RealKpiService:
 
         # B. Commandes Livrées/Terminées ce jour (via due_date)
         # Note: On utilise due_date car updated_at n'existe pas et due_date représente la date de livraison prévue/réelle
+        # IMPORTANT: Exclure les ordres de production (counter_production_request) qui ont montant=0
         shop_revenue = db.session.query(func.sum(Order.total_amount))\
             .filter(
                 Order.order_type != 'in_store',
+                Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
                 func.date(Order.due_date) == target_date
             ).scalar() or 0.0
@@ -47,6 +49,7 @@ class RealKpiService:
         shop_count = db.session.query(func.count(Order.id))\
             .filter(
                 Order.order_type != 'in_store',
+                Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
                 func.date(Order.due_date) == target_date
             ).scalar() or 0
@@ -66,9 +69,10 @@ class RealKpiService:
         ).all()
         pos_ids = [r[0] for r in pos_order_ids]
         
-        # Identifiants des commandes Shop livrées ce jour
+        # Identifiants des commandes Shop livrées ce jour (exclure ordres de production)
         shop_order_ids = db.session.query(Order.id).filter(
             Order.order_type != 'in_store',
+            Order.order_type != 'counter_production_request',  # Exclure les ordres de production
             Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
             func.date(Order.due_date) == target_date
         ).all()
@@ -146,6 +150,7 @@ class RealKpiService:
         shop_orders_debt = db.session.query(Order.total_amount, Order.amount_paid)\
             .filter(
                 Order.order_type != 'in_store',
+                Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
                 func.date(Order.due_date) == target_date
             ).all()

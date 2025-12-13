@@ -133,9 +133,10 @@ def _get_orders_filter_real(report_date=None, start_date=None, end_date=None):
             func.date(Order.created_at) == report_date
         )
         
-        # Shop : livrées ce jour
+        # Shop : livrées ce jour (exclure ordres de production)
         shop_condition = and_(
             Order.order_type != 'in_store',
+            Order.order_type != 'counter_production_request',  # Exclure les ordres de production
             Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
             func.date(Order.due_date) == report_date
         )
@@ -150,9 +151,10 @@ def _get_orders_filter_real(report_date=None, start_date=None, end_date=None):
             func.date(Order.created_at) <= end_date
         )
         
-        # Shop : livrées dans la période
+        # Shop : livrées dans la période (exclure ordres de production)
         shop_condition = and_(
             Order.order_type != 'in_store',
+            Order.order_type != 'counter_production_request',  # Exclure les ordres de production
             Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
             func.date(Order.due_date) >= start_date,
             func.date(Order.due_date) <= end_date
@@ -196,9 +198,11 @@ def _compute_revenue_real(report_date=None, start_date=None, end_date=None):
         
         # Shop : commandes livrées ce jour (due_date)
         # Utiliser Order.total_amount comme RealKpiService pour inclure les frais de livraison
+        # IMPORTANT: Exclure les ordres de production (counter_production_request) qui ont montant=0
         shop_revenue = db.session.query(func.sum(Order.total_amount))\
             .filter(
                 Order.order_type != 'in_store',
+                Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
                 func.date(Order.due_date) == report_date
             ).scalar() or 0.0
@@ -218,9 +222,11 @@ def _compute_revenue_real(report_date=None, start_date=None, end_date=None):
         
         # Shop : commandes livrées dans la période (due_date)
         # Utiliser Order.total_amount comme RealKpiService pour inclure les frais de livraison
+        # IMPORTANT: Exclure les ordres de production (counter_production_request) qui ont montant=0
         shop_revenue = db.session.query(func.sum(Order.total_amount))\
             .filter(
                 Order.order_type != 'in_store',
+                Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
                 func.date(Order.due_date) >= start_date,
                 func.date(Order.due_date) <= end_date
