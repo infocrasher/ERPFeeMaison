@@ -35,15 +35,16 @@ class RealKpiService:
                 func.date(Order.created_at) == target_date
             ).scalar() or 0
 
-        # B. Commandes Livrées/Terminées ce jour (via due_date)
-        # Note: On utilise due_date car updated_at n'existe pas et due_date représente la date de livraison prévue/réelle
-        # IMPORTANT: Exclure les ordres de production (counter_production_request) qui ont montant=0
+        # B. Commandes Livrées/Terminées ce jour
+        # IMPORTANT: Ne comptabiliser que les commandes créées ET livrées le même jour
+        # Exclure les ordres de production (counter_production_request) qui ont montant=0
         shop_revenue = db.session.query(func.sum(Order.total_amount))\
             .filter(
                 Order.order_type != 'in_store',
                 Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
-                func.date(Order.due_date) == target_date
+                func.date(Order.created_at) == target_date,  # Créée le jour J
+                func.date(Order.due_date) == target_date  # Livrée le jour J
             ).scalar() or 0.0
 
         shop_count = db.session.query(func.count(Order.id))\
@@ -51,7 +52,8 @@ class RealKpiService:
                 Order.order_type != 'in_store',
                 Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
-                func.date(Order.due_date) == target_date
+                func.date(Order.created_at) == target_date,  # Créée le jour J
+                func.date(Order.due_date) == target_date  # Livrée le jour J
             ).scalar() or 0
             
         total_revenue = float(pos_revenue) + float(shop_revenue)
@@ -69,12 +71,13 @@ class RealKpiService:
         ).all()
         pos_ids = [r[0] for r in pos_order_ids]
         
-        # Identifiants des commandes Shop livrées ce jour (exclure ordres de production)
+        # Identifiants des commandes Shop créées ET livrées ce jour (exclure ordres de production)
         shop_order_ids = db.session.query(Order.id).filter(
             Order.order_type != 'in_store',
             Order.order_type != 'counter_production_request',  # Exclure les ordres de production
             Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
-            func.date(Order.due_date) == target_date
+            func.date(Order.created_at) == target_date,  # Créée le jour J
+            func.date(Order.due_date) == target_date  # Livrée le jour J
         ).all()
         shop_ids = [r[0] for r in shop_order_ids]
         
@@ -152,7 +155,8 @@ class RealKpiService:
                 Order.order_type != 'in_store',
                 Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
-                func.date(Order.due_date) == target_date
+                func.date(Order.created_at) == target_date,  # Créée le jour J
+                func.date(Order.due_date) == target_date  # Livrée le jour J
             ).all()
             
         for o_total, o_paid in shop_orders_debt:
