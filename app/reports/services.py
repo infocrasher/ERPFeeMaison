@@ -591,49 +591,36 @@ class PrimeCostReportService:
         # Chiffre d'affaires (utilise DailySalesReportService qui est maintenant cohérent)
         revenue = DailySalesReportService.generate(report_date)['total_revenue']
         
-        # COGS (Cost of Goods Sold) - calcul correct via recettes et ingrédients
-        # Pour chaque produit vendu :
-        # - Si le produit a une recette : calculer le coût via les ingrédients consommés
-        # - Sinon : utiliser Product.cost_price
-        # IMPORTANT : Utiliser le même filtre que le revenue pour garantir la cohérence
-        from models import Recipe, RecipeIngredient
-        from decimal import Decimal
+        # COGS (Cost of Goods Sold) - calcul cohérent avec RealKpiService
+        # IMPORTANT : Utiliser la même méthode que RealKpiService pour garantir la cohérence
+        # On calcule directement via une requête SQL : OrderItem.quantity * Product.cost_price
         
-        # Utiliser le filtre cohérent avec RealKpiService (même que pour le revenue)
-        orders_filter = _get_orders_filter_real(report_date=report_date)
-        orders = Order.query.filter(orders_filter).all()
+        # Récupérer les IDs des commandes concernées (même logique que RealKpiService)
+        pos_order_ids = db.session.query(Order.id).filter(
+            Order.order_type == 'in_store',
+            func.date(Order.created_at) == report_date
+        ).all()
+        pos_ids = [r[0] for r in pos_order_ids]
         
-        cogs = Decimal('0.0')
-        for order in orders:
-            for item in order.items:
-                product = item.product
-                if not product:
-                    continue
-                
-                quantity = Decimal(str(item.quantity))
-                
-                # Si le produit a une recette, calculer le coût via les ingrédients
-                if product.recipe_definition:
-                    recipe = product.recipe_definition
-                    yield_qty = Decimal(str(recipe.yield_quantity or 1))
-                    
-                    # Coût par unité de produit = somme des coûts des ingrédients / yield
-                    cost_per_unit = Decimal('0.0')
-                    for ingredient in recipe.ingredients:
-                        ingredient_product = ingredient.product
-                        if ingredient_product:
-                            qty_needed = Decimal(str(ingredient.quantity_needed or 0))
-                            ingredient_cost_price = Decimal(str(ingredient_product.cost_price or 0))
-                            cost_per_ingredient = (qty_needed / yield_qty) * ingredient_cost_price
-                            cost_per_unit += cost_per_ingredient
-                    
-                    cogs += quantity * cost_per_unit
-                else:
-                    # Produit sans recette : utiliser cost_price
-                    cost_price = Decimal(str(product.cost_price or 0))
-                    cogs += quantity * cost_price
+        shop_order_ids = db.session.query(Order.id).filter(
+            Order.order_type != 'in_store',
+            Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
+            func.date(Order.due_date) == report_date
+        ).all()
+        shop_ids = [r[0] for r in shop_order_ids]
         
-        cogs = float(cogs)
+        all_order_ids = pos_ids + shop_ids
+        
+        # Calculer le COGS directement via requête SQL (même méthode que RealKpiService)
+        if all_order_ids:
+            cogs_query = db.session.query(
+                func.sum(OrderItem.quantity * Product.cost_price)
+            ).join(Product, OrderItem.product_id == Product.id)\
+             .filter(OrderItem.order_id.in_(all_order_ids))
+            
+            cogs = float(cogs_query.scalar() or 0.0)
+        else:
+            cogs = 0.0
         
         # Coût de main d'œuvre du jour
         # Utiliser AttendanceSummary si disponible, sinon AttendanceRecord
