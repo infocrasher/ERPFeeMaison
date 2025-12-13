@@ -8,6 +8,8 @@ from sqlalchemy import func, desc, case
 
 from extensions import db
 from models import Order, OrderItem, Product
+from app.reports.services import DailySalesReportService, ReportService # Modified import
+from app.reports.kpi_service import RealKpiService
 from app.sales.models import CashRegisterSession, CashMovement
 from app.purchases.models import Purchase
 from app.stock.models import StockMovement
@@ -41,10 +43,13 @@ def unified_dashboard():
     except (TypeError, ValueError):
         target_date = date.today()
 
-    context = build_dashboard_context(target_date, period)
+    dashboard_context = build_dashboard_context(target_date, period)
+    
+    # 🆕 AJOUT : KPIs Réels (Pilotage Financier)
+    dashboard_context['real_kpis'] = RealKpiService.get_daily_kpis(target_date)
     
     # Empêcher la mise en cache pour forcer le recalcul
-    response = render_template('dashboard.html', data=context)
+    response = render_template('dashboard.html', data=dashboard_context)
     from flask import make_response
     response = make_response(response)
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -72,6 +77,8 @@ def build_dashboard_context(target_date, period):
     stock_report = load_stock_report()
     prime_cost_report = load_prime_cost_report(today)
 
+    real_kpis = RealKpiService.get_daily_kpis(today)
+
     overview = build_overview_block(sales_report, today)
     stock_summary = build_stock_block(stock_report, today, week_start, now, trend_days)
     production_block, ingredient_summary = build_production_block(production_report, today, now)
@@ -88,7 +95,8 @@ def build_dashboard_context(target_date, period):
         stock_summary,
         cash_block,
         attendance_block,
-        alerts_block
+        alerts_block,
+        real_kpis
     )
     # ⏸️ AI désactivé temporairement pour performance
     # ai_insights = build_ai_insights_block(today, sales_report, stock_summary, production_block)
@@ -826,58 +834,89 @@ def build_alerts_block(stock_summary, production_block, overdue_orders):
     }
 
 
-def build_metric_cards(overview, prime_cost, sales_block, stock_summary, cash_block, attendance_block, alerts_block):
-    revenue = sales_block.get('daily_revenue', 0.0)
-    growth = sales_block.get('growth_rate', 0.0)
-    gross_margin = prime_cost.get('gross_margin', 0.0)
-    gross_margin_pct = prime_cost.get('gross_margin_percentage', 0.0)
-    net_margin_value = revenue - prime_cost.get('prime_cost', 0.0)
-    net_margin_pct = (net_margin_value / revenue * 100) if revenue else 0.0
+def build_metric_cards(overview, prime_cost, sales_block, stock_summary, cash_block, attendance_block, alerts_block, real_kpis=None):
+    # Fallback si real_kpis n'est pas fourni (mode dégradé)
+    if not real_kpis:
+        real_kpis = {
+            'revenue': {'total': 0, 'pos': 0, 'shop': 0},
+            'cogs': {'total': 0, 'ingredients': 0, 'labor': 0},
+            'margin': {'net': 0, 'percent': 0},
+            'counts': {'total': 0},
+            'delivery_debt': 0
+        }
 
-    return [
+    revenue = real_kpis['revenue']['total'] # Was sales_block.get('daily_revenue')
+    growth = sales_block.get('growth_rate', 0.0)
+    
+    # Marge Brute remplacée par COGS ou gardée ? L'utilisateur veut "COGS" et "Main d'oeuvre".
+    # Je vais remplacer Marge Brute par COGS global, et ajouter Main d'Oeuvre.
+    cogs_total = real_kpis['cogs']['total']
+    
+    net_margin_value = real_kpis['margin']['net']
+    net_margin_pct = real_kpis['margin']['percent']
+
+    cards = [
         {
             'label': 'CA du jour',
             'value': revenue,
             'unit': 'DA',
-            'delta': growth,
-            'trend_label': 'vs veille',
+            'delta': None,
+            'breakdown': [
+                {'label': 'POS', 'value': real_kpis['revenue']['pos']},
+                {'label': 'Cmd', 'value': real_kpis['revenue']['shop']}
+            ],
             'icon': 'bi-cash-stack',
             'tone': 'success'
         },
         {
-            'label': 'Marge brute',
-            'value': gross_margin,
+            'label': 'COGS (Coûts)',
+            'value': cogs_total,
             'unit': 'DA',
-            'delta': gross_margin_pct,
-            'trend_label': '% du CA',
-            'icon': 'bi-graph-up-arrow',
-            'tone': 'info'
+            'delta': None,
+            'breakdown': [
+                {'label': 'Mat', 'value': real_kpis['cogs']['ingredients']},
+                {'label': 'MO', 'value': real_kpis['cogs']['labor']}
+            ],
+            'icon': 'bi-tools',
+            'tone': 'danger'
         },
         {
             'label': 'Marge nette',
             'value': net_margin_value,
             'unit': 'DA',
-            'delta': round(net_margin_pct, 1),
+            'delta': net_margin_pct,
             'trend_label': '% du CA',
             'icon': 'bi-pie-chart',
             'tone': 'primary'
         },
         {
             'label': 'Commandes',
-            'value': sales_block.get('daily_orders', 0),
+            'value': real_kpis['counts']['total'],
             'unit': 'cmdes',
-            'delta': sales_block.get('weekly_orders', 0),
-            'trend_label': 'cette semaine',
+            'delta': None,
+            'breakdown': [
+                {'label': 'POS', 'value': real_kpis['counts']['pos']},
+                {'label': 'Cmd', 'value': real_kpis['counts']['shop']}
+            ],
             'icon': 'bi-bag-check',
             'tone': 'warning'
         },
         {
-            'label': 'Ticket moyen',
-            'value': sales_block.get('average_basket', 0.0),
+            'label': 'Dette Livreur',
+            'value': real_kpis.get('delivery_debt', 0),
             'unit': 'DA',
-            'delta': sales_block.get('on_time_rate', 0.0),
-            'trend_label': 'livraisons à l’heure',
-            'icon': 'bi-card-checklist',
+            'delta': None,
+            'trend_label': 'reste à encaisser',
+            'icon': 'bi-bicycle',
+            'tone': 'orange'
+        },
+         {
+            'label': 'Main d\'Oeuvre',
+            'value': real_kpis['cogs']['labor'],
+            'unit': 'DA',
+            'delta': None,
+            'trend_label': 'coût RH jour',
+            'icon': 'bi-people-fill',
             'tone': 'secondary'
         },
         {
@@ -903,15 +942,6 @@ def build_metric_cards(overview, prime_cost, sales_block, stock_summary, cash_bl
             }
         },
         {
-            'label': 'Présence',
-            'value': attendance_block.get('presence_rate', 0.0),
-            'unit': '%',
-            'delta': attendance_block.get('present', 0),
-            'trend_label': 'employés présents',
-            'icon': 'bi-people',
-            'tone': 'success'
-        },
-        {
             'label': 'Alertes critiques',
             'value': alerts_block.get('total', 0),
             'unit': 'issues',
@@ -921,8 +951,7 @@ def build_metric_cards(overview, prime_cost, sales_block, stock_summary, cash_bl
             'tone': 'danger'
         }
     ]
-
-
+    return cards
 def build_ai_insights_block(report_date, sales_report, stock_summary, production_block):
     """Génère les analyses IA combinées (OpenAI + Groq) pour optimiser les coûts"""
     ai_insights = {

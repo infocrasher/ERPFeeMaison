@@ -95,11 +95,16 @@ def new_customer_order():
                 customer_phone=form.customer_phone.data,
                 customer_address=form.customer_address.data,
                 delivery_option=form.delivery_option.data,
+                delivery_zone=form.delivery_zone.data, # ✅ Restauré
                 due_date=form.due_date.data,
                 delivery_cost=form.delivery_cost.data,
                 notes=form.notes.data,
                 status=initial_status # On utilise le statut calculé
             )
+
+            # ✅ Logique de repli : Si pas d'adresse, utiliser la zone
+            if not order.customer_address and form.delivery_zone.data:
+                order.customer_address = form.delivery_zone.data
 
             db.session.add(order)
             db.session.flush()

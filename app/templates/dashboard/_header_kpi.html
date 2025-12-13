@@ -1,11 +1,11 @@
 {% macro format_metric_value(value, unit) -%}
-    {% if unit == 'DA' %}
-        {{ "{:,.0f}".format(value).replace(",", " ") }} {{ unit }}
-    {% elif unit == '%' %}
-        {{ value|round(1) }}{{ unit }}
-    {% else %}
-        {{ value|round(1) }} {{ unit }}
-    {% endif %}
+{% if unit == 'DA' %}
+{{ "{:,.0f}".format(value).replace(",", " ") }} {{ unit }}
+{% elif unit == '%' %}
+{{ value|round(1) }}{{ unit }}
+{% else %}
+{{ value|round(1) }} {{ unit }}
+{% endif %}
 {%- endmacro %}
 
 <section class="hero-card hero-dashboard">
@@ -24,9 +24,9 @@
                 <label>
                     <span>Période</span>
                     <select name="period">
-                        <option value="day" {% if data.period == 'day' %}selected{% endif %}>Jour</option>
-                        <option value="week" {% if data.period == 'week' %}selected{% endif %}>Semaine</option>
-                        <option value="month" {% if data.period == 'month' %}selected{% endif %}>Mois</option>
+                        <option value="day" {% if data.period=='day' %}selected{% endif %}>Jour</option>
+                        <option value="week" {% if data.period=='week' %}selected{% endif %}>Semaine</option>
+                        <option value="month" {% if data.period=='month' %}selected{% endif %}>Mois</option>
                     </select>
                 </label>
                 <label>
@@ -54,17 +54,31 @@
         <div class="metric-content">
             <p>{{ card.label }}</p>
             <h3>{{ format_metric_value(card.value, card.unit) }}</h3>
-            {% if card.delta is not none %}
-                <small>{{ card.trend_label }} :
-                    {% if card.unit == 'DA' %}
-                        {{ "{:,.0f}".format(card.delta).replace(",", " ") }}
-                    {% else %}
-                        {{ card.delta }}
-                    {% endif %}
-                </small>
+            {% if card.breakdown %}
+            <div class="flex justify-between w-full text-xs mt-1">
+                {% for item in card.breakdown %}
+                <span>
+                    {{ item.label }}:
+                    <strong>
+                        {% if card.unit == 'DA' %}
+                        {{ "{:,.0f}".format(item.value).replace(",", " ") }}
+                        {% else %}
+                        {{ item.value }}
+                        {% endif %}
+                    </strong>
+                </span>
+                {% endfor %}
+            </div>
+            {% elif card.delta is not none %}
+            <small>{{ card.trend_label }} :
+                {% if card.unit == 'DA' %}
+                {{ "{:,.0f}".format(card.delta).replace(",", " ") }}
+                {% else %}
+                {{ card.delta }}
+                {% endif %}
+            </small>
             {% endif %}
         </div>
     </div>
     {% endfor %}
 </section>
-
