@@ -5,7 +5,7 @@ Contient toute la logique métier pour les calculs et analyses
 
 from datetime import datetime, date, timedelta
 from decimal import Decimal
-from sqlalchemy import func, and_, or_, extract
+from sqlalchemy import func, and_, or_, extract, case
 from extensions import db
 from models import Product, Order, OrderItem, Category
 from app.sales.models import CashRegisterSession, CashMovement
@@ -107,6 +107,153 @@ def _compute_revenue(report_date=None, start_date=None, end_date=None):
     
     result = query.scalar() or 0
     return float(result)
+
+
+def _get_orders_filter_real(report_date=None, start_date=None, end_date=None):
+    """
+    Helper pour construire le filtre de commandes selon la logique RealKpiService.
+    Retourne une condition SQLAlchemy qui filtre :
+    - POS : order_type == 'in_store' ET created_at == date
+    - Shop : order_type != 'in_store' ET status livré ET due_date == date
+    
+    Args:
+        report_date: Date unique pour un rapport quotidien
+        start_date: Date de début pour une période
+        end_date: Date de fin pour une période
+        
+    Returns:
+        SQLAlchemy filter condition
+    """
+    from sqlalchemy import or_, and_
+    
+    if report_date:
+        # POS : créées ce jour
+        pos_condition = and_(
+            Order.order_type == 'in_store',
+            func.date(Order.created_at) == report_date
+        )
+        
+        # Shop : livrées ce jour
+        shop_condition = and_(
+            Order.order_type != 'in_store',
+            Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
+            func.date(Order.due_date) == report_date
+        )
+        
+        return or_(pos_condition, shop_condition)
+    
+    elif start_date and end_date:
+        # POS : créées dans la période
+        pos_condition = and_(
+            Order.order_type == 'in_store',
+            func.date(Order.created_at) >= start_date,
+            func.date(Order.created_at) <= end_date
+        )
+        
+        # Shop : livrées dans la période
+        shop_condition = and_(
+            Order.order_type != 'in_store',
+            Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
+            func.date(Order.due_date) >= start_date,
+            func.date(Order.due_date) <= end_date
+        )
+        
+        return or_(pos_condition, shop_condition)
+    
+    # Par défaut, retourner une condition qui ne filtre rien (pour éviter les erreurs)
+    return Order.id.isnot(None)
+
+
+def _compute_revenue_real(report_date=None, start_date=None, end_date=None):
+    """
+    Fonction utilitaire pour calculer le chiffre d'affaires selon la logique RealKpiService.
+    Utilise la logique correcte :
+    - POS : created_at == date (comptabilisé à la création)
+    - Shop : due_date == date ET status livré (comptabilisé à la livraison)
+    
+    Cette fonction remplace progressivement _compute_revenue() pour garantir la cohérence
+    avec le dashboard qui utilise RealKpiService.
+    
+    Args:
+        report_date: Date unique pour un rapport quotidien
+        start_date: Date de début pour une période
+        end_date: Date de fin pour une période
+        
+    Returns:
+        float: Chiffre d'affaires calculé (0.0 si aucune vente)
+    """
+    from models import Order, OrderItem
+    
+    # Pour une date unique
+    if report_date:
+        # POS : commandes créées ce jour
+        pos_query = db.session.query(
+            func.sum(
+                func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
+            )
+        ).select_from(OrderItem).join(
+            Order, Order.id == OrderItem.order_id
+        ).filter(
+            Order.order_type == 'in_store',
+            func.date(Order.created_at) == report_date
+        )
+        
+        pos_revenue = pos_query.scalar() or 0.0
+        
+        # Shop : commandes livrées ce jour (due_date)
+        shop_query = db.session.query(
+            func.sum(
+                func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
+            )
+        ).select_from(OrderItem).join(
+            Order, Order.id == OrderItem.order_id
+        ).filter(
+            Order.order_type != 'in_store',
+            Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
+            func.date(Order.due_date) == report_date
+        )
+        
+        shop_revenue = shop_query.scalar() or 0.0
+        
+        return float(pos_revenue) + float(shop_revenue)
+    
+    # Pour une période (start_date, end_date)
+    elif start_date and end_date:
+        # POS : commandes créées dans la période
+        pos_query = db.session.query(
+            func.sum(
+                func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
+            )
+        ).select_from(OrderItem).join(
+            Order, Order.id == OrderItem.order_id
+        ).filter(
+            Order.order_type == 'in_store',
+            func.date(Order.created_at) >= start_date,
+            func.date(Order.created_at) <= end_date
+        )
+        
+        pos_revenue = pos_query.scalar() or 0.0
+        
+        # Shop : commandes livrées dans la période (due_date)
+        shop_query = db.session.query(
+            func.sum(
+                func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
+            )
+        ).select_from(OrderItem).join(
+            Order, Order.id == OrderItem.order_id
+        ).filter(
+            Order.order_type != 'in_store',
+            Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
+            func.date(Order.due_date) >= start_date,
+            func.date(Order.due_date) <= end_date
+        )
+        
+        shop_revenue = shop_query.scalar() or 0.0
+        
+        return float(pos_revenue) + float(shop_revenue)
+    
+    # Si aucun paramètre, retourner 0
+    return 0.0
 
 
 def _compute_growth_rate(current_value, previous_value):
@@ -312,18 +459,18 @@ class DailySalesReportService:
         if not report_date:
             report_date = date.today()
         
-        # Ventes du jour
-        orders = Order.query.filter(
-            func.date(Order.created_at) == report_date,
-            Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
-        ).all()
+        # Utiliser le filtre cohérent avec RealKpiService
+        orders_filter = _get_orders_filter_real(report_date=report_date)
         
-        # Calculs de base (utilisation de la fonction utilitaire pour cohérence)
-        total_revenue = _compute_revenue(report_date=report_date)
+        # Ventes du jour (POS créées ce jour + Shop livrées ce jour)
+        orders = Order.query.filter(orders_filter).all()
+        
+        # Calculs de base (utilisation de la fonction utilitaire cohérente)
+        total_revenue = _compute_revenue_real(report_date=report_date)
         total_transactions = len(orders)
         average_basket = total_revenue / total_transactions if total_transactions > 0 else 0
         
-        # Top 5 produits
+        # Top 5 produits (utiliser le filtre cohérent)
         top_products_rows = db.session.query(
             Product.name,
             func.sum(OrderItem.quantity).label('quantity'),
@@ -332,10 +479,7 @@ class DailySalesReportService:
             OrderItem, OrderItem.product_id == Product.id
         ).join(
             Order, Order.id == OrderItem.order_id
-        ).filter(
-            func.date(Order.created_at) == report_date,
-            Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
-        ).group_by(Product.id, Product.name).order_by(
+        ).filter(orders_filter).group_by(Product.id, Product.name).order_by(
             func.sum(OrderItem.quantity * OrderItem.unit_price).desc()
         ).limit(5).all()
         top_products_json = [
@@ -346,7 +490,7 @@ class DailySalesReportService:
             } for row in top_products_rows
         ]
         
-        # Ventes par catégorie
+        # Ventes par catégorie (utiliser le filtre cohérent)
         sales_by_category_rows = db.session.query(
             Category.name,
             func.sum(OrderItem.quantity * OrderItem.unit_price).label('revenue')
@@ -356,10 +500,7 @@ class DailySalesReportService:
             OrderItem, OrderItem.product_id == Product.id
         ).join(
             Order, Order.id == OrderItem.order_id
-        ).filter(
-            func.date(Order.created_at) == report_date,
-            Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
-        ).group_by(Category.id, Category.name).all()
+        ).filter(orders_filter).group_by(Category.id, Category.name).all()
         sales_by_category_json = [
             {
                 'name': row.name,
@@ -367,17 +508,19 @@ class DailySalesReportService:
             } for row in sales_by_category_rows
         ]
         
-        # Ventes par heure (cohérence avec OrderItem)
+        # Ventes par heure (utiliser created_at pour POS, due_date pour Shop)
+        # On utilise case pour sélectionner la bonne date selon le type de commande
+        date_for_hour = case(
+            (Order.order_type == 'in_store', Order.created_at),
+            else_=Order.due_date
+        )
         hourly_sales_rows = db.session.query(
-            extract('hour', Order.created_at).label('hour'),
+            extract('hour', date_for_hour).label('hour'),
             func.count(func.distinct(Order.id)).label('transactions'),
             func.sum(OrderItem.quantity * OrderItem.unit_price).label('revenue')
         ).select_from(Order).join(
             OrderItem, OrderItem.order_id == Order.id
-        ).filter(
-            func.date(Order.created_at) == report_date,
-            Order.status.in_(['completed', 'delivered', 'delivered_unpaid'])
-        ).group_by('hour').order_by('hour').all()
+        ).filter(orders_filter).group_by('hour').order_by('hour').all()
         hourly_sales_json = [
             {
                 'hour': int(row.hour or 0),
@@ -392,7 +535,7 @@ class DailySalesReportService:
         
         # Comparaison avec le jour précédent (growth_rate)
         previous_date = report_date - timedelta(days=1)
-        previous_revenue = _compute_revenue(report_date=previous_date)
+        previous_revenue = _compute_revenue_real(report_date=previous_date)
         growth_rate = _compute_growth_rate(total_revenue, previous_revenue)
         trend_direction = _determine_trend(growth_rate)
         
@@ -445,20 +588,20 @@ class PrimeCostReportService:
         if not report_date:
             report_date = date.today()
         
-        # Chiffre d'affaires
+        # Chiffre d'affaires (utilise DailySalesReportService qui est maintenant cohérent)
         revenue = DailySalesReportService.generate(report_date)['total_revenue']
         
         # COGS (Cost of Goods Sold) - calcul correct via recettes et ingrédients
         # Pour chaque produit vendu :
         # - Si le produit a une recette : calculer le coût via les ingrédients consommés
         # - Sinon : utiliser Product.cost_price
+        # IMPORTANT : Utiliser le même filtre que le revenue pour garantir la cohérence
         from models import Recipe, RecipeIngredient
         from decimal import Decimal
         
-        orders = Order.query.filter(
-            func.date(Order.created_at) == report_date,
-            Order.status.in_(['completed', 'delivered'])
-        ).all()
+        # Utiliser le filtre cohérent avec RealKpiService (même que pour le revenue)
+        orders_filter = _get_orders_filter_real(report_date=report_date)
+        orders = Order.query.filter(orders_filter).all()
         
         cogs = Decimal('0.0')
         for order in orders:
