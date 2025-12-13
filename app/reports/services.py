@@ -187,68 +187,44 @@ def _compute_revenue_real(report_date=None, start_date=None, end_date=None):
     # Pour une date unique
     if report_date:
         # POS : commandes créées ce jour
-        pos_query = db.session.query(
-            func.sum(
-                func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
-            )
-        ).select_from(OrderItem).join(
-            Order, Order.id == OrderItem.order_id
-        ).filter(
-            Order.order_type == 'in_store',
-            func.date(Order.created_at) == report_date
-        )
-        
-        pos_revenue = pos_query.scalar() or 0.0
+        # Utiliser Order.total_amount comme RealKpiService pour inclure tous les frais
+        pos_revenue = db.session.query(func.sum(Order.total_amount))\
+            .filter(
+                Order.order_type == 'in_store',
+                func.date(Order.created_at) == report_date
+            ).scalar() or 0.0
         
         # Shop : commandes livrées ce jour (due_date)
-        shop_query = db.session.query(
-            func.sum(
-                func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
-            )
-        ).select_from(OrderItem).join(
-            Order, Order.id == OrderItem.order_id
-        ).filter(
-            Order.order_type != 'in_store',
-            Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
-            func.date(Order.due_date) == report_date
-        )
-        
-        shop_revenue = shop_query.scalar() or 0.0
+        # Utiliser Order.total_amount comme RealKpiService pour inclure les frais de livraison
+        shop_revenue = db.session.query(func.sum(Order.total_amount))\
+            .filter(
+                Order.order_type != 'in_store',
+                Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
+                func.date(Order.due_date) == report_date
+            ).scalar() or 0.0
         
         return float(pos_revenue) + float(shop_revenue)
     
     # Pour une période (start_date, end_date)
     elif start_date and end_date:
         # POS : commandes créées dans la période
-        pos_query = db.session.query(
-            func.sum(
-                func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
-            )
-        ).select_from(OrderItem).join(
-            Order, Order.id == OrderItem.order_id
-        ).filter(
-            Order.order_type == 'in_store',
-            func.date(Order.created_at) >= start_date,
-            func.date(Order.created_at) <= end_date
-        )
-        
-        pos_revenue = pos_query.scalar() or 0.0
+        # Utiliser Order.total_amount comme RealKpiService
+        pos_revenue = db.session.query(func.sum(Order.total_amount))\
+            .filter(
+                Order.order_type == 'in_store',
+                func.date(Order.created_at) >= start_date,
+                func.date(Order.created_at) <= end_date
+            ).scalar() or 0.0
         
         # Shop : commandes livrées dans la période (due_date)
-        shop_query = db.session.query(
-            func.sum(
-                func.coalesce(OrderItem.quantity, 0) * func.coalesce(OrderItem.unit_price, 0)
-            )
-        ).select_from(OrderItem).join(
-            Order, Order.id == OrderItem.order_id
-        ).filter(
-            Order.order_type != 'in_store',
-            Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
-            func.date(Order.due_date) >= start_date,
-            func.date(Order.due_date) <= end_date
-        )
-        
-        shop_revenue = shop_query.scalar() or 0.0
+        # Utiliser Order.total_amount comme RealKpiService pour inclure les frais de livraison
+        shop_revenue = db.session.query(func.sum(Order.total_amount))\
+            .filter(
+                Order.order_type != 'in_store',
+                Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
+                func.date(Order.due_date) >= start_date,
+                func.date(Order.due_date) <= end_date
+            ).scalar() or 0.0
         
         return float(pos_revenue) + float(shop_revenue)
     

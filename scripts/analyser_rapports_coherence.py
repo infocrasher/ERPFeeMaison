@@ -147,10 +147,13 @@ def analyser_rapport_quotidien(service_name, service_method, report_date):
         
         # Analyser le COGS si disponible
         if 'cogs_calculated' in locals() and cogs_calculated is not None:
-            print(f"🔧 COGS Rapport: {format_currency(cogs_calculated)}")
-            print(f"🔧 COGS RealKpiService: {format_currency(cogs_real)}")
+            # Pour PrimeCostReportService, comparer avec cogs['ingredients'] (matière seule)
+            # car le rapport sépare COGS (matière) et Main d'Œuvre
+            cogs_real_matiere = real_kpis['cogs']['ingredients']
+            print(f"🔧 COGS Rapport (matière): {format_currency(cogs_calculated)}")
+            print(f"🔧 COGS RealKpiService (matière): {format_currency(cogs_real_matiere)}")
             
-            cogs_issues = analyser_calcul_cogs(service_name, report_date, cogs_calculated, cogs_real)
+            cogs_issues = analyser_calcul_cogs(service_name, report_date, cogs_calculated, cogs_real_matiere)
             issues.extend(cogs_issues)
             
             if not cogs_issues:
