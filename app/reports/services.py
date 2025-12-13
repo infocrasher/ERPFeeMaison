@@ -897,18 +897,15 @@ class WasteLossReportService:
             waste_by_reason[reason]['count'] += 1
             waste_by_reason[reason]['value'] += waste.value_lost
         
-        # Coût alimentaire total (COGS)
+        # Coût alimentaire total (COGS) - utiliser filtre cohérent avec RealKpiService
+        orders_filter = _get_orders_filter_real(start_date=start_date, end_date=end_date)
         total_cogs = db.session.query(
             func.sum(OrderItem.quantity * Product.cost_price)
         ).select_from(OrderItem).join(
             Product, Product.id == OrderItem.product_id
         ).join(
             Order, Order.id == OrderItem.order_id
-        ).filter(
-            func.date(Order.created_at) >= start_date,
-            func.date(Order.created_at) <= end_date,
-            Order.status.in_(['completed', 'delivered'])
-        ).scalar() or 1  # Éviter division par zéro
+        ).filter(orders_filter).scalar() or 1  # Éviter division par zéro
         total_cogs = float(total_cogs)
         
         # Pourcentage du coût alimentaire
@@ -994,7 +991,8 @@ class WeeklyProductPerformanceService:
         if not start_date or not end_date:
             start_date, end_date = ReportService.get_date_range('week')
         
-        # Ventes par produit cette semaine
+        # Ventes par produit cette semaine - utiliser filtre cohérent avec RealKpiService
+        orders_filter = _get_orders_filter_real(start_date=start_date, end_date=end_date)
         current_week_sales = db.session.query(
             Product.id,
             Product.name,
@@ -1004,16 +1002,12 @@ class WeeklyProductPerformanceService:
             OrderItem, OrderItem.product_id == Product.id
         ).join(
             Order, Order.id == OrderItem.order_id
-        ).filter(
-            func.date(Order.created_at) >= start_date,
-            func.date(Order.created_at) <= end_date,
-            Order.status.in_(['completed', 'delivered'])
-        ).group_by(Product.id, Product.name).all()
+        ).filter(orders_filter).group_by(Product.id, Product.name).all()
         
-        # Ventes semaine précédente
+        # Ventes semaine précédente - utiliser filtre cohérent
         prev_start = start_date - timedelta(days=7)
         prev_end = end_date - timedelta(days=7)
-        
+        prev_orders_filter = _get_orders_filter_real(start_date=prev_start, end_date=prev_end)
         prev_week_sales = db.session.query(
             Product.id,
             func.sum(OrderItem.quantity * OrderItem.unit_price).label('revenue')
@@ -1021,11 +1015,7 @@ class WeeklyProductPerformanceService:
             OrderItem, OrderItem.product_id == Product.id
         ).join(
             Order, Order.id == OrderItem.order_id
-        ).filter(
-            func.date(Order.created_at) >= prev_start,
-            func.date(Order.created_at) <= prev_end,
-            Order.status.in_(['completed', 'delivered'])
-        ).group_by(Product.id).all()
+        ).filter(prev_orders_filter).group_by(Product.id).all()
         
         # Créer un dict pour comparaison
         prev_sales_dict = {p.id: float(p.revenue) for p in prev_week_sales}
@@ -1103,18 +1093,15 @@ class StockRotationReportService:
         if not start_date or not end_date:
             start_date, end_date = ReportService.get_date_range('week')
         
-        # COGS de la période
+        # COGS de la période - utiliser filtre cohérent avec RealKpiService
+        orders_filter = _get_orders_filter_real(start_date=start_date, end_date=end_date)
         cogs = db.session.query(
             func.sum(OrderItem.quantity * Product.cost_price)
         ).select_from(OrderItem).join(
             Product, Product.id == OrderItem.product_id
         ).join(
             Order, Order.id == OrderItem.order_id
-        ).filter(
-            func.date(Order.created_at) >= start_date,
-            func.date(Order.created_at) <= end_date,
-            Order.status.in_(['completed', 'delivered'])
-        ).scalar() or 0
+        ).filter(orders_filter).scalar() or 0
         cogs = float(cogs)
         
         # Valeur moyenne du stock (formule correcte : moyenne période)
@@ -1232,8 +1219,8 @@ class LaborCostReportService:
         ).scalar() or 0
         overtime_hours = float(overtime_hours)
         
-        # Chiffre d'affaires de la période (utilisation de la fonction utilitaire)
-        revenue = _compute_revenue(start_date=start_date, end_date=end_date)
+        # Chiffre d'affaires de la période (utilisation de la fonction cohérente avec RealKpiService)
+        revenue = _compute_revenue_real(start_date=start_date, end_date=end_date)
         if revenue == 0:
             revenue = 1  # Éviter division par zéro
         
@@ -1312,8 +1299,8 @@ class CashFlowForecastService:
         if not start_date or not end_date:
             start_date, end_date = ReportService.get_date_range('week')
         
-        # Encaissements prévus (ventes complétées - utilisation fonction utilitaire)
-        expected_inflows = _compute_revenue(start_date=start_date, end_date=end_date)
+        # Encaissements prévus (ventes complétées - utilisation fonction cohérente avec RealKpiService)
+        expected_inflows = _compute_revenue_real(start_date=start_date, end_date=end_date)
         
         # Décaissements prévus (achats)
         # Correction : Prioriser payment_date si disponible, sinon requested_date
@@ -1436,7 +1423,8 @@ class MonthlyGrossMarginService:
         else:
             end_date = date(year, month + 1, 1) - timedelta(days=1)
         
-        # Ventes et COGS par catégorie
+        # Ventes et COGS par catégorie - utiliser filtre cohérent avec RealKpiService
+        orders_filter = _get_orders_filter_real(start_date=start_date, end_date=end_date)
         category_data = db.session.query(
             Category.name,
             func.sum(OrderItem.quantity * OrderItem.unit_price).label('revenue'),
@@ -1447,11 +1435,7 @@ class MonthlyGrossMarginService:
             OrderItem, OrderItem.product_id == Product.id
         ).join(
             Order, Order.id == OrderItem.order_id
-        ).filter(
-            func.date(Order.created_at) >= start_date,
-            func.date(Order.created_at) <= end_date,
-            Order.status.in_(['completed', 'delivered'])
-        ).group_by(Category.id, Category.name).all()
+        ).filter(orders_filter).group_by(Category.id, Category.name).all()
         
         # Calculer les marges
         margin_data = []
@@ -1548,21 +1532,18 @@ class MonthlyProfitLossService:
         else:
             end_date = date(year, month + 1, 1) - timedelta(days=1)
         
-        # Chiffre d'affaires (utilisation fonction utilitaire pour cohérence)
-        revenue = _compute_revenue(start_date=start_date, end_date=end_date)
+        # Chiffre d'affaires (utilisation fonction cohérente avec RealKpiService)
+        revenue = _compute_revenue_real(start_date=start_date, end_date=end_date)
         
-        # COGS
+        # COGS - utiliser le même filtre que le CA pour garantir la cohérence
+        orders_filter = _get_orders_filter_real(start_date=start_date, end_date=end_date)
         cogs = db.session.query(
             func.sum(OrderItem.quantity * Product.cost_price)
         ).select_from(OrderItem).join(
             Product, Product.id == OrderItem.product_id
         ).join(
             Order, Order.id == OrderItem.order_id
-        ).filter(
-            func.date(Order.created_at) >= start_date,
-            func.date(Order.created_at) <= end_date,
-            Order.status.in_(['completed', 'delivered'])
-        ).scalar() or 0
+        ).filter(orders_filter).scalar() or 0
         cogs = float(cogs)
         
         # Marge brute
