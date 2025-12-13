@@ -279,7 +279,9 @@ def attendance_dashboard():
     
     # Statistiques générales
     total_employees = Employee.query.filter(Employee.is_active == True).count()
-    present_employees = len([emp for emp in daily_summary.values() if emp['status'] == 'present'])
+    # Correction : Présents = Tous ceux qui ont pointé aujourd'hui (En cours, Pause, Terminé)
+    # On exclut ceux qui n'ont pas de pointage (absents)
+    present_employees = len(daily_summary) # Tous ceux dans le résumé ont pointé
     absent_employees = total_employees - present_employees
     
     # Employés sans pointage
