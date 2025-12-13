@@ -121,32 +121,74 @@ def audit_ca_shop(target_date):
     
     if shop_orders:
         print(f"\n📋 Détail des commandes livrées:")
-        print("-" * 100)
-        print(f"{'ID':<6} {'Type':<25} {'Statut':<20} {'Montant':<15} {'Due Date':<20} {'Client':<30}")
-        print("-" * 100)
+        print("-" * 120)
+        print(f"{'ID':<6} {'Type':<25} {'Statut':<20} {'Montant':<15} {'Créée le':<12} {'Due Date':<20} {'Client':<30}")
+        print("-" * 120)
+        
+        # Séparer les ordres de production (montant 0) des vraies commandes
+        production_orders = []
+        real_orders = []
         
         for order in sorted(shop_orders, key=lambda x: x.due_date):
             due_str = order.due_date.strftime('%d/%m/%Y %H:%M') if order.due_date else 'N/A'
+            created_str = order.created_at.strftime('%d/%m/%Y') if order.created_at else 'N/A'
             client = order.customer_name or 'Sans nom'
             order_type_display = order.get_order_type_display()
-            print(f"{order.id:<6} {order_type_display[:25]:<25} {order.status:<20} {format_currency(order.total_amount):<15} {due_str:<20} {client[:30]:<30}")
+            amount = float(order.total_amount or 0)
+            
+            print(f"{order.id:<6} {order_type_display[:25]:<25} {order.status:<20} {format_currency(amount):<15} {created_str:<12} {due_str:<20} {client[:30]:<30}")
+            
+            if order.order_type == 'counter_production_request' or amount == 0:
+                production_orders.append(order)
+            else:
+                real_orders.append(order)
+        
+        # Analyser les ordres de production
+        if production_orders:
+            print(f"\n⚠️  ORDRES DE PRODUCTION INCLUS (ne devraient pas être dans le CA):")
+            print(f"   Nombre: {len(production_orders)}")
+            print(f"   Montant total: {format_currency(sum(float(o.total_amount or 0) for o in production_orders))}")
+            print(f"   ⚠️  Ces ordres ont montant=0, ils ne devraient pas être comptabilisés dans le CA")
+        
+        # Analyser les vraies commandes
+        if real_orders:
+            print(f"\n✅ VRAIES COMMANDES CLIENT:")
+            print(f"   Nombre: {len(real_orders)}")
+            print(f"   Montant total: {format_currency(sum(float(o.total_amount or 0) for o in real_orders))}")
+            
+            # Vérifier les dates de création
+            created_today = [o for o in real_orders if func.date(o.created_at) == target_date]
+            created_before = [o for o in real_orders if func.date(o.created_at) != target_date]
+            
+            if created_before:
+                print(f"\n   ⚠️  {len(created_before)} commande(s) créée(s) AVANT le {target_date.strftime('%d/%m/%Y')} mais livrée(s) ce jour:")
+                for order in created_before:
+                    created_str = order.created_at.strftime('%d/%m/%Y') if order.created_at else 'N/A'
+                    print(f"      - Commande #{order.id}: créée le {created_str}, livrée le {target_date.strftime('%d/%m/%Y')}, montant: {format_currency(order.total_amount)}")
+            
+            if created_today:
+                print(f"\n   ✅ {len(created_today)} commande(s) créée(s) ET livrée(s) le {target_date.strftime('%d/%m/%Y')}")
         
         # Répartition par type
         type_count = {}
+        type_revenue = {}
         for order in shop_orders:
             order_type = order.get_order_type_display()
             type_count[order_type] = type_count.get(order_type, 0) + 1
+            type_revenue[order_type] = type_revenue.get(order_type, 0) + float(order.total_amount or 0)
         
         print(f"\n📊 Répartition par type:")
-        for order_type, count in sorted(type_count.items()):
-            print(f"  - {order_type}: {count}")
+        for order_type in sorted(type_count.keys()):
+            print(f"  - {order_type}: {type_count[order_type]} commandes, {format_currency(type_revenue[order_type])}")
     else:
         print("⚠️  Aucune commande livrée trouvée")
     
     return {
         'count': shop_count,
         'revenue': shop_revenue,
-        'orders': shop_orders
+        'orders': shop_orders,
+        'production_orders': [o for o in shop_orders if o.order_type == 'counter_production_request' or float(o.total_amount or 0) == 0],
+        'real_orders': [o for o in shop_orders if o.order_type != 'counter_production_request' and float(o.total_amount or 0) > 0]
     }
 
 def audit_dette_livreur(target_date):
@@ -432,7 +474,7 @@ def main():
             target_date, pos_data, shop_data, real_kpis
         )
         
-        # 7. Résumé final
+        # 7. Résumé final avec analyse détaillée
         print("\n" + "="*80)
         print("📋 RÉSUMÉ DE L'AUDIT")
         print("="*80)
@@ -440,13 +482,39 @@ def main():
         total_ca_calcule = pos_data['revenue'] + shop_data['revenue']
         total_ca_dashboard = real_kpis['revenue']['total']
         
+        # Calculer le CA "réel" (sans ordres de production)
+        ca_shop_sans_production = sum(float(o.total_amount or 0) for o in shop_data.get('real_orders', shop_data['orders']))
+        ca_reel = pos_data['revenue'] + ca_shop_sans_production
+        
         print(f"\n💰 CA:")
-        print(f"   - Calcul direct: {format_currency(total_ca_calcule)}")
+        print(f"   - Calcul direct (avec ordres prod): {format_currency(total_ca_calcule)}")
         print(f"   - Dashboard (RealKpiService): {format_currency(total_ca_dashboard)}")
+        print(f"   - CA RÉEL (sans ordres prod): {format_currency(ca_reel)}")
+        
         if abs(total_ca_calcule - total_ca_dashboard) > 0.01:
             print(f"   ❌ ÉCART: {format_currency(abs(total_ca_calcule - total_ca_dashboard))}")
         else:
-            print(f"   ✅ Cohérent")
+            print(f"   ✅ Cohérent avec RealKpiService")
+        
+        # Analyser les ordres de production
+        production_orders = shop_data.get('production_orders', [])
+        if production_orders:
+            print(f"\n⚠️  PROBLÈME IDENTIFIÉ:")
+            print(f"   - {len(production_orders)} Ordre(s) de Production inclus dans le CA Shop")
+            print(f"   - Ces ordres ont montant=0 et ne devraient PAS être comptabilisés")
+            print(f"   - CA sans ordres prod: {format_currency(ca_reel)}")
+            print(f"   - Différence: {format_currency(total_ca_calcule - ca_reel)}")
+        
+        # Analyser les commandes créées avant mais livrées aujourd'hui
+        real_orders = shop_data.get('real_orders', [])
+        if real_orders:
+            created_before = [o for o in real_orders if func.date(o.created_at) != target_date]
+            if created_before:
+                revenue_before = sum(float(o.total_amount or 0) for o in created_before)
+                print(f"\n📅 COMMANDES CRÉÉES AVANT MAIS LIVRÉES AUJOURD'HUI:")
+                print(f"   - Nombre: {len(created_before)}")
+                print(f"   - Montant: {format_currency(revenue_before)}")
+                print(f"   - Selon la logique actuelle, ces commandes sont comptabilisées aujourd'hui (date de livraison)")
         
         print(f"\n💳 DETTE LIVREUR:")
         print(f"   - Calcul direct: {format_currency(debt)}")
@@ -456,9 +524,26 @@ def main():
         else:
             print(f"   ✅ Cohérent")
         
+        # Détail des dettes
+        if debt > 0:
+            print(f"\n   📋 Détail des dettes:")
+            shop_orders_debt = Order.query.filter(
+                Order.order_type != 'in_store',
+                Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
+                func.date(Order.due_date) == target_date
+            ).all()
+            
+            for order in shop_orders_debt:
+                order_debt = float(order.total_amount or 0) - float(order.amount_paid or 0)
+                if order_debt > 0:
+                    print(f"      - Commande #{order.id} ({order.customer_name or 'Sans nom'}): {format_currency(order_debt)}")
+                    print(f"        Montant: {format_currency(order.total_amount)}, Payé: {format_currency(order.amount_paid)}")
+        
         print(f"\n📊 COMMANDES:")
         print(f"   - POS: {pos_data['count']} (Dashboard: {real_kpis['counts']['pos']})")
         print(f"   - Shop: {shop_data['count']} (Dashboard: {real_kpis['counts']['shop']})")
+        print(f"     - Dont Ordres de Production: {len(production_orders)}")
+        print(f"     - Dont Vraies commandes: {len(real_orders)}")
         print(f"   - Total créées ce jour: {len(all_orders)}")
         
         if issues or pos_problematiques or shop_problematiques:
