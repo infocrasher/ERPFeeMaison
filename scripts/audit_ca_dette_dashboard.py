@@ -17,6 +17,7 @@ from extensions import db
 from models import Order, OrderItem, Product, DeliveryDebt
 from sqlalchemy import func, and_, or_
 from app.reports.kpi_service import RealKpiService
+from app.sales.models import CashMovement, CashRegisterSession
 
 def parse_date(date_str):
     """Parse une date depuis différents formats"""
@@ -254,6 +255,127 @@ def audit_dette_livreur(target_date):
     
     return total_debt
 
+def audit_mouvements_caisse(target_date):
+    """Audit complet des mouvements de caisse pour une date"""
+    print("\n" + "="*80)
+    print("💰 AUDIT MOUVEMENTS DE CAISSE (CashMovement)")
+    print("="*80)
+    
+    # Récupérer tous les mouvements de caisse du jour
+    movements = CashMovement.query.filter(
+        func.date(CashMovement.created_at) == target_date
+    ).order_by(CashMovement.created_at).all()
+    
+    print(f"\n📅 Date: {target_date.strftime('%d/%m/%Y')}")
+    print(f"📊 Nombre de mouvements: {len(movements)}")
+    
+    # Catégoriser les mouvements
+    entry_types = {'entrée', 'vente', 'acompte', 'deposit'}
+    exit_types = {'sortie', 'retrait', 'frais', 'paiement', 'depot', 'dépôt', 'banque', 'depot banque', 'dépôt banque'}
+    
+    cash_in = 0.0
+    cash_out = 0.0
+    
+    # Détail par type
+    movements_by_type = {}
+    
+    if movements:
+        print(f"\n📋 Détail des mouvements:")
+        print("-" * 140)
+        print(f"{'ID':<6} {'Heure':<10} {'Type':<20} {'Montant':<15} {'Raison':<40} {'Notes':<40}")
+        print("-" * 140)
+        
+        for m in movements:
+            time_str = m.created_at.strftime('%H:%M') if m.created_at else 'N/A'
+            movement_type = (m.type or 'N/A').lower()
+            amount = float(m.amount or 0)
+            reason = (m.reason or '')[:40]
+            notes = (m.notes or '')[:40]
+            
+            # Catégoriser
+            if movement_type not in movements_by_type:
+                movements_by_type[movement_type] = {'count': 0, 'total': 0.0, 'movements': []}
+            movements_by_type[movement_type]['count'] += 1
+            movements_by_type[movement_type]['total'] += amount
+            movements_by_type[movement_type]['movements'].append(m)
+            
+            # Calculer entrées/sorties
+            if movement_type in exit_types or 'depot' in movement_type or 'banque' in movement_type:
+                cash_out += abs(amount)
+                indicator = "🔴 OUT"
+            elif movement_type in entry_types or amount >= 0:
+                cash_in += amount
+                indicator = "🟢 IN "
+            else:
+                cash_out += abs(amount)
+                indicator = "🔴 OUT"
+            
+            print(f"{m.id:<6} {time_str:<10} {m.type or 'N/A':<20} {format_currency(amount):<15} {reason:<40} {notes:<40} {indicator}")
+        
+        # Résumé par type
+        print(f"\n📊 Résumé par type de mouvement:")
+        print("-" * 80)
+        for mtype, data in sorted(movements_by_type.items(), key=lambda x: x[1]['total'], reverse=True):
+            is_out = mtype in exit_types or 'depot' in mtype or 'banque' in mtype
+            indicator = "🔴" if is_out else "🟢"
+            print(f"  {indicator} {mtype:<25}: {data['count']:>3} mouvement(s) = {format_currency(data['total'])}")
+        
+        # Identifier les dépôts banque spécifiquement
+        depot_banque = 0.0
+        depot_movements = []
+        for m in movements:
+            mtype = (m.type or '').lower()
+            reason_lower = (m.reason or '').lower()
+            notes_lower = (m.notes or '').lower()
+            
+            if ('depot' in mtype or 'dépôt' in mtype or 'banque' in mtype or
+                'depot' in reason_lower or 'dépôt' in reason_lower or 'banque' in reason_lower or
+                'depot' in notes_lower or 'dépôt' in notes_lower or 'banque' in notes_lower):
+                depot_banque += abs(float(m.amount or 0))
+                depot_movements.append(m)
+        
+        if depot_movements:
+            print(f"\n🏦 DÉPÔTS BANQUE IDENTIFIÉS:")
+            print("-" * 100)
+            for m in depot_movements:
+                time_str = m.created_at.strftime('%H:%M') if m.created_at else 'N/A'
+                print(f"  - ID {m.id}: {time_str} | {m.type} | {format_currency(m.amount)} | {m.reason or ''} | {m.notes or ''}")
+            print(f"\n  💵 TOTAL DÉPÔTS BANQUE: {format_currency(depot_banque)}")
+        else:
+            print(f"\n🏦 Aucun dépôt banque identifié ce jour")
+    else:
+        print("⚠️  Aucun mouvement de caisse trouvé")
+    
+    net = cash_in - cash_out
+    
+    print(f"\n" + "="*60)
+    print(f"💵 RÉSUMÉ FLUX DE CAISSE:")
+    print(f"="*60)
+    print(f"   🟢 Entrées (ventes, acomptes, etc.): +{format_currency(cash_in)}")
+    print(f"   🔴 Sorties (retraits, dépôts, etc.): -{format_currency(cash_out)}")
+    print(f"   📊 Flux Net: {'+' if net >= 0 else ''}{format_currency(net)}")
+    
+    # Vérifier les sessions de caisse
+    sessions = CashRegisterSession.query.filter(
+        func.date(CashRegisterSession.opened_at) == target_date
+    ).all()
+    
+    if sessions:
+        print(f"\n📦 Sessions de caisse du jour:")
+        for s in sessions:
+            opened = s.opened_at.strftime('%H:%M') if s.opened_at else 'N/A'
+            closed = s.closed_at.strftime('%H:%M') if s.closed_at else 'En cours'
+            status = "🟢 Ouverte" if s.is_open else "🔴 Fermée"
+            print(f"   - Session #{s.id}: {opened} → {closed} | Initial: {format_currency(s.initial_amount or 0)} | Final: {format_currency(s.closing_amount or 0)} | {status}")
+    
+    return {
+        'cash_in': cash_in,
+        'cash_out': cash_out,
+        'net': net,
+        'movements_count': len(movements),
+        'movements_by_type': movements_by_type
+    }
+
 def audit_toutes_commandes(target_date):
     """Audit de TOUTES les commandes créées ce jour"""
     print("\n" + "="*80)
@@ -466,15 +588,18 @@ def main():
         # 4. Audit dette livreur
         debt = audit_dette_livreur(target_date)
         
-        # 5. Comparer avec le dashboard
+        # 5. Audit mouvements de caisse
+        cash_data = audit_mouvements_caisse(target_date)
+        
+        # 6. Comparer avec le dashboard
         real_kpis = comparer_avec_dashboard(target_date)
         
-        # 6. Identifier les problèmes
+        # 7. Identifier les problèmes
         issues, pos_problematiques, shop_problematiques = identifier_commandes_problematiques(
             target_date, pos_data, shop_data, real_kpis
         )
         
-        # 7. Résumé final avec analyse détaillée
+        # 8. Résumé final avec analyse détaillée
         print("\n" + "="*80)
         print("📋 RÉSUMÉ DE L'AUDIT")
         print("="*80)
@@ -545,6 +670,38 @@ def main():
         print(f"     - Dont Ordres de Production: {len(production_orders)}")
         print(f"     - Dont Vraies commandes: {len(real_orders)}")
         print(f"   - Total créées ce jour: {len(all_orders)}")
+        
+        # Analyse flux de caisse
+        print(f"\n💵 FLUX DE CAISSE (CashMovement):")
+        print(f"   - Entrées (ventes, acomptes): +{format_currency(cash_data['cash_in'])}")
+        print(f"   - Sorties (retraits, dépôts): -{format_currency(cash_data['cash_out'])}")
+        print(f"   - Flux Net: {'+' if cash_data['net'] >= 0 else ''}{format_currency(cash_data['net'])}")
+        print(f"   - Nombre de mouvements: {cash_data['movements_count']}")
+        
+        # Comparaison CA vs Encaissements
+        ecart_ca_cash = cash_data['cash_in'] - total_ca_dashboard
+        print(f"\n📊 COMPARAISON CA vs ENCAISSEMENTS:")
+        print(f"   - CA Dashboard (RealKpiService): {format_currency(total_ca_dashboard)}")
+        print(f"   - Encaissements (CashMovement): {format_currency(cash_data['cash_in'])}")
+        print(f"   - Écart (Cash - CA): {'+' if ecart_ca_cash >= 0 else ''}{format_currency(ecart_ca_cash)}")
+        
+        if abs(ecart_ca_cash) > 0.01:
+            if ecart_ca_cash > 0:
+                print(f"   ℹ️  Les encaissements sont SUPÉRIEURS au CA (acomptes, paiements différés?)")
+            else:
+                print(f"   ⚠️  Les encaissements sont INFÉRIEURS au CA (créances, dettes livreurs?)")
+        
+        # Montant attendu par la gérante
+        print(f"\n🎯 VÉRIFICATION GÉRANTE:")
+        print(f"   - Valeur attendue par la gérante: 35,145 DA (à confirmer)")
+        print(f"   - CA Dashboard: {format_currency(total_ca_dashboard)}")
+        print(f"   - Encaissements bruts: {format_currency(cash_data['cash_in'])}")
+        print(f"   - Encaissements nets (après sorties): {format_currency(cash_data['net'])}")
+        
+        # Hypothèses d'écart
+        print(f"\n🔍 HYPOTHÈSES D'ÉCART:")
+        if cash_data['cash_out'] > 0:
+            print(f"   - Si dépôt banque déduit: Encaissements - Sorties = {format_currency(cash_data['cash_in'])} - {format_currency(cash_data['cash_out'])} = {format_currency(cash_data['net'])}")
         
         if issues or pos_problematiques or shop_problematiques:
             print(f"\n⚠️  {len(issues) + len(pos_problematiques) + len(shop_problematiques)} problème(s) détecté(s)")
