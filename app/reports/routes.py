@@ -14,7 +14,8 @@ from .services import (
     DailySalesReportService, PrimeCostReportService, ProductionReportService,
     StockAlertReportService, WasteLossReportService, WeeklyProductPerformanceService,
     StockRotationReportService, LaborCostReportService, CashFlowForecastService,
-    MonthlyGrossMarginService, MonthlyProfitLossService, analyse_ia
+    MonthlyGrossMarginService, MonthlyProfitLossService, DailyProfitabilityService,
+    analyse_ia
 )
 
 
@@ -350,6 +351,36 @@ def weekly_cash_flow_forecast():
                          title="Prévision de Trésorerie")
 
 
+# ==================== RAPPORT RENTABILITÉ & TRÉSORERIE ====================
+
+@reports.route('/profitability')
+@login_required
+@admin_required
+def profitability_report():
+    """
+    Rapport Rentabilité & Trésorerie (P&L vs Cash)
+    Compare la performance (CA ventes) avec la trésorerie (encaissements réels)
+    """
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        # Par défaut : 7 derniers jours
+        end_date = date.today()
+        start_date = end_date - timedelta(days=6)
+    
+    data = DailyProfitabilityService.generate(start_date, end_date)
+    ia_analysis = analyse_ia(data)
+    
+    return render_template('reports/profitability_report.html', 
+                         data=data, 
+                         ia_analysis=ia_analysis,
+                         title="Rentabilité & Trésorerie")
+
+
 # ==================== RAPPORTS MENSUELS ====================
 
 @reports.route('/monthly/gross-margin')
@@ -515,6 +546,41 @@ def export_csv(report_type):
             writer.writerow(['Décaissements Salaires', data['payroll_outflows']])
             writer.writerow(['Flux Net', data['net_cash_flow']])
             writer.writerow(['Solde Prévisionnel', data['forecasted_balance']])
+        
+        elif report_type == 'profitability':
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else date.today() - timedelta(days=6)
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else date.today()
+            data = DailyProfitabilityService.generate(start_date, end_date)
+            filename = f'rentabilite_tresorerie_{start_date}_{end_date}.csv'
+            
+            # En-têtes
+            writer.writerow(['Date', 'CA Ventes (DA)', 'Coût Matière (DA)', 'Main d\'Œuvre (DA)', 
+                            'Marge Nette (DA)', 'Encaissement (DA)', 'Écart Cash vs Ventes (DA)', 
+                            'POS', 'Shop', 'COGS %', 'Labor %', 'Marge %'])
+            # Données quotidiennes
+            for day in data['daily_data']:
+                writer.writerow([
+                    day['date'].strftime('%d/%m/%Y'),
+                    day['ca_ventes'],
+                    day['cogs'],
+                    day['labor_cost'],
+                    day['marge_nette'],
+                    day['encaissement'],
+                    day['ecart_cash'],
+                    day['pos_count'],
+                    day['shop_count'],
+                    f"{day['cogs_percent']}%",
+                    f"{day['labor_percent']}%",
+                    f"{day['margin_percent']}%"
+                ])
+            # Ligne totaux
+            writer.writerow([])
+            writer.writerow(['TOTAUX', data['totals']['ca_ventes'], data['totals']['cogs'], 
+                            data['totals']['labor_cost'], data['totals']['marge_nette'], 
+                            data['totals']['encaissement'], data['totals']['ecart_cash'],
+                            data['totals']['total_orders'], '', 
+                            f"{data['totals']['cogs_percent']}%", f"{data['totals']['labor_percent']}%",
+                            f"{data['totals']['margin_percent']}%"])
         
         elif report_type == 'monthly_gross_margin':
             year = int(year_str) if year_str else date.today().year

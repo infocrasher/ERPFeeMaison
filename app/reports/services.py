@@ -1647,3 +1647,149 @@ def analyse_ia(resume_donnees: dict) -> str:
     """
     return "Analyse IA en attente de connexion..."
 
+
+class DailyProfitabilityService:
+    """
+    Rapport Rentabilité & Trésorerie (P&L vs Cash)
+    Compare la performance (CA basé sur livraisons) avec la trésorerie (encaissements réels)
+    """
+    
+    @staticmethod
+    def get_daily_metrics(target_date):
+        """
+        Récupère les métriques quotidiennes pour une date donnée.
+        Réutilise les logiques existantes du Dashboard.
+        
+        Returns:
+            dict: Métriques quotidiennes (CA, COGS, Labor, Cash)
+        """
+        from app.reports.kpi_service import RealKpiService
+        from app.sales.models import CashMovement
+        
+        # 1. Récupérer les KPIs depuis RealKpiService (même logique que le dashboard)
+        kpis = RealKpiService.get_daily_kpis(target_date)
+        
+        # 2. Calculer les encaissements depuis CashMovement (même logique que FLUX CAISSE)
+        entry_types = {'entrée', 'vente', 'acompte', 'deposit'}
+        exit_types = {'sortie', 'retrait', 'frais', 'paiement'}
+        
+        movements = CashMovement.query.filter(
+            func.date(CashMovement.created_at) == target_date
+        ).all()
+        
+        cash_in = 0.0
+        cash_out = 0.0
+        
+        for movement in movements:
+            movement_type = (movement.type or '').lower()
+            amount = float(movement.amount or 0)
+            if movement_type in exit_types:
+                cash_out += amount
+            elif movement_type in entry_types or amount >= 0:
+                cash_in += amount
+            else:
+                cash_out += abs(amount)
+        
+        # 3. Extraire les métriques
+        ca_ventes = kpis['revenue']['total']  # CA Performance (ventes)
+        cogs = kpis['cogs']['ingredients']    # Coût Matière
+        labor_cost = kpis['cogs']['labor']    # Main d'œuvre
+        encaissement = cash_in                 # Encaissements réels
+        
+        # 4. Calculer les métriques dérivées
+        marge_nette = ca_ventes - cogs - labor_cost
+        ecart_cash = encaissement - ca_ventes  # Écart Cash vs Ventes
+        
+        return {
+            'date': target_date,
+            'ca_ventes': round(ca_ventes, 2),
+            'cogs': round(cogs, 2),
+            'labor_cost': round(labor_cost, 2),
+            'marge_nette': round(marge_nette, 2),
+            'encaissement': round(encaissement, 2),
+            'ecart_cash': round(ecart_cash, 2),
+            'cash_out': round(cash_out, 2),
+            # Métriques additionnelles utiles
+            'pos_count': kpis['counts']['pos'],
+            'shop_count': kpis['counts']['shop'],
+            'total_orders': kpis['counts']['total'],
+            'delivery_debt': kpis['delivery_debt'],
+            # Pourcentages
+            'cogs_percent': round((cogs / ca_ventes * 100) if ca_ventes > 0 else 0, 1),
+            'labor_percent': round((labor_cost / ca_ventes * 100) if ca_ventes > 0 else 0, 1),
+            'margin_percent': round((marge_nette / ca_ventes * 100) if ca_ventes > 0 else 0, 1)
+        }
+    
+    @staticmethod
+    def generate(start_date=None, end_date=None):
+        """
+        Génère le rapport de rentabilité & trésorerie pour une période.
+        
+        Args:
+            start_date: Date de début (défaut: 7 jours en arrière)
+            end_date: Date de fin (défaut: aujourd'hui)
+        
+        Returns:
+            dict: Rapport complet avec données quotidiennes et totaux
+        """
+        if not end_date:
+            end_date = date.today()
+        if not start_date:
+            start_date = end_date - timedelta(days=6)  # 7 jours par défaut
+        
+        # Générer les métriques pour chaque jour
+        daily_data = []
+        current_date = start_date
+        
+        totals = {
+            'ca_ventes': 0.0,
+            'cogs': 0.0,
+            'labor_cost': 0.0,
+            'marge_nette': 0.0,
+            'encaissement': 0.0,
+            'ecart_cash': 0.0,
+            'total_orders': 0
+        }
+        
+        while current_date <= end_date:
+            metrics = DailyProfitabilityService.get_daily_metrics(current_date)
+            daily_data.append(metrics)
+            
+            # Cumuler les totaux
+            totals['ca_ventes'] += metrics['ca_ventes']
+            totals['cogs'] += metrics['cogs']
+            totals['labor_cost'] += metrics['labor_cost']
+            totals['marge_nette'] += metrics['marge_nette']
+            totals['encaissement'] += metrics['encaissement']
+            totals['ecart_cash'] += metrics['ecart_cash']
+            totals['total_orders'] += metrics['total_orders']
+            
+            current_date += timedelta(days=1)
+        
+        # Calculer les pourcentages sur la période
+        totals['cogs_percent'] = round((totals['cogs'] / totals['ca_ventes'] * 100) if totals['ca_ventes'] > 0 else 0, 1)
+        totals['labor_percent'] = round((totals['labor_cost'] / totals['ca_ventes'] * 100) if totals['ca_ventes'] > 0 else 0, 1)
+        totals['margin_percent'] = round((totals['marge_nette'] / totals['ca_ventes'] * 100) if totals['ca_ventes'] > 0 else 0, 1)
+        
+        # Arrondir les totaux
+        for key in ['ca_ventes', 'cogs', 'labor_cost', 'marge_nette', 'encaissement', 'ecart_cash']:
+            totals[key] = round(totals[key], 2)
+        
+        # Préparer les données pour les graphiques
+        chart_data = {
+            'labels': [d['date'].strftime('%d/%m') for d in daily_data],
+            'ca_ventes': [d['ca_ventes'] for d in daily_data],
+            'encaissement': [d['encaissement'] for d in daily_data],
+            'marge_nette': [d['marge_nette'] for d in daily_data],
+            'ecart_cash': [d['ecart_cash'] for d in daily_data]
+        }
+        
+        return {
+            'start_date': start_date,
+            'end_date': end_date,
+            'daily_data': daily_data,
+            'totals': totals,
+            'chart_data': chart_data,
+            'days_count': len(daily_data)
+        }
+

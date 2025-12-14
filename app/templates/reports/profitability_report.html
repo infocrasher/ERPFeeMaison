@@ -1,0 +1,433 @@
+{% extends "reports/_report_base.html" %}
+
+{% set report_type = 'profitability' %}
+{% set export_params = '?start_date=' + (data.start_date.strftime('%Y-%m-%d') if data.start_date else '') + '&end_date=' + (data.end_date.strftime('%Y-%m-%d') if data.end_date else '') %}
+
+{% block report_icon %}bi-graph-up-arrow{% endblock %}
+{% block report_title %}Rentabilité & Trésorerie{% endblock %}
+{% block report_description %}
+    Analyse Performance vs Cash du {{ data.start_date.strftime('%d/%m/%Y') }} au {{ data.end_date.strftime('%d/%m/%Y') }}
+{% endblock %}
+
+{% block filter_fields %}
+<div class="col-md-3">
+    <label class="form-label">Date de début</label>
+    <input type="date" name="start_date" class="form-control" value="{{ data.start_date.strftime('%Y-%m-%d') }}">
+</div>
+<div class="col-md-3">
+    <label class="form-label">Date de fin</label>
+    <input type="date" name="end_date" class="form-control" value="{{ data.end_date.strftime('%Y-%m-%d') }}">
+</div>
+{% endblock %}
+
+{% block kpis %}
+<div class="row mb-4">
+    <!-- CA Ventes (Performance) -->
+    <div class="col-md-2">
+        <div class="card kpi-card border-primary h-100">
+            <div class="card-body text-center">
+                <div class="kpi-label">CA Ventes</div>
+                <div class="kpi-value text-primary" style="font-size: 1.5rem;">{{ "{:,.0f}".format(data.totals.ca_ventes) }}</div>
+                <small class="text-muted">DA (Performance)</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Coût Matière -->
+    <div class="col-md-2">
+        <div class="card kpi-card border-warning h-100">
+            <div class="card-body text-center">
+                <div class="kpi-label">Coût Matière</div>
+                <div class="kpi-value text-warning" style="font-size: 1.5rem;">{{ "{:,.0f}".format(data.totals.cogs) }}</div>
+                <small class="text-muted">DA ({{ data.totals.cogs_percent }}%)</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main d'Œuvre -->
+    <div class="col-md-2">
+        <div class="card kpi-card border-info h-100">
+            <div class="card-body text-center">
+                <div class="kpi-label">Main d'Œuvre</div>
+                <div class="kpi-value text-info" style="font-size: 1.5rem;">{{ "{:,.0f}".format(data.totals.labor_cost) }}</div>
+                <small class="text-muted">DA ({{ data.totals.labor_percent }}%)</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Marge Nette -->
+    <div class="col-md-2">
+        <div class="card kpi-card {% if data.totals.marge_nette >= 0 %}border-success{% else %}border-danger{% endif %} h-100">
+            <div class="card-body text-center">
+                <div class="kpi-label">Marge Nette</div>
+                <div class="kpi-value {% if data.totals.marge_nette >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1.5rem;">
+                    {{ "{:,.0f}".format(data.totals.marge_nette) }}
+                </div>
+                <small class="text-muted">DA ({{ data.totals.margin_percent }}%)</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Encaissements (Cash) -->
+    <div class="col-md-2">
+        <div class="card kpi-card border-secondary h-100">
+            <div class="card-body text-center">
+                <div class="kpi-label">Encaissements</div>
+                <div class="kpi-value" style="font-size: 1.5rem; color: #6c757d;">{{ "{:,.0f}".format(data.totals.encaissement) }}</div>
+                <small class="text-muted">DA (Cash réel)</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Écart Cash vs Ventes -->
+    <div class="col-md-2">
+        <div class="card kpi-card {% if data.totals.ecart_cash >= 0 %}border-success{% else %}border-danger{% endif %} h-100">
+            <div class="card-body text-center">
+                <div class="kpi-label">Écart Cash</div>
+                <div class="kpi-value {% if data.totals.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1.5rem;">
+                    {% if data.totals.ecart_cash >= 0 %}+{% endif %}{{ "{:,.0f}".format(data.totals.ecart_cash) }}
+                </div>
+                <small class="text-muted">DA (Cash - Ventes)</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block charts %}
+<div class="row mb-4">
+    <!-- Graphique CA vs Encaissements -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>CA Ventes vs Encaissements (Cash)</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="revenueVsCashChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Graphique Marge & Écart -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Marge Nette & Écart Cash</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="marginGapChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block data_tables %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-table me-2"></i>Détail Quotidien</h6>
+                <span class="badge bg-secondary">{{ data.days_count }} jours</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Date</th>
+                                <th class="text-end">CA Ventes<br><small class="fw-normal">(Performance)</small></th>
+                                <th class="text-end">Coût Matière<br><small class="fw-normal">(COGS)</small></th>
+                                <th class="text-end">Main d'Œuvre<br><small class="fw-normal">(Labor)</small></th>
+                                <th class="text-end">Marge Nette<br><small class="fw-normal">(Calculé)</small></th>
+                                <th class="text-end">Encaissement<br><small class="fw-normal">(Cash)</small></th>
+                                <th class="text-end">Écart<br><small class="fw-normal">(Cash - Ventes)</small></th>
+                                <th class="text-center">Cmds</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for day in data.daily_data %}
+                            <tr>
+                                <td>
+                                    <strong>{{ day.date.strftime('%d/%m/%Y') }}</strong>
+                                    <br><small class="text-muted">{{ day.date.strftime('%A') }}</small>
+                                </td>
+                                <td class="text-end">
+                                    <span class="text-primary fw-bold">{{ "{:,.0f}".format(day.ca_ventes) }} DA</span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="text-warning">-{{ "{:,.0f}".format(day.cogs) }} DA</span>
+                                    <br><small class="text-muted">({{ day.cogs_percent }}%)</small>
+                                </td>
+                                <td class="text-end">
+                                    <span class="text-info">-{{ "{:,.0f}".format(day.labor_cost) }} DA</span>
+                                    <br><small class="text-muted">({{ day.labor_percent }}%)</small>
+                                </td>
+                                <td class="text-end">
+                                    <span class="{% if day.marge_nette >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                        {% if day.marge_nette >= 0 %}+{% endif %}{{ "{:,.0f}".format(day.marge_nette) }} DA
+                                    </span>
+                                    <br><small class="text-muted">({{ day.margin_percent }}%)</small>
+                                </td>
+                                <td class="text-end">
+                                    <span class="fw-bold">{{ "{:,.0f}".format(day.encaissement) }} DA</span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="{% if day.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                        {% if day.ecart_cash >= 0 %}+{% endif %}{{ "{:,.0f}".format(day.ecart_cash) }} DA
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark">
+                                        {{ day.pos_count + day.shop_count }}
+                                    </span>
+                                    <br><small class="text-muted">POS:{{ day.pos_count }} Shop:{{ day.shop_count }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr class="fw-bold">
+                                <td>TOTAUX</td>
+                                <td class="text-end text-primary">{{ "{:,.0f}".format(data.totals.ca_ventes) }} DA</td>
+                                <td class="text-end text-warning">-{{ "{:,.0f}".format(data.totals.cogs) }} DA</td>
+                                <td class="text-end text-info">-{{ "{:,.0f}".format(data.totals.labor_cost) }} DA</td>
+                                <td class="text-end {% if data.totals.marge_nette >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if data.totals.marge_nette >= 0 %}+{% endif %}{{ "{:,.0f}".format(data.totals.marge_nette) }} DA
+                                </td>
+                                <td class="text-end">{{ "{:,.0f}".format(data.totals.encaissement) }} DA</td>
+                                <td class="text-end {% if data.totals.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if data.totals.ecart_cash >= 0 %}+{% endif %}{{ "{:,.0f}".format(data.totals.ecart_cash) }} DA
+                                </td>
+                                <td class="text-center">{{ data.totals.total_orders }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analyse -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card {% if data.totals.marge_nette >= 0 %}border-success{% else %}border-danger{% endif %}">
+            <div class="card-header {% if data.totals.marge_nette >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Analyse Performance</h6>
+            </div>
+            <div class="card-body">
+                {% if data.totals.marge_nette >= 0 %}
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-check-circle me-2"></i>Période Rentable</h6>
+                    <p class="mb-0">La marge nette est de <strong>{{ "{:,.0f}".format(data.totals.marge_nette) }} DA</strong> soit <strong>{{ data.totals.margin_percent }}%</strong> du CA.</p>
+                </div>
+                {% else %}
+                <div class="alert alert-danger">
+                    <h6><i class="bi bi-exclamation-triangle me-2"></i>Attention - Période Déficitaire</h6>
+                    <p class="mb-0">La marge nette est négative : <strong>{{ "{:,.0f}".format(data.totals.marge_nette) }} DA</strong>. Actions recommandées :</p>
+                    <ul class="mb-0 mt-2">
+                        <li>Réviser les coûts matières ({{ data.totals.cogs_percent }}% du CA)</li>
+                        <li>Optimiser les coûts de main d'œuvre ({{ data.totals.labor_percent }}% du CA)</li>
+                        <li>Analyser les prix de vente</li>
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <h6 class="mt-3">Répartition des Coûts</h6>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Coût Matière (COGS)</span>
+                        <span>{{ data.totals.cogs_percent }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning" style="width: {{ data.totals.cogs_percent }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Main d'Œuvre</span>
+                        <span>{{ data.totals.labor_percent }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-info" style="width: {{ data.totals.labor_percent }}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="d-flex justify-content-between">
+                        <span>Marge Nette</span>
+                        <span>{{ data.totals.margin_percent }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar {% if data.totals.margin_percent >= 0 %}bg-success{% else %}bg-danger{% endif %}" style="width: {{ [data.totals.margin_percent, 0] | max }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card {% if data.totals.ecart_cash >= 0 %}border-success{% else %}border-warning{% endif %}">
+            <div class="card-header {% if data.totals.ecart_cash >= 0 %}bg-success{% else %}bg-warning{% endif %} text-white">
+                <h6 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Analyse Trésorerie</h6>
+            </div>
+            <div class="card-body">
+                {% if data.totals.ecart_cash >= 0 %}
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-check-circle me-2"></i>Trésorerie Positive</h6>
+                    <p class="mb-0">Les encaissements (<strong>{{ "{:,.0f}".format(data.totals.encaissement) }} DA</strong>) dépassent le CA ventes (<strong>{{ "{:,.0f}".format(data.totals.ca_ventes) }} DA</strong>) de <strong>+{{ "{:,.0f}".format(data.totals.ecart_cash) }} DA</strong>.</p>
+                    <p class="mb-0 mt-2"><small>Cela peut indiquer des encaissements d'acomptes, des paiements différés de périodes précédentes, ou des entrées diverses.</small></p>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-exclamation-triangle me-2"></i>Attention - Écart Trésorerie</h6>
+                    <p class="mb-0">Les encaissements (<strong>{{ "{:,.0f}".format(data.totals.encaissement) }} DA</strong>) sont inférieurs au CA ventes (<strong>{{ "{:,.0f}".format(data.totals.ca_ventes) }} DA</strong>) de <strong>{{ "{:,.0f}".format(data.totals.ecart_cash) }} DA</strong>.</p>
+                    <p class="mb-0 mt-2"><small>Cela peut indiquer des créances clients, des ventes non encore encaissées, ou des dettes livreurs.</small></p>
+                </div>
+                {% endif %}
+                
+                <h6 class="mt-3">Comparaison Performance vs Cash</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tr>
+                            <td>CA Ventes (Performance)</td>
+                            <td class="text-end text-primary fw-bold">{{ "{:,.0f}".format(data.totals.ca_ventes) }} DA</td>
+                        </tr>
+                        <tr>
+                            <td>Encaissements (Cash)</td>
+                            <td class="text-end fw-bold">{{ "{:,.0f}".format(data.totals.encaissement) }} DA</td>
+                        </tr>
+                        <tr class="table-active">
+                            <td><strong>Écart (Cash - Ventes)</strong></td>
+                            <td class="text-end {% if data.totals.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                {% if data.totals.ecart_cash >= 0 %}+{% endif %}{{ "{:,.0f}".format(data.totals.ecart_cash) }} DA
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block chart_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Données pour les graphiques
+    const chartData = {{ data.chart_data | tojson }};
+    
+    // Graphique CA vs Encaissements
+    new Chart(document.getElementById('revenueVsCashChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.labels,
+            datasets: [
+                {
+                    label: 'CA Ventes (Performance)',
+                    data: chartData.ca_ventes,
+                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Encaissements (Cash)',
+                    data: chartData.encaissement,
+                    backgroundColor: 'rgba(108, 117, 125, 0.7)',
+                    borderColor: 'rgba(108, 117, 125, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.raw.toLocaleString() + ' DA';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' DA';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Graphique Marge & Écart
+    new Chart(document.getElementById('marginGapChart'), {
+        type: 'line',
+        data: {
+            labels: chartData.labels,
+            datasets: [
+                {
+                    label: 'Marge Nette',
+                    data: chartData.marge_nette,
+                    borderColor: 'rgba(25, 135, 84, 1)',
+                    backgroundColor: 'rgba(25, 135, 84, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Écart Cash',
+                    data: chartData.ecart_cash,
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    backgroundColor: 'rgba(255, 193, 7, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const sign = context.raw >= 0 ? '+' : '';
+                            return context.dataset.label + ': ' + sign + context.raw.toLocaleString() + ' DA';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: function(value) {
+                            const sign = value >= 0 ? '+' : '';
+                            return sign + value.toLocaleString() + ' DA';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block ai_section %}
+<!-- PHASE 3 - Intégration IA (optionnel) -->
+{% endblock %}
+

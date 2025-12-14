@@ -37,6 +37,33 @@
                 </div>
             </div>
 
+            <!-- Rapport Rentabilité & Trésorerie - NOUVEAU -->
+            <div class="card mb-4 border-success" style="border-width: 3px !important;">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up-arrow me-2"></i>Rentabilité & Trésorerie (P&L vs Cash)
+                        <span class="badge bg-light text-success ms-2">NOUVEAU</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="mb-2">Comparez la performance (ventes) avec la trésorerie (encaissements réels)</h6>
+                            <p class="text-muted mb-0 small">
+                                <i class="bi bi-check-circle me-1"></i>CA Ventes vs Encaissements journaliers<br>
+                                <i class="bi bi-check-circle me-1"></i>Coût Matière (COGS) et Main d'Œuvre<br>
+                                <i class="bi bi-check-circle me-1"></i>Marge Nette et Écart Cash sur période
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{{ url_for('reports.profitability_report') }}" class="btn btn-success btn-lg">
+                                <i class="bi bi-graph-up-arrow me-2"></i>Voir le Rapport
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Rapports Quotidiens -->
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
