@@ -1661,10 +1661,11 @@ class DailyProfitabilityService:
         Réutilise les logiques existantes du Dashboard.
         
         Returns:
-            dict: Métriques quotidiennes (CA, COGS, Labor, Cash)
+            dict: Métriques quotidiennes (CA, COGS, Labor, Cash) + détails des commandes
         """
         from app.reports.kpi_service import RealKpiService
         from app.sales.models import CashMovement
+        from models import Order
         
         # 1. Récupérer les KPIs depuis RealKpiService (même logique que le dashboard)
         kpis = RealKpiService.get_daily_kpis(target_date)
@@ -1679,6 +1680,7 @@ class DailyProfitabilityService:
         
         cash_in = 0.0
         cash_out = 0.0
+        cash_movements_detail = []  # 🆕 Liste des mouvements de caisse
         
         for movement in movements:
             movement_type = (movement.type or '').lower()
@@ -1687,6 +1689,16 @@ class DailyProfitabilityService:
                 cash_out += amount
             elif movement_type in entry_types or amount >= 0:
                 cash_in += amount
+                # 🆕 Enregistrer les détails des entrées
+                cash_movements_detail.append({
+                    'id': movement.id,
+                    'time': movement.created_at.strftime('%H:%M') if movement.created_at else 'N/A',
+                    'type': movement.type or 'Entrée',
+                    'reason': movement.reason or 'Sans raison',
+                    'notes': movement.notes or '',
+                    'amount': amount,
+                    'order_id': movement.order_id if hasattr(movement, 'order_id') else None
+                })
             else:
                 cash_out += abs(amount)
         
@@ -1699,6 +1711,62 @@ class DailyProfitabilityService:
         # 4. Calculer les métriques dérivées
         marge_nette = ca_ventes - cogs - labor_cost
         ecart_cash = encaissement - ca_ventes  # Écart Cash vs Ventes
+        
+        # 5. 🆕 DÉTAIL DES COMMANDES - CA VENTES
+        # 5.1 Commandes POS (Ventes au Comptoir)
+        pos_orders_query = Order.query.filter(
+            Order.order_type == 'in_store',
+            func.date(Order.created_at) == target_date
+        ).order_by(Order.created_at.desc())
+        
+        pos_orders_detail = []
+        for order in pos_orders_query:
+            pos_orders_detail.append({
+                'id': order.id,
+                'time': order.created_at.strftime('%H:%M') if order.created_at else 'N/A',
+                'amount': float(order.total_amount or 0)
+            })
+        
+        # 5.2 Commandes Shop créées ET livrées le même jour
+        shop_orders_same_day_query = Order.query.filter(
+            Order.order_type != 'in_store',
+            Order.order_type != 'counter_production_request',
+            Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
+            func.date(Order.created_at) == target_date,
+            func.date(Order.due_date) == target_date
+        ).order_by(Order.created_at.desc())
+        
+        shop_orders_same_day_detail = []
+        for order in shop_orders_same_day_query:
+            shop_orders_same_day_detail.append({
+                'id': order.id,
+                'customer': order.customer_name or 'Sans nom',
+                'amount': float(order.total_amount or 0),
+                'time': order.due_date.strftime('%H:%M') if order.due_date else 'N/A'
+            })
+        
+        # 6. 🆕 DÉTAIL DES COMMANDES - ENCAISSEMENTS (Commandes anciennes)
+        # Toutes les commandes Shop livrées aujourd'hui MAIS créées avant
+        old_orders_paid_today_query = Order.query.filter(
+            Order.order_type != 'in_store',
+            Order.order_type != 'counter_production_request',
+            Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
+            func.date(Order.due_date) == target_date,  # Livrée aujourd'hui
+            func.date(Order.created_at) != target_date  # Mais créée avant
+        ).order_by(Order.total_amount.desc())
+        
+        old_orders_detail = []
+        total_old_orders_amount = 0.0
+        for order in old_orders_paid_today_query:
+            amount = float(order.total_amount or 0)
+            total_old_orders_amount += amount
+            old_orders_detail.append({
+                'id': order.id,
+                'created_date': order.created_at.strftime('%d/%m/%Y') if order.created_at else 'N/A',
+                'delivered_date': order.due_date.strftime('%d/%m/%Y') if order.due_date else 'N/A',
+                'customer': order.customer_name or 'Sans nom',
+                'amount': amount
+            })
         
         return {
             'date': target_date,
@@ -1717,7 +1785,16 @@ class DailyProfitabilityService:
             # Pourcentages
             'cogs_percent': round((cogs / ca_ventes * 100) if ca_ventes > 0 else 0, 1),
             'labor_percent': round((labor_cost / ca_ventes * 100) if ca_ventes > 0 else 0, 1),
-            'margin_percent': round((marge_nette / ca_ventes * 100) if ca_ventes > 0 else 0, 1)
+            'margin_percent': round((marge_nette / ca_ventes * 100) if ca_ventes > 0 else 0, 1),
+            # 🆕 DÉTAILS DES COMMANDES
+            'pos_orders': pos_orders_detail,
+            'shop_orders_same_day': shop_orders_same_day_detail,
+            'old_orders_paid_today': old_orders_detail,
+            'old_orders_count': len(old_orders_detail),
+            'old_orders_total': round(total_old_orders_amount, 2),
+            # 🆕 DÉTAILS DES MOUVEMENTS DE CAISSE
+            'cash_movements': cash_movements_detail,
+            'cash_movements_total': round(cash_in, 2)
         }
     
     @staticmethod

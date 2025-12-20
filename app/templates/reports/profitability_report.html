@@ -1,12 +1,13 @@
 {% extends "reports/_report_base.html" %}
 
 {% set report_type = 'profitability' %}
-{% set export_params = '?start_date=' + (data.start_date.strftime('%Y-%m-%d') if data.start_date else '') + '&end_date=' + (data.end_date.strftime('%Y-%m-%d') if data.end_date else '') %}
+{% set export_params = '?start_date=' + (data.start_date.strftime('%Y-%m-%d') if data.start_date else '') + '&end_date='
++ (data.end_date.strftime('%Y-%m-%d') if data.end_date else '') %}
 
 {% block report_icon %}bi-graph-up-arrow{% endblock %}
 {% block report_title %}Rentabilité & Trésorerie{% endblock %}
 {% block report_description %}
-    Analyse Performance vs Cash du {{ data.start_date.strftime('%d/%m/%Y') }} au {{ data.end_date.strftime('%d/%m/%Y') }}
+Analyse Performance vs Cash du {{ data.start_date.strftime('%d/%m/%Y') }} au {{ data.end_date.strftime('%d/%m/%Y') }}
 {% endblock %}
 
 {% block filter_fields %}
@@ -27,64 +28,72 @@
         <div class="card kpi-card border-primary h-100">
             <div class="card-body text-center">
                 <div class="kpi-label">CA Ventes</div>
-                <div class="kpi-value text-primary" style="font-size: 1.5rem;">{{ "{:,.0f}".format(data.totals.ca_ventes) }}</div>
+                <div class="kpi-value text-primary" style="font-size: 1.5rem;">{{
+                    "{:,.0f}".format(data.totals.ca_ventes) }}</div>
                 <small class="text-muted">DA (Performance)</small>
             </div>
         </div>
     </div>
-    
+
     <!-- Coût Matière -->
     <div class="col-md-2">
         <div class="card kpi-card border-warning h-100">
             <div class="card-body text-center">
                 <div class="kpi-label">Coût Matière</div>
-                <div class="kpi-value text-warning" style="font-size: 1.5rem;">{{ "{:,.0f}".format(data.totals.cogs) }}</div>
+                <div class="kpi-value text-warning" style="font-size: 1.5rem;">{{ "{:,.0f}".format(data.totals.cogs) }}
+                </div>
                 <small class="text-muted">DA ({{ data.totals.cogs_percent }}%)</small>
             </div>
         </div>
     </div>
-    
+
     <!-- Main d'Œuvre -->
     <div class="col-md-2">
         <div class="card kpi-card border-info h-100">
             <div class="card-body text-center">
                 <div class="kpi-label">Main d'Œuvre</div>
-                <div class="kpi-value text-info" style="font-size: 1.5rem;">{{ "{:,.0f}".format(data.totals.labor_cost) }}</div>
+                <div class="kpi-value text-info" style="font-size: 1.5rem;">{{ "{:,.0f}".format(data.totals.labor_cost)
+                    }}</div>
                 <small class="text-muted">DA ({{ data.totals.labor_percent }}%)</small>
             </div>
         </div>
     </div>
-    
+
     <!-- Marge Nette -->
     <div class="col-md-2">
-        <div class="card kpi-card {% if data.totals.marge_nette >= 0 %}border-success{% else %}border-danger{% endif %} h-100">
+        <div
+            class="card kpi-card {% if data.totals.marge_nette >= 0 %}border-success{% else %}border-danger{% endif %} h-100">
             <div class="card-body text-center">
                 <div class="kpi-label">Marge Nette</div>
-                <div class="kpi-value {% if data.totals.marge_nette >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1.5rem;">
+                <div class="kpi-value {% if data.totals.marge_nette >= 0 %}text-success{% else %}text-danger{% endif %}"
+                    style="font-size: 1.5rem;">
                     {{ "{:,.0f}".format(data.totals.marge_nette) }}
                 </div>
                 <small class="text-muted">DA ({{ data.totals.margin_percent }}%)</small>
             </div>
         </div>
     </div>
-    
+
     <!-- Encaissements (Cash) -->
     <div class="col-md-2">
         <div class="card kpi-card border-secondary h-100">
             <div class="card-body text-center">
                 <div class="kpi-label">Encaissements</div>
-                <div class="kpi-value" style="font-size: 1.5rem; color: #6c757d;">{{ "{:,.0f}".format(data.totals.encaissement) }}</div>
+                <div class="kpi-value" style="font-size: 1.5rem; color: #6c757d;">{{
+                    "{:,.0f}".format(data.totals.encaissement) }}</div>
                 <small class="text-muted">DA (Cash réel)</small>
             </div>
         </div>
     </div>
-    
+
     <!-- Écart Cash vs Ventes -->
     <div class="col-md-2">
-        <div class="card kpi-card {% if data.totals.ecart_cash >= 0 %}border-success{% else %}border-danger{% endif %} h-100">
+        <div
+            class="card kpi-card {% if data.totals.ecart_cash >= 0 %}border-success{% else %}border-danger{% endif %} h-100">
             <div class="card-body text-center">
                 <div class="kpi-label">Écart Cash</div>
-                <div class="kpi-value {% if data.totals.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1.5rem;">
+                <div class="kpi-value {% if data.totals.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %}"
+                    style="font-size: 1.5rem;">
                     {% if data.totals.ecart_cash >= 0 %}+{% endif %}{{ "{:,.0f}".format(data.totals.ecart_cash) }}
                 </div>
                 <small class="text-muted">DA (Cash - Ventes)</small>
@@ -109,7 +118,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Graphique Marge & Écart -->
     <div class="col-md-4">
         <div class="card">
@@ -168,8 +177,10 @@
                                     <br><small class="text-muted">({{ day.labor_percent }}%)</small>
                                 </td>
                                 <td class="text-end">
-                                    <span class="{% if day.marge_nette >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                                        {% if day.marge_nette >= 0 %}+{% endif %}{{ "{:,.0f}".format(day.marge_nette) }} DA
+                                    <span
+                                        class="{% if day.marge_nette >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                        {% if day.marge_nette >= 0 %}+{% endif %}{{ "{:,.0f}".format(day.marge_nette) }}
+                                        DA
                                     </span>
                                     <br><small class="text-muted">({{ day.margin_percent }}%)</small>
                                 </td>
@@ -177,15 +188,287 @@
                                     <span class="fw-bold">{{ "{:,.0f}".format(day.encaissement) }} DA</span>
                                 </td>
                                 <td class="text-end">
-                                    <span class="{% if day.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                                        {% if day.ecart_cash >= 0 %}+{% endif %}{{ "{:,.0f}".format(day.ecart_cash) }} DA
+                                    <span
+                                        class="{% if day.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                        {% if day.ecart_cash >= 0 %}+{% endif %}{{ "{:,.0f}".format(day.ecart_cash) }}
+                                        DA
                                     </span>
                                 </td>
                                 <td class="text-center">
                                     <span class="badge bg-light text-dark">
                                         {{ day.pos_count + day.shop_count }}
                                     </span>
-                                    <br><small class="text-muted">POS:{{ day.pos_count }} Shop:{{ day.shop_count }}</small>
+                                    <br><small class="text-muted">POS:{{ day.pos_count }} Shop:{{ day.shop_count
+                                        }}</small>
+                                    <br>
+                                    <!-- Bouton pour afficher les détails -->
+                                    <button class="btn btn-sm btn-outline-primary mt-2" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}"
+                                        aria-expanded="false">
+                                        <i class="bi bi-list-ul"></i> Détails
+                                    </button>
+                                </td>
+                            </tr>
+                            <!-- Ligne collapsible avec les détails -->
+                            <tr class="collapse" id="details-{{ loop.index }}">
+                                <td colspan="8" class="bg-light">
+                                    <div class="accordion" id="accordion-{{ loop.index }}">
+                                        <!-- Accordéon 1: CA Ventes -->
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#ca-ventes-{{ loop.index }}">
+                                                    <i class="bi bi-bar-chart me-2"></i> <strong>CA Ventes : {{
+                                                        "{:,.0f}".format(day.ca_ventes) }} DA</strong>
+                                                </button>
+                                            </h2>
+                                            <div id="ca-ventes-{{ loop.index }}" class="accordion-collapse collapse"
+                                                data-bs-parent="#accordion-{{ loop.index }}">
+                                                <div class="accordion-body">
+                                                    <h6 class="text-primary">📦 Ventes Comptoir ({{
+                                                        "{:,.0f}".format(day.pos_orders | sum(attribute='amount')) }}
+                                                        DA) - {{ day.pos_orders | length }} commandes</h6>
+                                                    {% if day.pos_orders %}
+                                                    <table class="table table-sm table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>ID</th>
+                                                                <th>Heure</th>
+                                                                <th class="text-end">Montant</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for order in day.pos_orders %}
+                                                            <tr>
+                                                                <td><a href="/admin/orders/{{ order.id }}">#{{ order.id
+                                                                        }}</a></td>
+                                                                <td>{{ order.time }}</td>
+                                                                <td class="text-end">{{ "{:,.0f}".format(order.amount)
+                                                                    }} DA</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                    {% else %}
+                                                    <p class="text-muted">Aucune vente comptoir</p>
+                                                    {% endif %}
+
+                                                    <h6 class="text-primary mt-3">🚚 Commandes créées + livrées ce jour
+                                                        ({{ "{:,.0f}".format(day.shop_orders_same_day |
+                                                        sum(attribute='amount')) }} DA) - {{ day.shop_orders_same_day |
+                                                        length }} commandes</h6>
+                                                    {% if day.shop_orders_same_day %}
+                                                    <table class="table table-sm table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>ID</th>
+                                                                <th>Client</th>
+                                                                <th>Heure</th>
+                                                                <th class="text-end">Montant</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for order in day.shop_orders_same_day %}
+                                                            <tr>
+                                                                <td><a href="/admin/orders/{{ order.id }}">#{{ order.id
+                                                                        }}</a></td>
+                                                                <td>{{ order.customer }}</td>
+                                                                <td>{{ order.time }}</td>
+                                                                <td class="text-end">{{ "{:,.0f}".format(order.amount)
+                                                                    }} DA</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                    {% else %}
+                                                    <p class="text-muted">Aucune commande créée + livrée ce jour</p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Accordéon 2: Encaissements -->
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#encaissements-{{ loop.index }}">
+                                                    <i class="bi bi-cash-stack me-2"></i> <strong>Encaissements : {{
+                                                        "{:,.0f}".format(day.encaissement) }} DA</strong>
+                                                </button>
+                                            </h2>
+                                            <div id="encaissements-{{ loop.index }}" class="accordion-collapse collapse"
+                                                data-bs-parent="#accordion-{{ loop.index }}">
+                                                <div class="accordion-body">
+                                                    <h6 class="text-success">✅ Ventes comptoir du jour : {{
+                                                        "{:,.0f}".format(day.pos_orders | sum(attribute='amount')) }} DA
+                                                    </h6>
+                                                    <p class="text-muted small">Voir table ci-dessus (CA Ventes /
+                                                        Comptoir)</p>
+
+                                                    <h6 class="text-success mt-3">✅ Paiements commandes Shop du jour :
+                                                        {{ "{:,.0f}".format(day.shop_orders_same_day |
+                                                        sum(attribute='amount')) }} DA</h6>
+                                                    <p class="text-muted small">Voir table ci-dessus (CA Ventes /
+                                                        Commandes créées + livrées ce jour)</p>
+
+                                                    <h6 class="text-warning mt-3">⚠️ Paiements commandes anciennes : {{
+                                                        "{:,.0f}".format(day.old_orders_total) }} DA - {{
+                                                        day.old_orders_count }} commandes</h6>
+                                                    {% if day.old_orders_paid_today %}
+                                                    <table class="table table-sm table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>ID</th>
+                                                                <th>Créée le</th>
+                                                                <th>Livrée le</th>
+                                                                <th>Client</th>
+                                                                <th class="text-end">Montant</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for order in day.old_orders_paid_today %}
+                                                            <tr>
+                                                                <td><a href="/admin/orders/{{ order.id }}">#{{ order.id
+                                                                        }}</a></td>
+                                                                <td>{{ order.created_date }}</td>
+                                                                <td>{{ order.delivered_date }}</td>
+                                                                <td>{{ order.customer }}</td>
+                                                                <td class="text-end fw-bold">{{
+                                                                    "{:,.0f}".format(order.amount) }} DA</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                    {% else %}
+                                                    <p class="text-muted">Aucune commande ancienne encaissée ce jour</p>
+                                                    {% endif %}
+
+                                                    <h6 class="text-info mt-3">💵 Tous les mouvements de caisse : {{
+                                                        "{:,.0f}".format(day.cash_movements_total) }} DA - {{
+                                                        day.cash_movements | length }} entrées</h6>
+                                                    {% if day.cash_movements %}
+                                                    <table class="table table-sm table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Heure</th>
+                                                                <th>Type</th>
+                                                                <th>Description</th>
+                                                                <th>Commande</th>
+                                                                <th class="text-end">Montant</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for movement in day.cash_movements %}
+                                                            <tr>
+                                                                <td>{{ movement.time }}</td>
+                                                                <td><span class="badge bg-info">{{ movement.type
+                                                                        }}</span></td>
+                                                                <td>
+                                                                    {{ movement.reason }}
+                                                                    {% if movement.notes %}
+                                                                    <br><small class="text-muted">{{ movement.notes
+                                                                        }}</small>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {% if movement.order_id %}
+                                                                    <a href="/admin/orders/{{ movement.order_id }}">#{{
+                                                                        movement.order_id }}</a>
+                                                                    {% else %}
+                                                                    <span class="text-muted">-</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td class="text-end fw-bold">{{
+                                                                    "{:,.0f}".format(movement.amount) }} DA</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                    <p class="text-muted small"><em>Cette table montre TOUS les
+                                                            mouvements de caisse du jour, y compris les ventes comptoir,
+                                                            paiements de commandes, acomptes, et entrées manuelles.</em>
+                                                    </p>
+                                                    {% else %}
+                                                    <p class="text-muted">Aucun mouvement de caisse</p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Accordéon 3: Explication de l'écart -->
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#ecart-{{ loop.index }}">
+                                                    <i class="bi bi-graph-up-arrow me-2"></i> <strong>Explication de
+                                                        l'écart : {% if day.ecart_cash >= 0 %}+{% endif %}{{
+                                                        "{:,.0f}".format(day.ecart_cash) }} DA</strong>
+                                                </button>
+                                            </h2>
+                                            <div id="ecart-{{ loop.index }}" class="accordion-collapse collapse"
+                                                data-bs-parent="#accordion-{{ loop.index }}">
+                                                <div class="accordion-body">
+                                                    {% if day.ecart_cash >= 0 %}
+                                                    <div class="alert alert-success">
+                                                        <h6><i class="bi bi-check-circle me-2"></i>✅ Écart positif =
+                                                            Trésorerie saine</h6>
+                                                        <p class="mb-0">Vous avez encaissé <strong>{{
+                                                                "{:,.0f}".format(day.ecart_cash) }} DA de plus</strong>
+                                                            que le CA du jour.</p>
+                                                        {% if day.old_orders_count > 0 %}
+                                                        <p class="mb-0 mt-2"><strong>Raison :</strong> {{
+                                                            day.old_orders_count }} commande(s) créée(s) les jours
+                                                            précédents ont été livrées et payées aujourd'hui.</p>
+                                                        <ul class="mb-0 mt-2">
+                                                            <li>Ces paiements <strong>ne comptent pas</strong> dans le
+                                                                "CA Ventes" du jour (qui ne compte que les ventes créées
+                                                                ET livrées aujourd'hui)</li>
+                                                            <li>Mais ils <strong>comptent bien</strong> dans les
+                                                                "Encaissements" (argent réellement rentré en caisse)
+                                                            </li>
+                                                        </ul>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% else %}
+                                                    <div class="alert alert-warning">
+                                                        <h6><i class="bi bi-exclamation-triangle me-2"></i>⚠️ Écart
+                                                            négatif = Ventes non encore encaissées</h6>
+                                                        <p class="mb-0">Les encaissements sont <strong>{{
+                                                                "{:,.0f}".format(day.ecart_cash|abs) }} DA de
+                                                                moins</strong> que le CA du jour.</p>
+                                                        <p class="mb-0 mt-2"><strong>Raison possible :</strong> Créances
+                                                            clients, ventes à crédit, ou dettes livreurs non encore
+                                                            réglées.</p>
+                                                    </div>
+                                                    {% endif %}
+
+                                                    <h6 class="mt-3">Récapitulatif</h6>
+                                                    <table class="table table-sm">
+                                                        <tr>
+                                                            <td>CA Ventes (Performance)</td>
+                                                            <td class="text-end text-primary fw-bold">{{
+                                                                "{:,.0f}".format(day.ca_ventes) }} DA</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Encaissements (Cash)</td>
+                                                            <td class="text-end fw-bold">{{
+                                                                "{:,.0f}".format(day.encaissement) }} DA</td>
+                                                        </tr>
+                                                        <tr class="table-active">
+                                                            <td><strong>Écart (Cash - Ventes)</strong></td>
+                                                            <td
+                                                                class="text-end {% if day.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                                                {% if day.ecart_cash >= 0 %}+{% endif %}{{
+                                                                "{:,.0f}".format(day.ecart_cash) }} DA
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -196,12 +479,16 @@
                                 <td class="text-end text-primary">{{ "{:,.0f}".format(data.totals.ca_ventes) }} DA</td>
                                 <td class="text-end text-warning">-{{ "{:,.0f}".format(data.totals.cogs) }} DA</td>
                                 <td class="text-end text-info">-{{ "{:,.0f}".format(data.totals.labor_cost) }} DA</td>
-                                <td class="text-end {% if data.totals.marge_nette >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                    {% if data.totals.marge_nette >= 0 %}+{% endif %}{{ "{:,.0f}".format(data.totals.marge_nette) }} DA
+                                <td
+                                    class="text-end {% if data.totals.marge_nette >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if data.totals.marge_nette >= 0 %}+{% endif %}{{
+                                    "{:,.0f}".format(data.totals.marge_nette) }} DA
                                 </td>
                                 <td class="text-end">{{ "{:,.0f}".format(data.totals.encaissement) }} DA</td>
-                                <td class="text-end {% if data.totals.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                    {% if data.totals.ecart_cash >= 0 %}+{% endif %}{{ "{:,.0f}".format(data.totals.ecart_cash) }} DA
+                                <td
+                                    class="text-end {% if data.totals.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if data.totals.ecart_cash >= 0 %}+{% endif %}{{
+                                    "{:,.0f}".format(data.totals.ecart_cash) }} DA
                                 </td>
                                 <td class="text-center">{{ data.totals.total_orders }}</td>
                             </tr>
@@ -217,19 +504,22 @@
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card {% if data.totals.marge_nette >= 0 %}border-success{% else %}border-danger{% endif %}">
-            <div class="card-header {% if data.totals.marge_nette >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
+            <div
+                class="card-header {% if data.totals.marge_nette >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
                 <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Analyse Performance</h6>
             </div>
             <div class="card-body">
                 {% if data.totals.marge_nette >= 0 %}
                 <div class="alert alert-success">
                     <h6><i class="bi bi-check-circle me-2"></i>Période Rentable</h6>
-                    <p class="mb-0">La marge nette est de <strong>{{ "{:,.0f}".format(data.totals.marge_nette) }} DA</strong> soit <strong>{{ data.totals.margin_percent }}%</strong> du CA.</p>
+                    <p class="mb-0">La marge nette est de <strong>{{ "{:,.0f}".format(data.totals.marge_nette) }}
+                            DA</strong> soit <strong>{{ data.totals.margin_percent }}%</strong> du CA.</p>
                 </div>
                 {% else %}
                 <div class="alert alert-danger">
                     <h6><i class="bi bi-exclamation-triangle me-2"></i>Attention - Période Déficitaire</h6>
-                    <p class="mb-0">La marge nette est négative : <strong>{{ "{:,.0f}".format(data.totals.marge_nette) }} DA</strong>. Actions recommandées :</p>
+                    <p class="mb-0">La marge nette est négative : <strong>{{ "{:,.0f}".format(data.totals.marge_nette)
+                            }} DA</strong>. Actions recommandées :</p>
                     <ul class="mb-0 mt-2">
                         <li>Réviser les coûts matières ({{ data.totals.cogs_percent }}% du CA)</li>
                         <li>Optimiser les coûts de main d'œuvre ({{ data.totals.labor_percent }}% du CA)</li>
@@ -237,7 +527,7 @@
                     </ul>
                 </div>
                 {% endif %}
-                
+
                 <h6 class="mt-3">Répartition des Coûts</h6>
                 <div class="mb-2">
                     <div class="d-flex justify-content-between">
@@ -263,39 +553,49 @@
                         <span>{{ data.totals.margin_percent }}%</span>
                     </div>
                     <div class="progress">
-                        <div class="progress-bar {% if data.totals.margin_percent >= 0 %}bg-success{% else %}bg-danger{% endif %}" style="width: {{ [data.totals.margin_percent, 0] | max }}%"></div>
+                        <div class="progress-bar {% if data.totals.margin_percent >= 0 %}bg-success{% else %}bg-danger{% endif %}"
+                            style="width: {{ [data.totals.margin_percent, 0] | max }}%"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card {% if data.totals.ecart_cash >= 0 %}border-success{% else %}border-warning{% endif %}">
-            <div class="card-header {% if data.totals.ecart_cash >= 0 %}bg-success{% else %}bg-warning{% endif %} text-white">
+            <div
+                class="card-header {% if data.totals.ecart_cash >= 0 %}bg-success{% else %}bg-warning{% endif %} text-white">
                 <h6 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Analyse Trésorerie</h6>
             </div>
             <div class="card-body">
                 {% if data.totals.ecart_cash >= 0 %}
                 <div class="alert alert-success">
                     <h6><i class="bi bi-check-circle me-2"></i>Trésorerie Positive</h6>
-                    <p class="mb-0">Les encaissements (<strong>{{ "{:,.0f}".format(data.totals.encaissement) }} DA</strong>) dépassent le CA ventes (<strong>{{ "{:,.0f}".format(data.totals.ca_ventes) }} DA</strong>) de <strong>+{{ "{:,.0f}".format(data.totals.ecart_cash) }} DA</strong>.</p>
-                    <p class="mb-0 mt-2"><small>Cela peut indiquer des encaissements d'acomptes, des paiements différés de périodes précédentes, ou des entrées diverses.</small></p>
+                    <p class="mb-0">Les encaissements (<strong>{{ "{:,.0f}".format(data.totals.encaissement) }}
+                            DA</strong>) dépassent le CA ventes (<strong>{{ "{:,.0f}".format(data.totals.ca_ventes) }}
+                            DA</strong>) de <strong>+{{ "{:,.0f}".format(data.totals.ecart_cash) }} DA</strong>.</p>
+                    <p class="mb-0 mt-2"><small>Cela peut indiquer des encaissements d'acomptes, des paiements différés
+                            de périodes précédentes, ou des entrées diverses.</small></p>
                 </div>
                 {% else %}
                 <div class="alert alert-warning">
                     <h6><i class="bi bi-exclamation-triangle me-2"></i>Attention - Écart Trésorerie</h6>
-                    <p class="mb-0">Les encaissements (<strong>{{ "{:,.0f}".format(data.totals.encaissement) }} DA</strong>) sont inférieurs au CA ventes (<strong>{{ "{:,.0f}".format(data.totals.ca_ventes) }} DA</strong>) de <strong>{{ "{:,.0f}".format(data.totals.ecart_cash) }} DA</strong>.</p>
-                    <p class="mb-0 mt-2"><small>Cela peut indiquer des créances clients, des ventes non encore encaissées, ou des dettes livreurs.</small></p>
+                    <p class="mb-0">Les encaissements (<strong>{{ "{:,.0f}".format(data.totals.encaissement) }}
+                            DA</strong>) sont inférieurs au CA ventes (<strong>{{
+                            "{:,.0f}".format(data.totals.ca_ventes) }} DA</strong>) de <strong>{{
+                            "{:,.0f}".format(data.totals.ecart_cash) }} DA</strong>.</p>
+                    <p class="mb-0 mt-2"><small>Cela peut indiquer des créances clients, des ventes non encore
+                            encaissées, ou des dettes livreurs.</small></p>
                 </div>
                 {% endif %}
-                
+
                 <h6 class="mt-3">Comparaison Performance vs Cash</h6>
                 <div class="table-responsive">
                     <table class="table table-sm">
                         <tr>
                             <td>CA Ventes (Performance)</td>
-                            <td class="text-end text-primary fw-bold">{{ "{:,.0f}".format(data.totals.ca_ventes) }} DA</td>
+                            <td class="text-end text-primary fw-bold">{{ "{:,.0f}".format(data.totals.ca_ventes) }} DA
+                            </td>
                         </tr>
                         <tr>
                             <td>Encaissements (Cash)</td>
@@ -303,8 +603,10 @@
                         </tr>
                         <tr class="table-active">
                             <td><strong>Écart (Cash - Ventes)</strong></td>
-                            <td class="text-end {% if data.totals.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                                {% if data.totals.ecart_cash >= 0 %}+{% endif %}{{ "{:,.0f}".format(data.totals.ecart_cash) }} DA
+                            <td
+                                class="text-end {% if data.totals.ecart_cash >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                {% if data.totals.ecart_cash >= 0 %}+{% endif %}{{
+                                "{:,.0f}".format(data.totals.ecart_cash) }} DA
                             </td>
                         </tr>
                     </table>
@@ -317,10 +619,11 @@
 
 {% block chart_scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Données pour les graphiques
-    const chartData = {{ data.chart_data | tojson }};
-    
+    document.addEventListener('DOMContentLoaded', function () {
+        // Données pour les graphiques
+        const chartData = {{ data.chart_data | tojson
+    }};
+
     // Graphique CA vs Encaissements
     new Chart(document.getElementById('revenueVsCashChart'), {
         type: 'bar',
@@ -352,7 +655,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             return context.dataset.label + ': ' + context.raw.toLocaleString() + ' DA';
                         }
                     }
@@ -362,7 +665,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return value.toLocaleString() + ' DA';
                         }
                     }
@@ -370,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    
+
     // Graphique Marge & Écart
     new Chart(document.getElementById('marginGapChart'), {
         type: 'line',
@@ -404,7 +707,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const sign = context.raw >= 0 ? '+' : '';
                             return context.dataset.label + ': ' + sign + context.raw.toLocaleString() + ' DA';
                         }
@@ -414,7 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
             scales: {
                 y: {
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             const sign = value >= 0 ? '+' : '';
                             return sign + value.toLocaleString() + ' DA';
                         }
@@ -430,4 +733,3 @@ document.addEventListener('DOMContentLoaded', function() {
 {% block ai_section %}
 <!-- PHASE 3 - Intégration IA (optionnel) -->
 {% endblock %}
-
