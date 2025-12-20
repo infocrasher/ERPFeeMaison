@@ -4,68 +4,69 @@
 
 {% block content %}
 <style>
-/* Améliorations visuelles pour les templates */
-.template-card {
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-    cursor: pointer;
-}
-
-.template-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    border-color: var(--bs-primary);
-}
-
-.order-item-row {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 4px solid var(--bs-primary);
-    margin-bottom: 15px;
-}
-
-/* Animation pour les nouveaux items */
-@keyframes slideInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
+    /* Améliorations visuelles pour les templates */
+    .template-card {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        cursor: pointer;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+
+    .template-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-color: var(--bs-primary);
     }
-}
 
-.order-item-row {
-    animation: slideInDown 0.3s ease;
-}
+    .order-item-row {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid var(--bs-primary);
+        margin-bottom: 15px;
+    }
 
-/* Style pour le toast */
-.toast {
-    min-width: 300px;
-}
+    /* Animation pour les nouveaux items */
+    @keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
 
-/* Prévention des problèmes de modal */
-.modal {
-    z-index: 1055;
-}
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-.modal-backdrop {
-    z-index: 1054;
-}
+    .order-item-row {
+        animation: slideInDown 0.3s ease;
+    }
 
-/* Force la suppression des scrollbars bloquées */
-body.modal-cleanup {
-    overflow: auto !important;
-    padding-right: 0 !important;
-    margin-right: 0 !important;
-}
+    /* Style pour le toast */
+    .toast {
+        min-width: 300px;
+    }
 
-/* Animation plus fluide pour éviter les conflits */
-.modal.fade .modal-dialog {
-    transition: transform 0.15s ease-out;
-}
+    /* Prévention des problèmes de modal */
+    .modal {
+        z-index: 1055;
+    }
+
+    .modal-backdrop {
+        z-index: 1054;
+    }
+
+    /* Force la suppression des scrollbars bloquées */
+    body.modal-cleanup {
+        overflow: auto !important;
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    /* Animation plus fluide pour éviter les conflits */
+    .modal.fade .modal-dialog {
+        transition: transform 0.15s ease-out;
+    }
 </style>
 <div class="container-fluid">
     <div class="row justify-content-center">
@@ -79,76 +80,40 @@ body.modal-cleanup {
                 <div class="card-body">
                     <form method="POST" novalidate id="orderForm">
                         {{ form.hidden_tag() }}
-                        
+
                         <!-- Informations de base -->
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     {{ form.b2b_client_id.label(class="form-label") }}
-                                    {{ form.b2b_client_id(class="form-select" + (" is-invalid" if form.b2b_client_id.errors else "")) }}
+                                    {{ form.b2b_client_id(class="form-select" + (" is-invalid" if
+                                    form.b2b_client_id.errors else "")) }}
                                     {% if form.b2b_client_id.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.b2b_client_id.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
+                                    <div class="invalid-feedback">
+                                        {% for error in form.b2b_client_id.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     {{ form.delivery_date.label(class="form-label") }}
-                                    {{ form.delivery_date(class="form-control" + (" is-invalid" if form.delivery_date.errors else ""), type="date") }}
+                                    {{ form.delivery_date(class="form-control" + (" is-invalid" if
+                                    form.delivery_date.errors else ""), type="date") }}
                                     {% if form.delivery_date.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.delivery_date.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
+                                    <div class="invalid-feedback">
+                                        {% for error in form.delivery_date.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Option multi-jours -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <div class="form-check">
-                                    {{ form.is_multi_day(class="form-check-input") }}
-                                    {{ form.is_multi_day.label(class="form-check-label") }}
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Période multi-jours (masquée par défaut) -->
-                        <div class="row mb-4" id="periodFields" style="display: none;">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.period_start.label(class="form-label") }}
-                                    {{ form.period_start(class="form-control" + (" is-invalid" if form.period_start.errors else ""), type="date") }}
-                                    {% if form.period_start.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.period_start.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.period_end.label(class="form-label") }}
-                                    {{ form.period_end(class="form-control" + (" is-invalid" if form.period_end.errors else ""), type="date") }}
-                                    {% if form.period_end.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.period_end.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
 
                         <!-- Articles de la commande -->
                         <div class="card">
@@ -158,10 +123,13 @@ body.modal-cleanup {
                             <div class="card-body">
                                 <!-- Boutons d'ajout -->
                                 <div class="d-flex gap-2 mb-3">
-                                    <button type="button" class="btn btn-primary" id="add-item-btn" aria-label="Ajouter un article simple">
+                                    <button type="button" class="btn btn-primary" id="add-item-btn"
+                                        aria-label="Ajouter un article simple">
                                         <i class="bi bi-plus-circle me-2"></i>Ajouter un article
                                     </button>
-                                    <button type="button" class="btn btn-success" id="add-composite-btn" data-bs-toggle="modal" data-bs-target="#compositeProductModal" aria-label="Créer un produit composé">
+                                    <button type="button" class="btn btn-success" id="add-composite-btn"
+                                        data-bs-toggle="modal" data-bs-target="#compositeProductModal"
+                                        aria-label="Créer un produit composé">
                                         <i class="bi bi-layers me-2"></i>Ajouter produit composé
                                     </button>
                                 </div>
@@ -172,40 +140,49 @@ body.modal-cleanup {
                                     <div class="order-item-row mb-3">
                                         <div class="row">
                                             <div class="col-md-4">
-                                                <label class="form-label" for="{{ item_form.product.id }}">Produit</label>
-                                                {{ item_form.product(class="form-control product-select", id=item_form.product.id) }}
+                                                <label class="form-label"
+                                                    for="{{ item_form.product.id }}">Produit</label>
+                                                {{ item_form.product(class="form-control product-select",
+                                                id=item_form.product.id) }}
                                                 {% if item_form.product.errors %}
-                                                    <div class="invalid-feedback">
-                                                        {% for error in item_form.product.errors %}
-                                                            {{ error }}
-                                                        {% endfor %}
-                                                    </div>
+                                                <div class="invalid-feedback">
+                                                    {% for error in item_form.product.errors %}
+                                                    {{ error }}
+                                                    {% endfor %}
+                                                </div>
                                                 {% endif %}
                                             </div>
                                             <div class="col-md-2">
-                                                <label class="form-label" for="{{ item_form.quantity.id }}">Quantité</label>
-                                                {{ item_form.quantity(class="form-control quantity-input", type="number", min="1", value="1", id=item_form.quantity.id) }}
+                                                <label class="form-label"
+                                                    for="{{ item_form.quantity.id }}">Quantité</label>
+                                                {{ item_form.quantity(class="form-control quantity-input",
+                                                type="number", min="1", value="1", id=item_form.quantity.id) }}
                                                 {% if item_form.quantity.errors %}
-                                                    <div class="invalid-feedback">
-                                                        {% for error in item_form.quantity.errors %}
-                                                            {{ error }}
-                                                        {% endfor %}
-                                                    </div>
+                                                <div class="invalid-feedback">
+                                                    {% for error in item_form.quantity.errors %}
+                                                    {{ error }}
+                                                    {% endfor %}
+                                                </div>
                                                 {% endif %}
                                             </div>
                                             <div class="col-md-3">
-                                                <label class="form-label" for="{{ item_form.unit_price.id }}">Prix unitaire</label>
-                                                {{ item_form.unit_price(class="form-control", type="number", step="0.01", min="0", id=item_form.unit_price.id) }}
+                                                <label class="form-label" for="{{ item_form.unit_price.id }}">Prix
+                                                    unitaire</label>
+                                                {{ item_form.unit_price(class="form-control", type="number",
+                                                step="0.01", min="0", id=item_form.unit_price.id) }}
                                                 {% if item_form.unit_price.errors %}
-                                                    <div class="invalid-feedback">
-                                                        {% for error in item_form.unit_price.errors %}
-                                                            {{ error }}
-                                                        {% endfor %}
-                                                    </div>
+                                                <div class="invalid-feedback">
+                                                    {% for error in item_form.unit_price.errors %}
+                                                    {{ error }}
+                                                    {% endfor %}
+                                                </div>
                                                 {% endif %}
                                             </div>
                                             <div class="col-md-1 d-flex align-items-end">
-                                                <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" style="display: {{ 'none' if loop.first else 'block' }}" aria-label="Supprimer cet article">
+                                                <button type="button"
+                                                    class="btn btn-outline-danger btn-sm remove-item-btn"
+                                                    style="display: {{ 'none' if loop.first else 'block' }}"
+                                                    aria-label="Supprimer cet article">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
@@ -229,22 +206,26 @@ body.modal-cleanup {
                         </div>
 
                         <!-- Modal pour les produits composés -->
-                        <div class="modal fade" id="compositeProductModal" tabindex="-1" aria-labelledby="compositeProductModalLabel" aria-hidden="true">
+                        <div class="modal fade" id="compositeProductModal" tabindex="-1"
+                            aria-labelledby="compositeProductModalLabel" aria-hidden="true">
                             <div class="modal-dialog modal-xl">
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="compositeProductModalLabel">
                                             <i class="bi bi-layers me-2"></i>Créer un produit composé
                                         </h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
                                     </div>
                                     <div class="modal-body">
                                         <div id="composite-product-form">
                                             <div class="row mb-4">
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
-                                                        <label class="form-label" for="composite-name">Nom du produit composé</label>
-                                                        <input type="text" class="form-control" id="composite-name" name="composite-name" required>
+                                                        <label class="form-label" for="composite-name">Nom du produit
+                                                            composé</label>
+                                                        <input type="text" class="form-control" id="composite-name"
+                                                            name="composite-name" required>
                                                         <div class="form-text">
                                                             Ce nom apparaîtra sur la facture client
                                                         </div>
@@ -252,14 +233,20 @@ body.modal-cleanup {
                                                 </div>
                                                 <div class="col-md-3">
                                                     <div class="mb-3">
-                                                        <label class="form-label" for="composite-quantity">Quantité commandée</label>
-                                                        <input type="number" class="form-control" id="composite-quantity" name="composite-quantity" value="1" min="1" required>
+                                                        <label class="form-label" for="composite-quantity">Quantité
+                                                            commandée</label>
+                                                        <input type="number" class="form-control"
+                                                            id="composite-quantity" name="composite-quantity" value="1"
+                                                            min="1" required>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-3">
                                                     <div class="mb-3">
-                                                        <label class="form-label" for="composite-unit-price">Prix unitaire (DZD)</label>
-                                                        <input type="number" class="form-control" id="composite-unit-price" name="composite-unit-price" step="0.01" required>
+                                                        <label class="form-label" for="composite-unit-price">Prix
+                                                            unitaire (DZD)</label>
+                                                        <input type="number" class="form-control"
+                                                            id="composite-unit-price" name="composite-unit-price"
+                                                            step="0.01" required>
                                                     </div>
                                                 </div>
                                             </div>
@@ -269,15 +256,18 @@ body.modal-cleanup {
                                                     <h6 class="mb-0">
                                                         <i class="bi bi-list-ul me-2"></i>Composition du produit
                                                     </h6>
-                                                    <small class="text-muted">Ajoutez les produits finis qui composent ce produit</small>
+                                                    <small class="text-muted">Ajoutez les produits finis qui composent
+                                                        ce produit</small>
                                                 </div>
                                                 <div class="card-body">
                                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-component-btn">
-                                                            <i class="bi bi-plus-circle me-2"></i>Ajouter un produit fini
+                                                        <button type="button" class="btn btn-outline-primary btn-sm"
+                                                            id="add-component-btn">
+                                                            <i class="bi bi-plus-circle me-2"></i>Ajouter un produit
+                                                            fini
                                                         </button>
                                                     </div>
-                                                    
+
                                                     <div id="components-container">
                                                         <!-- Les composants seront ajoutés ici dynamiquement -->
                                                     </div>
@@ -300,13 +290,14 @@ body.modal-cleanup {
                         <!-- Notes -->
                         <div class="mb-4">
                             {{ form.notes.label(class="form-label") }}
-                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3) }}
+                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3)
+                            }}
                             {% if form.notes.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.notes.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
+                            <div class="invalid-feedback">
+                                {% for error in form.notes.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
                             {% endif %}
                         </div>
 
@@ -332,66 +323,82 @@ body.modal-cleanup {
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    let orderItemsCounter = 0;
-    let componentsCounter = 0;
-    let modalInstance = null; // Instance globale du modal
-    let availableProducts = []; // Sera chargé depuis l'API
+    document.addEventListener('DOMContentLoaded', function () {
+        let orderItemsCounter = 0;
+        let componentsCounter = 0;
+        let modalInstance = null; // Instance globale du modal
+        let availableProducts = []; // Sera chargé depuis l'API
 
-    // Fonction pour nettoyer complètement tous les modals
-    function forceCleanupModals() {
-        // Supprimer tous les overlays
-        const backdrops = document.querySelectorAll('.modal-backdrop');
-        backdrops.forEach(backdrop => backdrop.remove());
-        
-        // Nettoyer le body
-        document.body.classList.remove('modal-open');
-        document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
-        document.body.style.marginRight = '';
-        
-        // Supprimer les attributs Bootstrap
-        document.body.removeAttribute('data-bs-overflow');
-        document.body.removeAttribute('data-bs-padding-right');
-    }
+        // Fonction pour nettoyer complètement tous les modals
+        function forceCleanupModals() {
+            // Supprimer tous les overlays
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
 
-    // Fonction sécurisée pour fermer le modal
-    function safeCloseModal() {
-        try {
-            if (modalInstance) {
-                // Méthode 1: Fermeture via l'instance
-                modalInstance.hide();
-                
-                // Attendre que l'animation se termine
-                setTimeout(() => {
-                    forceCleanupModals();
-                    modalInstance = null;
-                }, 200);
-            } else {
-                // Méthode 2: Fermeture par événement si pas d'instance
-                const modalElement = document.getElementById('compositeProductModal');
-                if (modalElement) {
-                    modalElement.dispatchEvent(new Event('hide.bs.modal'));
-                    setTimeout(forceCleanupModals, 200);
-                }
-            }
-        } catch (error) {
-            console.warn('Erreur fermeture modal:', error);
-            // Nettoyage d'urgence
-            forceCleanupModals();
+            // Nettoyer le body
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            document.body.style.marginRight = '';
+
+            // Supprimer les attributs Bootstrap
+            document.body.removeAttribute('data-bs-overflow');
+            document.body.removeAttribute('data-bs-padding-right');
         }
-    }
 
-    // Charger les produits depuis l'API
-    async function loadProducts() {
-        try {
-            const response = await fetch('/admin/b2b/api/products');
-            if (response.ok) {
-                availableProducts = await response.json();
-                console.log('Produits chargés:', availableProducts.length);
-            } else {
-                console.error('Erreur lors du chargement des produits');
-                // Fallback sur une liste statique en cas d'erreur
+        // Fonction sécurisée pour fermer le modal
+        function safeCloseModal() {
+            try {
+                if (modalInstance) {
+                    // Méthode 1: Fermeture via l'instance
+                    modalInstance.hide();
+
+                    // Attendre que l'animation se termine
+                    setTimeout(() => {
+                        forceCleanupModals();
+                        modalInstance = null;
+                    }, 200);
+                } else {
+                    // Méthode 2: Fermeture par événement si pas d'instance
+                    const modalElement = document.getElementById('compositeProductModal');
+                    if (modalElement) {
+                        modalElement.dispatchEvent(new Event('hide.bs.modal'));
+                        setTimeout(forceCleanupModals, 200);
+                    }
+                }
+            } catch (error) {
+                console.warn('Erreur fermeture modal:', error);
+                // Nettoyage d'urgence
+                forceCleanupModals();
+            }
+        }
+
+        // Charger les produits depuis l'API
+        async function loadProducts() {
+            try {
+                const response = await fetch('/admin/b2b/api/products');
+                if (response.ok) {
+                    availableProducts = await response.json();
+                    console.log('Produits chargés:', availableProducts.length);
+                } else {
+                    console.error('Erreur lors du chargement des produits');
+                    // Fallback sur une liste statique en cas d'erreur
+                    availableProducts = [
+                        { id: 1, name: 'Mini tarte au citron', price: 80 },
+                        { id: 2, name: 'Mini tarte au chocolat', price: 80 },
+                        { id: 3, name: 'Mini tarte aux fruits secs', price: 90 },
+                        { id: 4, name: 'Pâtisserie au citron', price: 120 },
+                        { id: 5, name: 'Pâtisserie au chocolat', price: 120 },
+                        { id: 6, name: 'Pâtisserie au praliné', price: 130 },
+                        { id: 7, name: 'Rechta au poulet', price: 800 },
+                        { id: 8, name: 'Salade mixte', price: 200 },
+                        { id: 9, name: 'Boisson 33cl', price: 100 },
+                        { id: 10, name: 'Fruit de saison', price: 150 }
+                    ];
+                }
+            } catch (error) {
+                console.error('Erreur réseau:', error);
+                // Fallback sur une liste statique
                 availableProducts = [
                     { id: 1, name: 'Mini tarte au citron', price: 80 },
                     { id: 2, name: 'Mini tarte au chocolat', price: 80 },
@@ -405,377 +412,348 @@ document.addEventListener('DOMContentLoaded', function() {
                     { id: 10, name: 'Fruit de saison', price: 150 }
                 ];
             }
-        } catch (error) {
-            console.error('Erreur réseau:', error);
-            // Fallback sur une liste statique
-            availableProducts = [
-                { id: 1, name: 'Mini tarte au citron', price: 80 },
-                { id: 2, name: 'Mini tarte au chocolat', price: 80 },
-                { id: 3, name: 'Mini tarte aux fruits secs', price: 90 },
-                { id: 4, name: 'Pâtisserie au citron', price: 120 },
-                { id: 5, name: 'Pâtisserie au chocolat', price: 120 },
-                { id: 6, name: 'Pâtisserie au praliné', price: 130 },
-                { id: 7, name: 'Rechta au poulet', price: 800 },
-                { id: 8, name: 'Salade mixte', price: 200 },
-                { id: 9, name: 'Boisson 33cl', price: 100 },
-                { id: 10, name: 'Fruit de saison', price: 150 }
-            ];
-        }
-    }
-
-    // Initialisation
-    function init() {
-        loadProducts().then(() => {
-            initializeItemCounter();
-            bindExistingItems();
-            bindEvents();
-            updateOrderTotal();
-            forceCleanupModals();
-        });
-    }
-
-    // Compter les items existants au chargement
-    function initializeItemCounter() {
-        const existingItems = document.querySelectorAll('[name^="items-"]');
-        const indices = [];
-        
-        existingItems.forEach(item => {
-            const match = item.name.match(/items-(\d+)-/);
-            if (match) {
-                indices.push(parseInt(match[1]));
-            }
-        });
-        
-        orderItemsCounter = indices.length > 0 ? Math.max(...indices) + 1 : 1;
-        console.log('Compteur initialisé à:', orderItemsCounter);
-    }
-
-    // Gérer les items existants
-    function bindExistingItems() {
-        // Gérer les items Jinja2 (order-item-row)
-        const existingRows = document.querySelectorAll('.order-item-row');
-        console.log('Items existants (Jinja2) trouvés:', existingRows.length);
-        
-        existingRows.forEach((row, index) => {
-            console.log(`Binding item Jinja2 ${index}:`, row);
-            
-            const productSelect = row.querySelector('.product-select');
-            const quantityInput = row.querySelector('.quantity-input');
-            const priceInput = row.querySelector('[name$="-unit_price"]');
-            const removeBtn = row.querySelector('.remove-item-btn');
-            
-            console.log('Product select:', productSelect);
-            console.log('Quantity input:', quantityInput);
-            console.log('Price input:', priceInput);
-            
-            if (productSelect && priceInput) {
-                productSelect.addEventListener('change', function() {
-                    console.log('Produit changé:', this.value);
-                    const selectedOption = this.selectedOptions[0];
-                    if (selectedOption && selectedOption.textContent.includes('(') && selectedOption.textContent.includes('DA')) {
-                        const priceMatch = selectedOption.textContent.match(/\((\d+(?:\.\d+)?)\s*DA/);
-                        if (priceMatch) {
-                            priceInput.value = priceMatch[1];
-                            console.log('Prix mis à jour:', priceMatch[1]);
-                            updateOrderTotal();
-                        }
-                    }
-                });
-            }
-            
-            if (quantityInput) {
-                quantityInput.addEventListener('input', function() {
-                    console.log('Quantité changée:', this.value);
-                    updateOrderTotal();
-                });
-            }
-            
-            if (priceInput) {
-                priceInput.addEventListener('input', function() {
-                    console.log('Prix changé:', this.value);
-                    updateOrderTotal();
-                });
-            }
-            
-            if (removeBtn) {
-                removeBtn.addEventListener('click', function() {
-                    console.log('Suppression item');
-                    row.remove();
-                    updateOrderTotal();
-                });
-            }
-        });
-        
-        // Gérer les items JavaScript (order-item)
-        const dynamicItems = document.querySelectorAll('.order-item');
-        console.log('Items dynamiques (JS) trouvés:', dynamicItems.length);
-        
-        dynamicItems.forEach((item, index) => {
-            console.log(`Binding item JS ${index}:`, item);
-            
-            const productSelect = item.querySelector('.product-select');
-            const quantityInput = item.querySelector('.quantity-input');
-            const priceInput = item.querySelector('.price-input');
-            const removeBtn = item.querySelector('.remove-order-item-btn');
-            
-            console.log('Product select (JS):', productSelect);
-            console.log('Quantity input (JS):', quantityInput);
-            console.log('Price input (JS):', priceInput);
-            
-            if (productSelect && priceInput) {
-                productSelect.addEventListener('change', function() {
-                    console.log('Produit JS changé:', this.value);
-                    const selectedOption = this.selectedOptions[0];
-                    if (selectedOption?.dataset?.price) {
-                        priceInput.value = selectedOption.dataset.price;
-                        console.log('Prix JS mis à jour:', selectedOption.dataset.price);
-                        updateOrderTotal();
-                    }
-                });
-            }
-            
-            if (quantityInput) {
-                quantityInput.addEventListener('input', function() {
-                    console.log('Quantité JS changée:', this.value);
-                    updateOrderTotal();
-                });
-            }
-            
-            if (priceInput) {
-                priceInput.addEventListener('input', function() {
-                    console.log('Prix JS changé:', this.value);
-                    updateOrderTotal();
-                });
-            }
-            
-            if (removeBtn) {
-                removeBtn.addEventListener('click', function() {
-                    console.log('Suppression item JS');
-                    item.remove();
-                    updateOrderTotal();
-                });
-            }
-        });
-    }
-
-    // Binding des événements principaux
-    function bindEvents() {
-        // Ajouter produit simple
-        document.getElementById('add-item-btn')?.addEventListener('click', addSimpleProduct);
-
-        // Ouvrir modal produit composé
-        document.getElementById('add-composite-btn')?.addEventListener('click', openCompositeModal);
-
-        // Ajouter composant dans le modal
-        document.getElementById('add-component-btn')?.addEventListener('click', addComponent);
-
-        // Sauvegarder le produit composé
-        document.getElementById('save-composite-product-btn')?.addEventListener('click', saveCompositeProduct);
-
-        // Gestion de la soumission du formulaire
-        const orderForm = document.getElementById('orderForm');
-        const submitBtn = document.getElementById('submit-btn');
-        
-        console.log('🔍 Formulaire trouvé:', !!orderForm, orderForm);
-        console.log('🔍 Bouton submit trouvé:', !!submitBtn, submitBtn);
-        
-        let isSubmitting = false;
-        
-        if (submitBtn) {
-            submitBtn.addEventListener('click', function(e) {
-                console.log('🖱️ CLICK SUR LE BOUTON SUBMIT');
-                console.log('Type du bouton:', this.type);
-                console.log('Form associé:', this.form);
-                console.log('Bouton désactivé?', this.disabled);
-                console.log('Formulaire valide?', this.form?.checkValidity());
-                
-                // Éviter les doubles soumissions
-                if (isSubmitting) {
-                    console.log('⚠️ Soumission déjà en cours, ignoré');
-                    e.preventDefault();
-                    return false;
-                }
-                
-                // Le bouton type="submit" devrait automatiquement soumettre le formulaire
-                // Si ça ne marche pas, c'est qu'il y a un problème de validation HTML5
-                console.log('✅ Click détecté, le formulaire devrait se soumettre automatiquement...');
-            });
-        }
-        
-        if (orderForm) {
-            orderForm.addEventListener('submit', function(e) {
-                console.log('=== SOUMISSION FORMULAIRE ===');
-                console.log('Form ID:', this.id);
-                console.log('Form action:', this.action);
-                console.log('Form method:', this.method);
-                
-                // Marquer qu'on est en train de soumettre
-                isSubmitting = true;
-                
-                // Log des données du formulaire
-                const formData = new FormData(this);
-                console.log('Données du formulaire:');
-                for (let [key, value] of formData.entries()) {
-                    console.log(`${key}: ${value}`);
-                }
-                
-                // Validation côté client
-                const clientSelect = document.getElementById('b2b_client_id');
-                const deliveryDate = document.getElementById('delivery_date');
-                
-                console.log('Client sélectionné:', clientSelect?.value);
-                console.log('Date de livraison:', deliveryDate?.value);
-                
-                if (!clientSelect?.value) {
-                    e.preventDefault();
-                    isSubmitting = false;
-                    alert('Veuillez sélectionner un client B2B');
-                    console.log('Erreur: Client non sélectionné');
-                    return false;
-                }
-                
-                if (!deliveryDate?.value) {
-                    e.preventDefault();
-                    isSubmitting = false;
-                    alert('Veuillez saisir une date de livraison');
-                    console.log('Erreur: Date de livraison manquante');
-                    return false;
-                }
-                
-                // Vérifier les produits
-                const productItems = document.querySelectorAll('[name^="items-"][name$="-product"]');
-                console.log('Nombre de produits trouvés:', productItems.length);
-                let hasValidItems = false;
-                productItems.forEach((item, index) => {
-                    console.log(`Produit ${index}:`, item.value);
-                    if (item.value && item.value !== '') {
-                        hasValidItems = true;
-                    }
-                });
-                
-                if (!hasValidItems) {
-                    e.preventDefault();
-                    isSubmitting = false;
-                    alert('Veuillez ajouter au moins un produit à la commande');
-                    console.log('Erreur: Aucun produit valide');
-                    return false;
-                }
-                
-                console.log('✅ Validation réussie - Soumission autorisée');
-                console.log('Formulaire va être soumis normalement...');
-                // Ne pas appeler e.preventDefault() ici - laisser la soumission se faire
-                return true;
-            });
-        } else {
-            console.error('❌ FORMULAIRE NON TROUVÉ: orderForm');
         }
 
-        // Événements du modal
-        const modalElement = document.getElementById('compositeProductModal');
-        if (modalElement) {
-            // Cleanup quand le modal est complètement fermé
-            modalElement.addEventListener('hidden.bs.modal', function() {
-                modalInstance = null;
+        // Initialisation
+        function init() {
+            loadProducts().then(() => {
+                initializeItemCounter();
+                bindExistingItems();
+                bindEvents();
+                updateOrderTotal();
                 forceCleanupModals();
             });
+        }
 
-            // Gestion d'erreur si le modal ne se ferme pas
-            modalElement.addEventListener('hide.bs.modal', function() {
-                setTimeout(() => {
-                    if (document.querySelector('.modal-backdrop')) {
-                        forceCleanupModals();
+        // Compter les items existants au chargement
+        function initializeItemCounter() {
+            const existingItems = document.querySelectorAll('[name^="items-"]');
+            const indices = [];
+
+            existingItems.forEach(item => {
+                const match = item.name.match(/items-(\d+)-/);
+                if (match) {
+                    indices.push(parseInt(match[1]));
+                }
+            });
+
+            orderItemsCounter = indices.length > 0 ? Math.max(...indices) + 1 : 1;
+            console.log('Compteur initialisé à:', orderItemsCounter);
+        }
+
+        // Gérer les items existants
+        function bindExistingItems() {
+            // Gérer les items Jinja2 (order-item-row)
+            const existingRows = document.querySelectorAll('.order-item-row');
+            console.log('Items existants (Jinja2) trouvés:', existingRows.length);
+
+            existingRows.forEach((row, index) => {
+                console.log(`Binding item Jinja2 ${index}:`, row);
+
+                const productSelect = row.querySelector('.product-select');
+                const quantityInput = row.querySelector('.quantity-input');
+                const priceInput = row.querySelector('[name$="-unit_price"]');
+                const removeBtn = row.querySelector('.remove-item-btn');
+
+                console.log('Product select:', productSelect);
+                console.log('Quantity input:', quantityInput);
+                console.log('Price input:', priceInput);
+
+                if (productSelect && priceInput) {
+                    productSelect.addEventListener('change', function () {
+                        console.log('Produit changé:', this.value);
+                        const selectedOption = this.selectedOptions[0];
+                        if (selectedOption && selectedOption.textContent.includes('(') && selectedOption.textContent.includes('DA')) {
+                            const priceMatch = selectedOption.textContent.match(/\((\d+(?:\.\d+)?)\s*DA/);
+                            if (priceMatch) {
+                                priceInput.value = priceMatch[1];
+                                console.log('Prix mis à jour:', priceMatch[1]);
+                                updateOrderTotal();
+                            }
+                        }
+                    });
+                }
+
+                if (quantityInput) {
+                    quantityInput.addEventListener('input', function () {
+                        console.log('Quantité changée:', this.value);
+                        updateOrderTotal();
+                    });
+                }
+
+                if (priceInput) {
+                    priceInput.addEventListener('input', function () {
+                        console.log('Prix changé:', this.value);
+                        updateOrderTotal();
+                    });
+                }
+
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function () {
+                        console.log('Suppression item');
+                        row.remove();
+                        updateOrderTotal();
+                    });
+                }
+            });
+
+            // Gérer les items JavaScript (order-item)
+            const dynamicItems = document.querySelectorAll('.order-item');
+            console.log('Items dynamiques (JS) trouvés:', dynamicItems.length);
+
+            dynamicItems.forEach((item, index) => {
+                console.log(`Binding item JS ${index}:`, item);
+
+                const productSelect = item.querySelector('.product-select');
+                const quantityInput = item.querySelector('.quantity-input');
+                const priceInput = item.querySelector('.price-input');
+                const removeBtn = item.querySelector('.remove-order-item-btn');
+
+                console.log('Product select (JS):', productSelect);
+                console.log('Quantity input (JS):', quantityInput);
+                console.log('Price input (JS):', priceInput);
+
+                if (productSelect && priceInput) {
+                    productSelect.addEventListener('change', function () {
+                        console.log('Produit JS changé:', this.value);
+                        const selectedOption = this.selectedOptions[0];
+                        if (selectedOption?.dataset?.price) {
+                            priceInput.value = selectedOption.dataset.price;
+                            console.log('Prix JS mis à jour:', selectedOption.dataset.price);
+                            updateOrderTotal();
+                        }
+                    });
+                }
+
+                if (quantityInput) {
+                    quantityInput.addEventListener('input', function () {
+                        console.log('Quantité JS changée:', this.value);
+                        updateOrderTotal();
+                    });
+                }
+
+                if (priceInput) {
+                    priceInput.addEventListener('input', function () {
+                        console.log('Prix JS changé:', this.value);
+                        updateOrderTotal();
+                    });
+                }
+
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function () {
+                        console.log('Suppression item JS');
+                        item.remove();
+                        updateOrderTotal();
+                    });
+                }
+            });
+        }
+
+        // Binding des événements principaux
+        function bindEvents() {
+            // Ajouter produit simple
+            document.getElementById('add-item-btn')?.addEventListener('click', addSimpleProduct);
+
+            // Ouvrir modal produit composé
+            document.getElementById('add-composite-btn')?.addEventListener('click', openCompositeModal);
+
+            // Ajouter composant dans le modal
+            document.getElementById('add-component-btn')?.addEventListener('click', addComponent);
+
+            // Sauvegarder le produit composé
+            document.getElementById('save-composite-product-btn')?.addEventListener('click', saveCompositeProduct);
+
+            // Gestion de la soumission du formulaire
+            const orderForm = document.getElementById('orderForm');
+            const submitBtn = document.getElementById('submit-btn');
+
+            console.log('🔍 Formulaire trouvé:', !!orderForm, orderForm);
+            console.log('🔍 Bouton submit trouvé:', !!submitBtn, submitBtn);
+
+            let isSubmitting = false;
+
+            if (submitBtn) {
+                submitBtn.addEventListener('click', function (e) {
+                    console.log('🖱️ CLICK SUR LE BOUTON SUBMIT');
+                    console.log('Type du bouton:', this.type);
+                    console.log('Form associé:', this.form);
+                    console.log('Bouton désactivé?', this.disabled);
+                    console.log('Formulaire valide?', this.form?.checkValidity());
+
+                    // Éviter les doubles soumissions
+                    if (isSubmitting) {
+                        console.log('⚠️ Soumission déjà en cours, ignoré');
+                        e.preventDefault();
+                        return false;
                     }
-                }, 500);
-            });
-        }
 
-        // Bouton fermer du modal
-        const closeButtons = document.querySelectorAll('[data-bs-dismiss="modal"]');
-        closeButtons.forEach(btn => {
-            btn.addEventListener('click', function() {
-                setTimeout(forceCleanupModals, 100);
-            });
-        });
-
-        // ESC pour fermer le modal
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && modalInstance) {
-                safeCloseModal();
+                    // Le bouton type="submit" devrait automatiquement soumettre le formulaire
+                    // Si ça ne marche pas, c'est qu'il y a un problème de validation HTML5
+                    console.log('✅ Click détecté, le formulaire devrait se soumettre automatiquement...');
+                });
             }
-        });
 
-        // Gestion de l'option multi-jours
-        const multiDayCheckbox = document.querySelector('input[name="is_multi_day"]');
-        const periodFields = document.getElementById('periodFields');
-        
-        if (multiDayCheckbox && periodFields) {
-            multiDayCheckbox.addEventListener('change', function() {
-                periodFields.style.display = this.checked ? 'flex' : 'none';
-            });
+            if (orderForm) {
+                orderForm.addEventListener('submit', function (e) {
+                    console.log('=== SOUMISSION FORMULAIRE ===');
+                    console.log('Form ID:', this.id);
+                    console.log('Form action:', this.action);
+                    console.log('Form method:', this.method);
 
-            // Initialiser l'affichage
-            if (multiDayCheckbox.checked) {
-                periodFields.style.display = 'flex';
+                    // Marquer qu'on est en train de soumettre
+                    isSubmitting = true;
+
+                    // Log des données du formulaire
+                    const formData = new FormData(this);
+                    console.log('Données du formulaire:');
+                    for (let [key, value] of formData.entries()) {
+                        console.log(`${key}: ${value}`);
+                    }
+
+                    // Validation côté client
+                    const clientSelect = document.getElementById('b2b_client_id');
+                    const deliveryDate = document.getElementById('delivery_date');
+
+                    console.log('Client sélectionné:', clientSelect?.value);
+                    console.log('Date de livraison:', deliveryDate?.value);
+
+                    if (!clientSelect?.value) {
+                        e.preventDefault();
+                        isSubmitting = false;
+                        alert('Veuillez sélectionner un client B2B');
+                        console.log('Erreur: Client non sélectionné');
+                        return false;
+                    }
+
+                    if (!deliveryDate?.value) {
+                        e.preventDefault();
+                        isSubmitting = false;
+                        alert('Veuillez saisir une date de livraison');
+                        console.log('Erreur: Date de livraison manquante');
+                        return false;
+                    }
+
+                    // Vérifier les produits
+                    const productItems = document.querySelectorAll('[name^="items-"][name$="-product"]');
+                    console.log('Nombre de produits trouvés:', productItems.length);
+                    let hasValidItems = false;
+                    productItems.forEach((item, index) => {
+                        console.log(`Produit ${index}:`, item.value);
+                        if (item.value && item.value !== '') {
+                            hasValidItems = true;
+                        }
+                    });
+
+                    if (!hasValidItems) {
+                        e.preventDefault();
+                        isSubmitting = false;
+                        alert('Veuillez ajouter au moins un produit à la commande');
+                        console.log('Erreur: Aucun produit valide');
+                        return false;
+                    }
+
+                    console.log('✅ Validation réussie - Soumission autorisée');
+                    console.log('Formulaire va être soumis normalement...');
+                    // Ne pas appeler e.preventDefault() ici - laisser la soumission se faire
+                    return true;
+                });
+            } else {
+                console.error('❌ FORMULAIRE NON TROUVÉ: orderForm');
             }
-        }
-    }
 
-    // Ouvrir le modal de création de produit composé
-    function openCompositeModal() {
-        try {
-            // Nettoyage préventif
-            forceCleanupModals();
-            
-            // Reset du formulaire
-            const form = document.getElementById('composite-product-form');
-            if (form) form.reset();
-            
-            const container = document.getElementById('components-container');
-            if (container) container.innerHTML = '';
-            
-            componentsCounter = 0;
-
-            // Ajouter un composant par défaut
-            addComponent();
-
-            // Créer l'instance du modal
+            // Événements du modal
             const modalElement = document.getElementById('compositeProductModal');
             if (modalElement) {
-                modalInstance = new bootstrap.Modal(modalElement, {
-                    backdrop: 'static', // Empêche la fermeture accidentelle
-                    keyboard: true,
-                    focus: true
+                // Cleanup quand le modal est complètement fermé
+                modalElement.addEventListener('hidden.bs.modal', function () {
+                    modalInstance = null;
+                    forceCleanupModals();
                 });
-                
-                modalInstance.show();
+
+                // Gestion d'erreur si le modal ne se ferme pas
+                modalElement.addEventListener('hide.bs.modal', function () {
+                    setTimeout(() => {
+                        if (document.querySelector('.modal-backdrop')) {
+                            forceCleanupModals();
+                        }
+                    }, 500);
+                });
             }
-        } catch (error) {
-            console.error('Erreur ouverture modal:', error);
-            forceCleanupModals();
+
+            // Bouton fermer du modal
+            const closeButtons = document.querySelectorAll('[data-bs-dismiss="modal"]');
+            closeButtons.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    setTimeout(forceCleanupModals, 100);
+                });
+            });
+
+            // ESC pour fermer le modal
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && modalInstance) {
+                    safeCloseModal();
+                }
+            });
+
+
         }
-    }
 
-    // Ajouter un composant dans le modal
-    function addComponent() {
-        const container = document.getElementById('components-container');
-        if (!container) return;
-        
-        const componentDiv = createComponentHTML(componentsCounter);
-        container.appendChild(componentDiv);
-        componentsCounter++;
-    }
+        // Ouvrir le modal de création de produit composé
+        function openCompositeModal() {
+            try {
+                // Nettoyage préventif
+                forceCleanupModals();
 
-    // Créer le HTML pour un composant
-    function createComponentHTML(index) {
-        const div = document.createElement('div');
-        div.className = 'component-row mb-3';
-        div.dataset.index = index;
+                // Reset du formulaire
+                const form = document.getElementById('composite-product-form');
+                if (form) form.reset();
 
-        const productsOptions = availableProducts.map(product => 
-            `<option value="${product.id}" data-price="${product.price}">${product.name}</option>`
-        ).join('');
+                const container = document.getElementById('components-container');
+                if (container) container.innerHTML = '';
 
-        div.innerHTML = `
+                componentsCounter = 0;
+
+                // Ajouter un composant par défaut
+                addComponent();
+
+                // Créer l'instance du modal
+                const modalElement = document.getElementById('compositeProductModal');
+                if (modalElement) {
+                    modalInstance = new bootstrap.Modal(modalElement, {
+                        backdrop: 'static', // Empêche la fermeture accidentelle
+                        keyboard: true,
+                        focus: true
+                    });
+
+                    modalInstance.show();
+                }
+            } catch (error) {
+                console.error('Erreur ouverture modal:', error);
+                forceCleanupModals();
+            }
+        }
+
+        // Ajouter un composant dans le modal
+        function addComponent() {
+            const container = document.getElementById('components-container');
+            if (!container) return;
+
+            const componentDiv = createComponentHTML(componentsCounter);
+            container.appendChild(componentDiv);
+            componentsCounter++;
+        }
+
+        // Créer le HTML pour un composant
+        function createComponentHTML(index) {
+            const div = document.createElement('div');
+            div.className = 'component-row mb-3';
+            div.dataset.index = index;
+
+            const productsOptions = availableProducts.map(product =>
+                `<option value="${product.id}" data-price="${product.price}">${product.name}</option>`
+            ).join('');
+
+            div.innerHTML = `
             <div class="row">
                 <div class="col-md-4">
                     <label class="form-label" for="component-product-${index}">Produit fini</label>
@@ -800,129 +778,129 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        bindComponentEvents(div);
-        return div;
-    }
-
-    // Binding des événements pour un composant
-    function bindComponentEvents(componentDiv) {
-        const productSelect = componentDiv.querySelector('.component-product');
-        const priceInput = componentDiv.querySelector('.component-price');
-        const removeBtn = componentDiv.querySelector('.remove-component-btn');
-
-        if (productSelect && priceInput) {
-            productSelect.addEventListener('change', function() {
-                const selectedOption = this.selectedOptions[0];
-                if (selectedOption?.dataset?.price) {
-                    priceInput.value = selectedOption.dataset.price;
-                }
-            });
+            bindComponentEvents(div);
+            return div;
         }
 
-        if (removeBtn) {
-            removeBtn.addEventListener('click', function() {
-                componentDiv.remove();
-            });
+        // Binding des événements pour un composant
+        function bindComponentEvents(componentDiv) {
+            const productSelect = componentDiv.querySelector('.component-product');
+            const priceInput = componentDiv.querySelector('.component-price');
+            const removeBtn = componentDiv.querySelector('.remove-component-btn');
+
+            if (productSelect && priceInput) {
+                productSelect.addEventListener('change', function () {
+                    const selectedOption = this.selectedOptions[0];
+                    if (selectedOption?.dataset?.price) {
+                        priceInput.value = selectedOption.dataset.price;
+                    }
+                });
+            }
+
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function () {
+                    componentDiv.remove();
+                });
+            }
         }
-    }
 
-    // Sauvegarder le produit composé et l'ajouter à la commande
-    function saveCompositeProduct() {
-        try {
-            const compositeName = document.getElementById('composite-name')?.value?.trim();
-            const compositeQuantity = parseInt(document.getElementById('composite-quantity')?.value) || 1;
-            const compositePrice = parseFloat(document.getElementById('composite-unit-price')?.value) || 0;
+        // Sauvegarder le produit composé et l'ajouter à la commande
+        function saveCompositeProduct() {
+            try {
+                const compositeName = document.getElementById('composite-name')?.value?.trim();
+                const compositeQuantity = parseInt(document.getElementById('composite-quantity')?.value) || 1;
+                const compositePrice = parseFloat(document.getElementById('composite-unit-price')?.value) || 0;
 
-            // Validations
-            if (!compositeName) {
-                alert('Veuillez saisir le nom du produit composé');
-                return;
-            }
-
-            if (compositePrice <= 0) {
-                alert('Veuillez saisir un prix unitaire valide');
-                return;
-            }
-
-            // Récupérer tous les composants
-            const components = [];
-            const componentRows = document.querySelectorAll('.component-row');
-            componentRows.forEach(row => {
-                const productSelect = row.querySelector('.component-product');
-                const quantity = parseInt(row.querySelector('.component-quantity')?.value) || 0;
-                const price = parseFloat(row.querySelector('.component-price')?.value) || 0;
-
-                if (productSelect?.value && quantity > 0) {
-                    components.push({
-                        productId: productSelect.value,
-                        productName: productSelect.selectedOptions[0]?.text || '',
-                        quantity: quantity,
-                        unitPrice: price
-                    });
+                // Validations
+                if (!compositeName) {
+                    alert('Veuillez saisir le nom du produit composé');
+                    return;
                 }
-            });
 
-            if (components.length === 0) {
-                alert('Veuillez ajouter au moins un produit fini à la composition');
-                return;
+                if (compositePrice <= 0) {
+                    alert('Veuillez saisir un prix unitaire valide');
+                    return;
+                }
+
+                // Récupérer tous les composants
+                const components = [];
+                const componentRows = document.querySelectorAll('.component-row');
+                componentRows.forEach(row => {
+                    const productSelect = row.querySelector('.component-product');
+                    const quantity = parseInt(row.querySelector('.component-quantity')?.value) || 0;
+                    const price = parseFloat(row.querySelector('.component-price')?.value) || 0;
+
+                    if (productSelect?.value && quantity > 0) {
+                        components.push({
+                            productId: productSelect.value,
+                            productName: productSelect.selectedOptions[0]?.text || '',
+                            quantity: quantity,
+                            unitPrice: price
+                        });
+                    }
+                });
+
+                if (components.length === 0) {
+                    alert('Veuillez ajouter au moins un produit fini à la composition');
+                    return;
+                }
+
+                // Créer l'affichage du produit composé dans la commande
+                const container = document.getElementById('order-items-container');
+                if (container) {
+                    const compositeItem = createCompositeOrderItemHTML(
+                        orderItemsCounter,
+                        compositeName,
+                        compositeQuantity,
+                        compositePrice,
+                        components
+                    );
+
+                    container.appendChild(compositeItem);
+                    // Incrémenter le compteur pour tenir compte des composants supplémentaires
+                    orderItemsCounter += components.length;
+                }
+
+                // Fermeture sécurisée du modal
+                safeCloseModal();
+
+                // Mettre à jour le total
+                updateOrderTotal();
+
+                // Message de succès
+                showSuccessMessage(`Produit composé "${compositeName}" ajouté à la commande !`);
+
+            } catch (error) {
+                console.error('Erreur sauvegarde produit composé:', error);
+                safeCloseModal();
             }
+        }
 
-            // Créer l'affichage du produit composé dans la commande
+        // Ajouter un produit simple à la commande
+        function addSimpleProduct() {
             const container = document.getElementById('order-items-container');
             if (container) {
-                const compositeItem = createCompositeOrderItemHTML(
-                    orderItemsCounter,
-                    compositeName,
-                    compositeQuantity,
-                    compositePrice,
-                    components
-                );
-                
-                container.appendChild(compositeItem);
-                // Incrémenter le compteur pour tenir compte des composants supplémentaires
-                orderItemsCounter += components.length;
+                const itemDiv = createOrderItemHTML('simple', orderItemsCounter, '', 1, 0, '');
+                container.appendChild(itemDiv);
+                orderItemsCounter++;
+                updateOrderTotal();
             }
-
-            // Fermeture sécurisée du modal
-            safeCloseModal();
-
-            // Mettre à jour le total
-            updateOrderTotal();
-
-            // Message de succès
-            showSuccessMessage(`Produit composé "${compositeName}" ajouté à la commande !`);
-
-        } catch (error) {
-            console.error('Erreur sauvegarde produit composé:', error);
-            safeCloseModal();
         }
-    }
 
-    // Ajouter un produit simple à la commande
-    function addSimpleProduct() {
-        const container = document.getElementById('order-items-container');
-        if (container) {
-            const itemDiv = createOrderItemHTML('simple', orderItemsCounter, '', 1, 0, '');
-            container.appendChild(itemDiv);
-            orderItemsCounter++;
-            updateOrderTotal();
-        }
-    }
+        // Créer le HTML pour un produit composé dans la commande
+        function createCompositeOrderItemHTML(index, name, quantity, unitPrice, components) {
+            const div = document.createElement('div');
+            div.className = 'order-item mb-4';
+            div.dataset.index = index;
+            div.dataset.type = 'composite';
 
-    // Créer le HTML pour un produit composé dans la commande
-    function createCompositeOrderItemHTML(index, name, quantity, unitPrice, components) {
-        const div = document.createElement('div');
-        div.className = 'order-item mb-4';
-        div.dataset.index = index;
-        div.dataset.type = 'composite';
+            const compositionDetails = components.map(comp =>
+                `${comp.quantity} × ${comp.productName}`
+            ).join('');
 
-        const compositionDetails = components.map(comp => 
-            `${comp.quantity} × ${comp.productName}`
-        ).join('');
+            const totalPrice = quantity * unitPrice;
 
-        const totalPrice = quantity * unitPrice;
-
-        div.innerHTML = `
+            div.innerHTML = `
             <div class="card border-primary">
                 <div class="card-header bg-primary text-white">
                     <div class="row align-items-center">
@@ -967,87 +945,88 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        // Champ caché pour indiquer que c'est un produit composé
-        const productHidden = document.createElement('input');
-        productHidden.type = 'hidden';
-        productHidden.name = `items-${index}-product`;
-        productHidden.id = `composite-product-${index}`;
-        productHidden.value = 'composite'; // Valeur spéciale pour identifier les produits composés
-        div.appendChild(productHidden);
+            // Champ caché pour indiquer que c'est un produit composé
+            const productHidden = document.createElement('input');
+            productHidden.type = 'hidden';
+            productHidden.name = `items-${index}-product`;
+            productHidden.id = `composite-product-${index}`;
+            productHidden.value = 'composite';
+            div.appendChild(productHidden);
 
-        // Champs cachés pour les composants individuels
-        // ✅ CORRECTION : Marquer les composants avec data-is-component pour les exclure du calcul total
-        components.forEach((component, compIndex) => {
-            const additionalIndex = index + compIndex + 1;
-            
-            const additionalDiv = document.createElement('div');
-            additionalDiv.style.display = 'none';
-            additionalDiv.dataset.isComponent = 'true'; // ✅ Marqueur pour exclure du total
-            additionalDiv.innerHTML = `
-                <input type="hidden" name="items-${additionalIndex}-product" id="hidden-product-${additionalIndex}" value="${component.productId}">
-                <input type="hidden" name="items-${additionalIndex}-quantity" id="hidden-quantity-${additionalIndex}" value="${component.quantity}">
-                <input type="hidden" name="items-${additionalIndex}-unit_price" id="hidden-price-${additionalIndex}" value="0">
-                <input type="hidden" name="items-${additionalIndex}-description" id="hidden-description-${additionalIndex}" value="Composant de: ${name}">
-            `;
-            div.appendChild(additionalDiv);
-        });
+            // ✅ IMPORTANT : Sérialiser la composition en JSON dans un seul champ caché
+            // Le backend s'attend à recevoir une string JSON dans le champ 'composition'
+            const compositionHidden = document.createElement('input');
+            compositionHidden.type = 'hidden';
+            compositionHidden.name = `items-${index}-composition`;
+            compositionHidden.id = `composite-data-${index}`;
 
-        // Binding événement suppression
-        const removeBtn = div.querySelector('.remove-order-item-btn');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', function() {
-                div.remove();
-                updateOrderTotal();
-            });
+            // Nettoyer les données avant sérialisation (garder que id, name, qty)
+            const cleanComponents = components.map(c => ({
+                product_id: c.productId,
+                name: c.productName,
+                quantity: c.quantity,
+                unit_price: c.unitPrice // Optionnel, pour info
+            }));
+
+            compositionHidden.value = JSON.stringify(cleanComponents);
+            div.appendChild(compositionHidden);
+
+            // Binding événement suppression
+            const removeBtn = div.querySelector('.remove-order-item-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function () {
+                    div.remove();
+                    updateOrderTotal();
+                });
+            }
+
+            // Binding événements pour les champs d'édition
+            const quantityInput = div.querySelector('input[name*="quantity"]');
+            const priceInput = div.querySelector('input[name*="unit_price"]');
+
+            if (quantityInput) {
+                quantityInput.addEventListener('input', function () {
+                    updateOrderTotal();
+                    // Mettre à jour l'affichage du total
+                    const totalInput = div.querySelector('input[id*="composite-total"]');
+                    if (totalInput) {
+                        const newQuantity = parseFloat(this.value) || 0;
+                        const newPrice = parseFloat(priceInput.value) || 0;
+                        const newTotal = newQuantity * newPrice;
+                        totalInput.value = newTotal.toLocaleString() + ' DZD';
+                    }
+                });
+            }
+
+            if (priceInput) {
+                priceInput.addEventListener('input', function () {
+                    updateOrderTotal();
+                    // Mettre à jour l'affichage du total
+                    const totalInput = div.querySelector('input[id*="composite-total"]');
+                    if (totalInput) {
+                        const newQuantity = parseFloat(quantityInput.value) || 0;
+                        const newPrice = parseFloat(this.value) || 0;
+                        const newTotal = newQuantity * newPrice;
+                        totalInput.value = newTotal.toLocaleString() + ' DZD';
+                    }
+                });
+            }
+
+            return div;
         }
 
-        // Binding événements pour les champs d'édition
-        const quantityInput = div.querySelector('input[name*="quantity"]');
-        const priceInput = div.querySelector('input[name*="unit_price"]');
-        
-        if (quantityInput) {
-            quantityInput.addEventListener('input', function() {
-                updateOrderTotal();
-                // Mettre à jour l'affichage du total
-                const totalInput = div.querySelector('input[id*="composite-total"]');
-                if (totalInput) {
-                    const newQuantity = parseFloat(this.value) || 0;
-                    const newPrice = parseFloat(priceInput.value) || 0;
-                    const newTotal = newQuantity * newPrice;
-                    totalInput.value = newTotal.toLocaleString() + ' DZD';
-                }
-            });
-        }
-        
-        if (priceInput) {
-            priceInput.addEventListener('input', function() {
-                updateOrderTotal();
-                // Mettre à jour l'affichage du total
-                const totalInput = div.querySelector('input[id*="composite-total"]');
-                if (totalInput) {
-                    const newQuantity = parseFloat(quantityInput.value) || 0;
-                    const newPrice = parseFloat(this.value) || 0;
-                    const newTotal = newQuantity * newPrice;
-                    totalInput.value = newTotal.toLocaleString() + ' DZD';
-                }
-            });
-        }
+        // Créer le HTML pour un produit simple
+        function createOrderItemHTML(type, index, name, quantity, price, description = '') {
+            const div = document.createElement('div');
+            div.className = 'order-item mb-3';
+            div.dataset.index = index;
+            div.dataset.type = type;
 
-        return div;
-    }
+            const productsOptions = availableProducts.map(product =>
+                `<option value="${product.id}" data-price="${product.price}">${product.name}</option>`
+            ).join('');
 
-    // Créer le HTML pour un produit simple
-    function createOrderItemHTML(type, index, name, quantity, price, description = '') {
-        const div = document.createElement('div');
-        div.className = 'order-item mb-3';
-        div.dataset.index = index;
-        div.dataset.type = type;
-
-        const productsOptions = availableProducts.map(product => 
-            `<option value="${product.id}" data-price="${product.price}">${product.name}</option>`
-        ).join('');
-
-        div.innerHTML = `
+            div.innerHTML = `
             <div class="row">
                 <div class="col-md-4">
                     <label class="form-label" for="items-${index}-product">Produit</label>
@@ -1079,139 +1058,139 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        // Binding des événements
-        bindSimpleItemEvents(div);
-        return div;
-    }
-
-    // Binding des événements pour un produit simple
-    function bindSimpleItemEvents(itemDiv) {
-        const productSelect = itemDiv.querySelector('.product-select');
-        const priceInput = itemDiv.querySelector('.price-input');
-        const quantityInput = itemDiv.querySelector('.quantity-input');
-        const removeBtn = itemDiv.querySelector('.remove-order-item-btn');
-
-        if (productSelect && priceInput) {
-            productSelect.addEventListener('change', function() {
-                const selectedOption = this.selectedOptions[0];
-                if (selectedOption?.dataset?.price) {
-                    priceInput.value = selectedOption.dataset.price;
-                    updateOrderTotal();
-                }
-            });
+            // Binding des événements
+            bindSimpleItemEvents(div);
+            return div;
         }
 
-        if (quantityInput) {
-            quantityInput.addEventListener('input', updateOrderTotal);
-        }
+        // Binding des événements pour un produit simple
+        function bindSimpleItemEvents(itemDiv) {
+            const productSelect = itemDiv.querySelector('.product-select');
+            const priceInput = itemDiv.querySelector('.price-input');
+            const quantityInput = itemDiv.querySelector('.quantity-input');
+            const removeBtn = itemDiv.querySelector('.remove-order-item-btn');
 
-        if (priceInput) {
-            priceInput.addEventListener('input', updateOrderTotal);
-        }
-
-        if (removeBtn) {
-            removeBtn.addEventListener('click', function() {
-                itemDiv.remove();
-                updateOrderTotal();
-            });
-        }
-    }
-
-    // Mettre à jour le total de la commande
-    function updateOrderTotal() {
-        let total = 0;
-        console.log('=== MISE À JOUR DU TOTAL ===');
-        
-        // Gérer les items existants (premier item par défaut - Jinja2)
-        const existingItems = document.querySelectorAll('.order-item-row');
-        console.log('Items existants (Jinja2):', existingItems.length);
-        
-        existingItems.forEach((item, index) => {
-            // ✅ CORRECTION : Ignorer les composants (items avec data-is-component)
-            if (item.dataset.isComponent === 'true') {
-                console.log(`Item existant ${index}: IGNORÉ (composant)`);
-                return;
-            }
-            
-            const quantityInput = item.querySelector('.quantity-input');
-            const priceInput = item.querySelector('[name$="-unit_price"]');
-            const quantity = parseFloat(quantityInput?.value) || 0;
-            const unitPrice = parseFloat(priceInput?.value) || 0;
-            const subtotal = quantity * unitPrice;
-            
-            console.log(`Item existant ${index}:`, {
-                quantity: quantity,
-                unitPrice: unitPrice,
-                subtotal: subtotal
-            });
-            
-            total += subtotal;
-        });
-        
-        // Gérer les items ajoutés dynamiquement (JavaScript)
-        const dynamicItems = document.querySelectorAll('.order-item');
-        console.log('Items dynamiques (JS):', dynamicItems.length);
-        
-        dynamicItems.forEach((item, index) => {
-            if (item.dataset.type === 'composite') {
-                const quantityInput = item.querySelector('input[name*="quantity"]');
-                const unitPriceInput = item.querySelector('input[name*="unit_price"]');
-                const quantity = parseFloat(quantityInput?.value) || 0;
-                const unitPrice = parseFloat(unitPriceInput?.value) || 0;
-                const subtotal = quantity * unitPrice;
-                
-                console.log(`Item composé ${index}:`, {
-                    quantity: quantity,
-                    unitPrice: unitPrice,
-                    subtotal: subtotal
+            if (productSelect && priceInput) {
+                productSelect.addEventListener('change', function () {
+                    const selectedOption = this.selectedOptions[0];
+                    if (selectedOption?.dataset?.price) {
+                        priceInput.value = selectedOption.dataset.price;
+                        updateOrderTotal();
+                    }
                 });
-                
-                total += subtotal;
-            } else {
+            }
+
+            if (quantityInput) {
+                quantityInput.addEventListener('input', updateOrderTotal);
+            }
+
+            if (priceInput) {
+                priceInput.addEventListener('input', updateOrderTotal);
+            }
+
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function () {
+                    itemDiv.remove();
+                    updateOrderTotal();
+                });
+            }
+        }
+
+        // Mettre à jour le total de la commande
+        function updateOrderTotal() {
+            let total = 0;
+            console.log('=== MISE À JOUR DU TOTAL ===');
+
+            // Gérer les items existants (premier item par défaut - Jinja2)
+            const existingItems = document.querySelectorAll('.order-item-row');
+            console.log('Items existants (Jinja2):', existingItems.length);
+
+            existingItems.forEach((item, index) => {
+                // ✅ CORRECTION : Ignorer les composants (items avec data-is-component)
+                if (item.dataset.isComponent === 'true') {
+                    console.log(`Item existant ${index}: IGNORÉ (composant)`);
+                    return;
+                }
+
                 const quantityInput = item.querySelector('.quantity-input');
-                const priceInput = item.querySelector('.price-input');
+                const priceInput = item.querySelector('[name$="-unit_price"]');
                 const quantity = parseFloat(quantityInput?.value) || 0;
                 const unitPrice = parseFloat(priceInput?.value) || 0;
                 const subtotal = quantity * unitPrice;
-                
-                console.log(`Item simple ${index}:`, {
+
+                console.log(`Item existant ${index}:`, {
                     quantity: quantity,
                     unitPrice: unitPrice,
                     subtotal: subtotal
                 });
-                
+
                 total += subtotal;
+            });
+
+            // Gérer les items ajoutés dynamiquement (JavaScript)
+            const dynamicItems = document.querySelectorAll('.order-item');
+            console.log('Items dynamiques (JS):', dynamicItems.length);
+
+            dynamicItems.forEach((item, index) => {
+                if (item.dataset.type === 'composite') {
+                    const quantityInput = item.querySelector('input[name*="quantity"]');
+                    const unitPriceInput = item.querySelector('input[name*="unit_price"]');
+                    const quantity = parseFloat(quantityInput?.value) || 0;
+                    const unitPrice = parseFloat(unitPriceInput?.value) || 0;
+                    const subtotal = quantity * unitPrice;
+
+                    console.log(`Item composé ${index}:`, {
+                        quantity: quantity,
+                        unitPrice: unitPrice,
+                        subtotal: subtotal
+                    });
+
+                    total += subtotal;
+                } else {
+                    const quantityInput = item.querySelector('.quantity-input');
+                    const priceInput = item.querySelector('.price-input');
+                    const quantity = parseFloat(quantityInput?.value) || 0;
+                    const unitPrice = parseFloat(priceInput?.value) || 0;
+                    const subtotal = quantity * unitPrice;
+
+                    console.log(`Item simple ${index}:`, {
+                        quantity: quantity,
+                        unitPrice: unitPrice,
+                        subtotal: subtotal
+                    });
+
+                    total += subtotal;
+                }
+            });
+
+            console.log('Total final:', total);
+
+            const totalElement = document.getElementById('order-total');
+            if (totalElement) {
+                totalElement.textContent = total.toLocaleString('fr-FR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
             }
-        });
 
-        console.log('Total final:', total);
-        
-        const totalElement = document.getElementById('order-total');
-        if (totalElement) {
-            totalElement.textContent = total.toLocaleString('fr-FR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
+            // Mettre à jour aussi l'affichage du total en haut
+            const orderTotalElement = document.getElementById('orderTotal');
+            if (orderTotalElement) {
+                orderTotalElement.textContent = total.toLocaleString('fr-FR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
         }
-        
-        // Mettre à jour aussi l'affichage du total en haut
-        const orderTotalElement = document.getElementById('orderTotal');
-        if (orderTotalElement) {
-            orderTotalElement.textContent = total.toLocaleString('fr-FR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-        }
-    }
 
-    // Afficher message de succès
-    function showSuccessMessage(message) {
-        const toast = document.createElement('div');
-        toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed';
-        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
-        toast.setAttribute('role', 'alert');
-        
-        toast.innerHTML = `
+        // Afficher message de succès
+        function showSuccessMessage(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed';
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            toast.setAttribute('role', 'alert');
+
+            toast.innerHTML = `
             <div class="d-flex">
                 <div class="toast-body">
                     <i class="bi bi-check-circle me-2"></i>${message}
@@ -1220,23 +1199,23 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        document.body.appendChild(toast);
-        const bsToast = new bootstrap.Toast(toast);
-        bsToast.show();
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
 
-        toast.addEventListener('hidden.bs.toast', () => toast.remove());
-    }
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
 
-    // Initialisation
-    init();
+        // Initialisation
+        init();
 
-    // Fonction d'urgence globale pour nettoyer les modals bloqués
-    window.emergencyCleanupModal = function() {
-        console.log('🚨 Nettoyage d\'urgence des modals');
-        forceCleanupModals();
-        modalInstance = null;
-    };
-});
+        // Fonction d'urgence globale pour nettoyer les modals bloqués
+        window.emergencyCleanupModal = function () {
+            console.log('🚨 Nettoyage d\'urgence des modals');
+            forceCleanupModals();
+            modalInstance = null;
+        };
+    });
 
     // Code de diagnostic supprimé - causait des doublons d'événements
     // Le premier DOMContentLoaded (ligne ~335) gère déjà la soumission

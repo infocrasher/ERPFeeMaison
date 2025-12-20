@@ -1,376 +1,381 @@
-# -*- coding: utf-8 -*-
-"""
-Générateur de templates pour les factures PDF
-"""
-
+from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib import colors
 from decimal import Decimal
 import io
-
+import os
+import re
 
 class InvoiceTemplate:
-    """Template de base pour les factures"""
-    
     def __init__(self, config=None):
         self.config = config or self.get_default_config()
+        self._register_fonts()
         self.styles = getSampleStyleSheet()
         self._create_custom_styles()
     
-    def get_default_config(self):
-        """Configuration par défaut pour Fée Maison"""
-        return {
-            'company': {
-                'name': 'FÉE MAISON',
-                'subtitle1': 'Restaurant • Traiteur • Pâtisserie',
-                'subtitle2': 'Spécialités Algériennes & Orientales',
-                'address': '',
-                'phone': '',
-                'email': '',
-                'website': ''
-            },
-            'colors': {
-                'primary': '#2E4057',      # Bleu marine
-                'secondary': '#5A6C7D',    # Gris bleu
-                'accent': '#D4AF37',       # Or
-                'text': '#000000',         # Noir
-                'background': '#F5F5F5'    # Gris clair
-            },
-            'fonts': {
-                'header': 'Helvetica-Bold',
-                'subtitle': 'Helvetica',
-                'normal': 'Helvetica',
-                'bold': 'Helvetica-Bold'
-            },
-            'sizes': {
-                'header': 18,
-                'subtitle': 12,
-                'invoice_title': 16,
-                'normal': 10,
-                'small': 9
-            },
-            'margins': {
-                'top': 0.5,
-                'bottom': 0.5,
-                'left': 0.5,
-                'right': 0.5
-            },
-            'footer': {
-                'text1': 'Merci de votre confiance • Fée Maison',
-                'text2': 'Conditions de paiement : 30 jours'
-            },
-            'currency': 'DA',
-            'tax_rate': 0.19,
-            'show_tax': True
-        }
-    
+    def _register_fonts(self):
+        """Enregistrer les polices personnalisées si disponibles"""
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        
+        # Le chemin exact vers la police Brotherhood
+        font_path = 'static/fonts/Brotherhood_Script.ttf'
+        if os.path.exists(font_path):
+            try:
+                pdfmetrics.registerFont(TTFont('Brotherhood_Script', font_path))
+                self.config['fonts']['header'] = 'Brotherhood_Script'
+            except Exception as e:
+                print(f"Erreur enregistrement police: {e}")
+        else:
+            self.config['fonts']['header'] = 'Helvetica-Bold'
+
     def _create_custom_styles(self):
-        """Créer les styles personnalisés"""
-        # Style en-tête entreprise
+        """Créer les styles ParagraphStyle personnalisés"""
         self.header_style = ParagraphStyle(
             'HeaderStyle',
             parent=self.styles['Normal'],
-            fontSize=self.config['sizes']['header'],
+            fontSize=32 if self.config['fonts']['header'] == 'BrotherhoodScript' else 24,
             fontName=self.config['fonts']['header'],
             textColor=colors.HexColor(self.config['colors']['primary']),
-            alignment=1,  # Centré
-            spaceAfter=10
+            alignment=0,
+            spaceAfter=5
         )
         
-        # Style sous-titre
         self.subtitle_style = ParagraphStyle(
             'SubtitleStyle',
             parent=self.styles['Normal'],
             fontSize=self.config['sizes']['subtitle'],
             fontName=self.config['fonts']['subtitle'],
             textColor=colors.HexColor(self.config['colors']['secondary']),
-            alignment=1,  # Centré
-            spaceAfter=20
+            alignment=0,
+            spaceAfter=2
         )
         
-        # Style titre facture
-        self.invoice_title_style = ParagraphStyle(
-            'InvoiceTitleStyle',
-            parent=self.styles['Normal'],
-            fontSize=self.config['sizes']['invoice_title'],
-            fontName=self.config['fonts']['bold'],
-            textColor=colors.HexColor(self.config['colors']['accent']),
-            alignment=1,  # Centré
-            spaceAfter=15,
-            borderWidth=1,
-            borderColor=colors.HexColor(self.config['colors']['accent']),
-            borderPadding=8
-        )
-        
-        # Style informations
         self.info_style = ParagraphStyle(
             'InfoStyle',
             parent=self.styles['Normal'],
-            fontSize=self.config['sizes']['normal'],
+            fontSize=10,
             fontName=self.config['fonts']['normal'],
-            spaceAfter=5
+            leading=12
         )
         
-        # Style client
-        self.client_style = ParagraphStyle(
-            'ClientStyle',
-            parent=self.styles['Normal'],
-            fontSize=11,
-            fontName=self.config['fonts']['bold'],
-            textColor=colors.HexColor(self.config['colors']['primary']),
-            spaceAfter=8
-        )
-        
-        # Style pied de page
         self.footer_style = ParagraphStyle(
             'FooterStyle',
             parent=self.styles['Normal'],
-            fontSize=self.config['sizes']['small'],
+            fontSize=8,
             fontName=self.config['fonts']['normal'],
-            textColor=colors.HexColor(self.config['colors']['secondary']),
-            alignment=1,  # Centré
-            spaceAfter=5
+            textColor=colors.HexColor('#666666'),
+            alignment=1
         )
-    
-    def generate_pdf(self, invoice):
-        """Générer le PDF de la facture"""
-        buffer = io.BytesIO()
+
+    def get_default_config(self):
+        return {
+            'company': {
+                'name': 'Fée Maison',
+                'subtitle1': 'Traiteur',
+                'subtitle2': '',
+                'address': '183 cooperative ERRAHMA, Dely Brahim Alger',
+                'phone': '0556250370',
+                'email': '',
+                'website': '',
+                'logo': 'app/static/img/logo-feemaison.png'
+            },
+            'colors': {
+                'primary': '#2E4057',
+                'secondary': '#666666',
+                'accent': '#B08050',
+                'background': '#F4F4F9'
+            },
+            'fonts': {
+                'header': 'Helvetica-Bold',
+                'subtitle': 'Helvetica-Oblique',
+                'normal': 'Helvetica',
+                'bold': 'Helvetica-Bold'
+            },
+            'sizes': {
+                'header': 24,
+                'subtitle': 12,
+                'normal': 10
+            },
+            'margins': {
+                'left': 0.5,
+                'right': 0.5,
+                'top': 0.5,
+                'bottom': 0.5
+            },
+            'currency': 'DZD',
+            'tax_rate': 0.00,
+            'show_tax': False
+        }
+
+    def number_to_french_words(self, number):
+        """Convertisseur manuel de nombres en lettres (Français)"""
+        units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"]
+        teens = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"]
+        tens = ["", "dix", "vingt", "trente", "quarante", "cinquante", "soixante", "soixante-dix", "quatre-vingt", "quatre-vingt-dix"]
+        
+        def _convert_below_100(n):
+            if n < 10: return units[n]
+            if 10 <= n < 20: return teens[n-10]
+            if n < 70:
+                t, u = divmod(n, 10)
+                if u == 0: return tens[t]
+                if u == 1: return f"{tens[t]}-et-un"
+                return f"{tens[t]}-{units[u]}"
+            if 70 <= n < 80:
+                return f"soixante-{'et-onze' if n==71 else teens[n-70]}"
+            if 80 <= n < 90:
+                t, u = divmod(n, 10)
+                return f"quatre-vingt{'' if u==0 else '-' + units[u]}"
+            if 90 <= n < 100:
+                return f"quatre-vingt-{teens[n-90]}"
+            return ""
+
+        def _convert_below_1000(n):
+            if n == 0: return ""
+            h, r = divmod(n, 100)
+            if h == 0: return _convert_below_100(r)
+            prefix = "cent" if h == 1 else f"{units[h]}-cent"
+            if r == 0: return prefix + ("s" if h > 1 else "")
+            return f"{prefix}-{_convert_below_100(r)}"
+
+        if number == 0: return "zéro"
+        
+        res = []
+        millions, rest = divmod(int(number), 1000000)
+        if millions > 0:
+            res.append(f"{_convert_below_1000(millions)} million{'s' if millions > 1 else ''}")
+        
+        thousands, rest = divmod(rest, 1000)
+        if thousands > 0:
+            if thousands == 1:
+                res.append("mille")
+            else:
+                res.append(f"{_convert_below_1000(thousands)} mille")
+        
+        if rest > 0:
+            res.append(_convert_below_1000(rest))
+            
+        return " ".join(res).replace("- -", "-").strip()
+
+    def generate_pdf(self, invoice, output_path=None):
+        if output_path is None:
+            output_path = io.BytesIO()
+            
         doc = SimpleDocTemplate(
-            buffer, 
+            output_path,
             pagesize=A4,
-            topMargin=self.config['margins']['top']*inch,
-            bottomMargin=self.config['margins']['bottom']*inch,
+            rightMargin=self.config['margins']['right']*inch,
             leftMargin=self.config['margins']['left']*inch,
-            rightMargin=self.config['margins']['right']*inch
+            topMargin=self.config['margins']['top']*inch,
+            bottomMargin=self.config['margins']['bottom']*inch
         )
         
-        story = []
-        
-        # En-tête
-        story.extend(self._build_header())
-        
-        # Type de facture
-        story.extend(self._build_invoice_title(invoice))
-        
-        # Informations facture et client
-        story.extend(self._build_info_section(invoice))
-        
-        # Tableau des articles
-        story.extend(self._build_items_table(invoice))
-        
-        # Notes
-        story.extend(self._build_notes_section(invoice))
-        
-        # Pied de page
-        story.extend(self._build_footer())
-        
-        # Générer le PDF
-        doc.build(story)
-        buffer.seek(0)
-        
-        return buffer
-    
-    def _build_header(self):
-        """Construire l'en-tête"""
         elements = []
+        # On ne met plus le header dans les éléments mais on laisse de l'espace en haut
+        elements.append(Spacer(1, 1.3*inch))
+        elements.extend(self._build_info_section(invoice))
+        elements.extend(self._build_items_table(invoice))
+        elements.extend(self._build_closing_sentence(invoice))
         
-        # Nom de l'entreprise
-        elements.append(Paragraph(self.config['company']['name'], self.header_style))
+        # Passer l'objet invoice au doc pour que les callbacks puissent y accéder
+        doc.invoice = invoice
         
-        # Sous-titres
-        if self.config['company']['subtitle1']:
-            elements.append(Paragraph(self.config['company']['subtitle1'], self.subtitle_style))
+        # Le header et le footer sont dessinés via onPage pour la pleine largeur
+        doc.build(elements, 
+                  onFirstPage=lambda c, d: (self._draw_header(c, d), self._draw_footer(c, d)), 
+                  onLaterPages=lambda c, d: (self._draw_header(c, d), self._draw_footer(c, d)))
         
-        if self.config['company']['subtitle2']:
-            elements.append(Paragraph(self.config['company']['subtitle2'], self.subtitle_style))
+        # Si on utilise un buffer, il faut revenir au début avant de le renvoyer
+        if isinstance(output_path, io.BytesIO):
+            output_path.seek(0)
+            
+        return output_path
+
+    def _draw_header(self, canvas, doc):
+        """Dessiner l'en-tête en pleine largeur"""
+        canvas.saveState()
+        invoice = doc.invoice
+        from reportlab.platypus import Image as RLImage
         
-        elements.append(Spacer(1, 10))
+        # Rectangle de fond
+        page_width = doc.width + doc.leftMargin + doc.rightMargin
+        header_height = 1.3 * inch
+        canvas.setFillColor(colors.HexColor(self.config['colors']['accent']))
+        canvas.rect(0, A4[1] - header_height, page_width, header_height, stroke=0, fill=1)
         
-        # Ligne de séparation
-        elements.append(HRFlowable(
-            width="100%", 
-            thickness=2, 
-            color=colors.HexColor(self.config['colors']['accent'])
-        ))
-        elements.append(Spacer(1, 15))
+        # Logo
+        logo_path = self.config['company'].get('logo')
+        logo = None
+        if logo_path and os.path.exists(logo_path):
+            try:
+                # Logo qui prend toute la hauteur (avec un petit padding vertical de 5pts)
+                logo_size = header_height - 10
+                logo = RLImage(logo_path, width=logo_size, height=logo_size)
+            except: pass
+
+        # Styles
+        title_style = ParagraphStyle(
+            'TitleStyleFull',
+            fontName='Helvetica-Bold',
+            fontSize=22 if invoice.invoice_type == 'proforma' else 28,
+            textColor=colors.whitesmoke,
+            alignment=2
+        )
         
-        return elements
-    
-    def _build_invoice_title(self, invoice):
-        """Construire le titre de la facture"""
-        elements = []
+        header_text = [
+            Paragraph(f"{self.config['company']['name']}", 
+                      ParagraphStyle('H1Full', fontName=self.config['fonts']['header'], fontSize=28, textColor=colors.whitesmoke, leading=32)),
+            Paragraph(f"{self.config['company']['subtitle1']}", 
+                      ParagraphStyle('H2Full', fontName=self.config['fonts']['subtitle'], fontSize=12, textColor=colors.whitesmoke, leading=14)),
+            Paragraph(f"Adresse {self.config['company']['address']}<br/>{self.config['company']['phone']}", 
+                      ParagraphStyle('HInfoFull', fontName=self.config['fonts']['normal'], fontSize=10, textColor=colors.whitesmoke, leading=12))
+        ]
+
+        # Titre dynamique
+        title_text = "Facture Proforma" if invoice.invoice_type == 'proforma' else "Facture"
         
-        if invoice.invoice_type == 'proforma':
-            title = "FACTURE PROFORMA"
-        else:
-            title = "FACTURE DÉFINITIVE"
+        # Construction de la table pour le contenu du header
+        data = [[logo or "", header_text, Paragraph(title_text, title_style)]]
+        header_table = Table(data, colWidths=[1.3*inch, 3.8*inch, page_width - 5.1*inch - 30])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 15),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
         
-        elements.append(Paragraph(title, self.invoice_title_style))
+        w, h = header_table.wrap(page_width, header_height)
+        header_table.drawOn(canvas, 0, A4[1] - header_height)
         
-        return elements
-    
+        canvas.restoreState()
+
     def _build_info_section(self, invoice):
-        """Construire la section d'informations"""
         elements = []
+        client = invoice.b2b_client
         
-        # Informations facture et client côte à côte
-        info_data = [
-            ['FACTURE:', invoice.invoice_number, 'CLIENT:', invoice.b2b_client.company_name],
-            ['Date:', invoice.invoice_date.strftime('%d/%m/%Y'), 'Contact:', invoice.b2b_client.contact_person or '—'],
-            ['Échéance:', invoice.due_date.strftime('%d/%m/%Y'), 'NIF:', invoice.b2b_client.tax_number or '—'],
-            ['', '', 'Adresse:', invoice.b2b_client.address or '—']
+        client_lines = [Paragraph("<b>Facturé à:</b>", self.info_style)]
+        if client:
+            client_lines.append(Paragraph(client.company_name or "", self.info_style))
+            if client.tax_number: client_lines.append(Paragraph(f"NIF/RC : {client.tax_number}", self.info_style))
+            if client.address: client_lines.append(Paragraph(client.address, self.info_style))
+        
+        # Traduction des modes de paiement
+        payment_mapping = {
+            'cheque': 'Par Chèque',
+            'espece': 'En Espèces',
+            'virement': 'Par Virement',
+            'traite': 'Par Traite'
+        }
+        payment_method = payment_mapping.get(invoice.payment_method, invoice.payment_method or "Chèque")
+        
+        invoice_lines = [
+            Paragraph(f"<b>N de facture :</b> {invoice.invoice_number}", self.info_style),
+            Paragraph(f"<b>Date :</b> {invoice.invoice_date.strftime('%d/%m/%Y')}", self.info_style),
+            Paragraph(f"<b>Paiement :</b> {payment_method}", self.info_style)
         ]
         
-        info_table = Table(info_data, colWidths=[80, 120, 80, 200])
-        info_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (1, -1), self.config['fonts']['bold']),
-            ('FONTNAME', (2, 0), (3, -1), self.config['fonts']['bold']),
-            ('FONTSIZE', (0, 0), (-1, -1), self.config['sizes']['normal']),
-            ('TEXTCOLOR', (0, 0), (1, -1), colors.HexColor(self.config['colors']['primary'])),
-            ('TEXTCOLOR', (2, 0), (3, -1), colors.HexColor(self.config['colors']['primary'])),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 5),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ]))
+        data = [[client_lines, invoice_lines]]
+        info_table = Table(data, colWidths=[4.5*inch, 3.0*inch])
+        info_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
         
         elements.append(info_table)
         elements.append(Spacer(1, 25))
-        
         return elements
-    
+
     def _build_items_table(self, invoice):
-        """Construire le tableau des articles"""
         elements = []
+        data = [['Jour', 'DESIGNATION', 'Quantité', 'PRIX UNIT HT', 'MONTANT HT']]
         
-        # En-tête du tableau
-        data = [['DÉSIGNATION', 'QTÉ', 'PRIX UNITAIRE', 'MONTANT']]
+        items = sorted(invoice.invoice_items, key=lambda x: (x.section or "", x.id))
         
-        subtotal = Decimal('0.00')
-        for item in invoice.invoice_items:
-            # Formater la description pour les produits composés
-            description = item.description
-            if description and '\\n' in description:
-                description = description.replace('\\n', '<br/>')
+        last_jour = None
+        for item in items:
+            date_match = re.search(r'(\d{2}/\d{2}/\d{4})', item.section or "")
+            current_jour = date_match.group(1) if date_match else ""
             
-            # Formater les montants
-            unit_price_formatted = f"{float(item.unit_price):,.0f} {self.config['currency']}"
-            total_formatted = f"{float(item.total_price):,.0f} {self.config['currency']}"
-            quantity_formatted = f"{float(item.quantity):g}"
+            # Ne pas répéter la date si c'est la même
+            display_jour = current_jour if current_jour != last_jour else ""
+            last_jour = current_jour
+            
+            description = item.description.replace('\\n', '<br/>')
             
             data.append([
+                display_jour,
                 Paragraph(description, self.info_style),
-                quantity_formatted,
-                unit_price_formatted,
-                total_formatted
+                f"{float(item.quantity):g}",
+                f"{float(item.unit_price):,.0f}",
+                f"{float(item.total_price):,.0f}"
             ])
-            subtotal += item.total_price
+            
+        data.append(['', '', '', 'MONTANT HT', f"{float(invoice.total_amount):,.00f}"])
+        data.append(['', '', '', 
+                     Paragraph("<b>TOTAL</b>", ParagraphStyle('Tot', fontName=self.config['fonts']['bold'], textColor=colors.whitesmoke, alignment=1)), 
+                     Paragraph(f"<b>{float(invoice.total_amount):,.00f} DZD</b>", ParagraphStyle('TotVal', fontName=self.config['fonts']['bold'], textColor=colors.whitesmoke, alignment=1))])
         
-        # Ligne de séparation avant totaux
-        data.append(['', '', '', ''])
+        table = Table(data, colWidths=[1.0*inch, 3.0*inch, 1.0*inch, 1.25*inch, 1.25*inch])
         
-        # Totaux
-        data.append(['', '', 'SOUS-TOTAL:', f"{float(subtotal):,.0f} {self.config['currency']}"])
-        
-        if self.config['show_tax']:
-            tax_amount = subtotal * Decimal(str(self.config['tax_rate']))
-            total_with_tax = subtotal + tax_amount
-            data.append(['', '', f'TVA ({int(self.config["tax_rate"]*100)}%):', f"{float(tax_amount):,.0f} {self.config['currency']}"])
-            data.append(['', '', 'TOTAL GÉNÉRAL:', f"{float(total_with_tax):,.0f} {self.config['currency']}"])
-        else:
-            data.append(['', '', 'TOTAL:', f"{float(subtotal):,.0f} {self.config['currency']}"])
-        
-        # Créer le tableau
-        table = Table(data, colWidths=[280, 60, 100, 100])
-        table.setStyle(self._get_table_style())
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#333333')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('GRID', (0, 0), (-1, -3), 0.5, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), self.config['fonts']['bold']),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BACKGROUND', (3, -1), (4, -1), colors.HexColor('#B08050')),
+            ('GRID', (3, -2), (4, -1), 1, colors.black),
+            ('ALIGN', (3, -2), (4, -1), 'CENTER'),
+            ('BACKGROUND', (3, -2), (4, -2), colors.whitesmoke),
+        ]))
         
         elements.append(table)
-        elements.append(Spacer(1, 25))
-        
+        elements.append(Spacer(1, 40))
         return elements
-    
-    def _get_table_style(self):
-        """Style du tableau des articles"""
-        return TableStyle([
-            # En-tête
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(self.config['colors']['primary'])),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('FONTNAME', (0, 0), (-1, 0), self.config['fonts']['bold']),
-            ('FONTSIZE', (0, 0), (-1, 0), 11),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-            
-            # Corps du tableau
-            ('FONTNAME', (0, 1), (-1, -4), self.config['fonts']['normal']),
-            ('FONTSIZE', (0, 1), (-1, -4), self.config['sizes']['normal']),
-            ('ALIGN', (1, 1), (1, -4), 'CENTER'),  # Quantité centrée
-            ('ALIGN', (2, 1), (-1, -4), 'RIGHT'),  # Prix et totaux à droite
-            ('VALIGN', (0, 1), (-1, -4), 'TOP'),
-            ('TOPPADDING', (0, 1), (-1, -4), 8),
-            ('BOTTOMPADDING', (0, 1), (-1, -4), 8),
-            ('LEFTPADDING', (0, 1), (0, -4), 10),
-            ('RIGHTPADDING', (-1, 1), (-1, -4), 10),
-            
-            # Ligne de séparation
-            ('LINEBELOW', (0, -4), (-1, -4), 1, colors.HexColor(self.config['colors']['accent'])),
-            
-            # Totaux
-            ('FONTNAME', (0, -3), (-1, -1), self.config['fonts']['bold']),
-            ('FONTSIZE', (0, -3), (-1, -1), 11),
-            ('ALIGN', (2, -3), (-1, -1), 'RIGHT'),
-            ('BACKGROUND', (2, -1), (-1, -1), colors.HexColor(self.config['colors']['background'])),
-            ('TEXTCOLOR', (2, -1), (-1, -1), colors.HexColor(self.config['colors']['primary'])),
-            
-            # Bordures
-            ('GRID', (0, 0), (-1, -4), 0.5, colors.HexColor('#CCCCCC')),
-            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor(self.config['colors']['primary'])),
-        ])
-    
-    def _build_notes_section(self, invoice):
-        """Construire la section des notes"""
-        elements = []
+
+    def _build_closing_sentence(self, invoice):
+        amount_words = self.number_to_french_words(int(invoice.total_amount))
+        sentence = f"« Arrêtée la présente facture à la somme de : {amount_words} dinars algériens. »"
+        return [Paragraph(sentence, self.info_style), Spacer(1, 50)]
+
+    def _draw_footer(self, canvas, doc):
+        """Dessiner le pied de page tout en bas de la page"""
+        canvas.saveState()
         
-        if invoice.notes:
-            elements.append(Paragraph("NOTES:", self.client_style))
-            notes_style = ParagraphStyle(
-                'NotesStyle',
-                parent=self.styles['Normal'],
-                fontSize=self.config['sizes']['normal'],
-                fontName=self.config['fonts']['normal'],
-                spaceAfter=10,
-                leftIndent=10
-            )
-            elements.append(Paragraph(invoice.notes, notes_style))
-            elements.append(Spacer(1, 15))
+        # Définition du style du footer
+        footer_style = ParagraphStyle('Footer', 
+                                     fontName=self.config['fonts']['normal'], 
+                                     fontSize=9, # Légèrement plus petit pour tenir sur une ligne
+                                     textColor=colors.whitesmoke, 
+                                     alignment=1, 
+                                     leading=12)
         
-        return elements
-    
-    def _build_footer(self):
-        """Construire le pied de page"""
-        elements = []
+        # Fusion des informations sur une seule ligne
+        footer_line = "RC N° : 16/00 - 4954376 A18 / NIF: 185160600384161 / AI : 16235191021 / RIB: 021 00010115041061025 BIC: SOGEDZAL"
         
-        elements.append(Spacer(1, 20))
-        elements.append(HRFlowable(
-            width="100%", 
-            thickness=1, 
-            color=colors.HexColor('#CCCCCC')
-        ))
-        elements.append(Spacer(1, 10))
+        # Création d'une table pour le fond coloré et le texte
+        footer_content = [
+            [Paragraph(footer_line, footer_style)],
+            [Paragraph("TEL: 00213 556 25 03 70 - Merci de Votre Confiance", footer_style)]
+        ]
+        footer_table = Table(footer_content, colWidths=[doc.width + doc.leftMargin + doc.rightMargin])
+        footer_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#B08050')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
         
-        if self.config['footer']['text1']:
-            elements.append(Paragraph(self.config['footer']['text1'], self.footer_style))
+        # Calculer la position (tout en bas)
+        w, h = footer_table.wrap(doc.width, doc.height)
+        footer_table.drawOn(canvas, 0, 0)
         
-        if self.config['footer']['text2']:
-            elements.append(Paragraph(self.config['footer']['text2'], self.footer_style))
-        
-        return elements
-    
+        canvas.restoreState()
+
     def get_filename(self, invoice):
         """Générer le nom de fichier"""
         if invoice.invoice_type == 'proforma':
@@ -383,98 +388,5 @@ class InvoiceTemplate:
         
         return f"{prefix}_{client_name}_{date_str}.pdf"
 
-
-# Templates prédéfinis
 def get_fee_maison_template():
-    """Template par défaut Fée Maison"""
     return InvoiceTemplate()
-
-
-def get_minimal_template():
-    """Template minimal"""
-    config = {
-        'company': {
-            'name': 'FÉE MAISON',
-            'subtitle1': 'Restaurant & Traiteur',
-            'subtitle2': '',
-        },
-        'colors': {
-            'primary': '#000000',
-            'secondary': '#666666',
-            'accent': '#999999',
-            'text': '#000000',
-            'background': '#F8F8F8'
-        },
-        'fonts': {
-            'header': 'Helvetica-Bold',
-            'subtitle': 'Helvetica',
-            'normal': 'Helvetica',
-            'bold': 'Helvetica-Bold'
-        },
-        'sizes': {
-            'header': 16,
-            'subtitle': 11,
-            'invoice_title': 14,
-            'normal': 9,
-            'small': 8
-        },
-        'margins': {
-            'top': 0.5,
-            'bottom': 0.5,
-            'left': 0.5,
-            'right': 0.5
-        },
-        'footer': {
-            'text1': 'Merci de votre confiance',
-            'text2': ''
-        },
-        'currency': 'DA',
-        'tax_rate': 0.19,
-        'show_tax': True
-    }
-    return InvoiceTemplate(config)
-
-
-def get_elegant_template():
-    """Template élégant"""
-    config = {
-        'company': {
-            'name': 'FÉE MAISON',
-            'subtitle1': 'Restaurant • Traiteur • Pâtisserie',
-            'subtitle2': 'Cuisine Authentique & Raffinée',
-        },
-        'colors': {
-            'primary': '#1A237E',      # Bleu indigo
-            'secondary': '#3F51B5',    # Bleu
-            'accent': '#FF6F00',       # Orange
-            'text': '#000000',
-            'background': '#FFF3E0'    # Orange très clair
-        },
-        'fonts': {
-            'header': 'Helvetica-Bold',
-            'subtitle': 'Helvetica',
-            'normal': 'Helvetica',
-            'bold': 'Helvetica-Bold'
-        },
-        'sizes': {
-            'header': 20,
-            'subtitle': 13,
-            'invoice_title': 18,
-            'normal': 10,
-            'small': 9
-        },
-        'margins': {
-            'top': 0.5,
-            'bottom': 0.5,
-            'left': 0.5,
-            'right': 0.5
-        },
-        'footer': {
-            'text1': '✨ Merci de votre confiance • Fée Maison ✨',
-            'text2': 'Conditions de paiement : 30 jours'
-        },
-        'currency': 'DA',
-        'tax_rate': 0.19,
-        'show_tax': True
-    }
-    return InvoiceTemplate(config)

@@ -15,45 +15,48 @@
                 <div class="card-body">
                     <form method="POST" novalidate id="invoiceForm">
                         {{ form.hidden_tag() }}
-                        
+
                         <!-- Informations de base -->
                         <div class="row mb-4">
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     {{ form.b2b_client_id.label(class="form-label") }}
-                                    {{ form.b2b_client_id(class="form-select" + (" is-invalid" if form.b2b_client_id.errors else "")) }}
+                                    {{ form.b2b_client_id(class="form-select" + (" is-invalid" if
+                                    form.b2b_client_id.errors else "")) }}
                                     {% if form.b2b_client_id.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.b2b_client_id.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
+                                    <div class="invalid-feedback">
+                                        {% for error in form.b2b_client_id.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     {{ form.invoice_type.label(class="form-label") }}
-                                    {{ form.invoice_type(class="form-select" + (" is-invalid" if form.invoice_type.errors else "")) }}
+                                    {{ form.invoice_type(class="form-select" + (" is-invalid" if
+                                    form.invoice_type.errors else "")) }}
                                     {% if form.invoice_type.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.invoice_type.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
+                                    <div class="invalid-feedback">
+                                        {% for error in form.invoice_type.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     {{ form.invoice_date.label(class="form-label") }}
-                                    {{ form.invoice_date(class="form-control" + (" is-invalid" if form.invoice_date.errors else ""), type="date") }}
+                                    {{ form.invoice_date(class="form-control" + (" is-invalid" if
+                                    form.invoice_date.errors else ""), type="date") }}
                                     {% if form.invoice_date.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.invoice_date.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
+                                    <div class="invalid-feedback">
+                                        {% for error in form.invoice_date.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -63,26 +66,28 @@
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     {{ form.due_date.label(class="form-label") }}
-                                    {{ form.due_date(class="form-control" + (" is-invalid" if form.due_date.errors else ""), type="date") }}
+                                    {{ form.due_date(class="form-control" + (" is-invalid" if form.due_date.errors else
+                                    ""), type="date") }}
                                     {% if form.due_date.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.due_date.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
+                                    <div class="invalid-feedback">
+                                        {% for error in form.due_date.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     {{ form.payment_method.label(class="form-label") }}
-                                    {{ form.payment_method(class="form-select" + (" is-invalid" if form.payment_method.errors else "")) }}
+                                    {{ form.payment_method(class="form-select" + (" is-invalid" if
+                                    form.payment_method.errors else "")) }}
                                     {% if form.payment_method.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.payment_method.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
+                                    <div class="invalid-feedback">
+                                        {% for error in form.payment_method.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -100,42 +105,60 @@
                         <div class="mb-4">
                             <h5>Articles de la facture</h5>
                             <div id="invoiceItems">
-                                {% for item_form in form.invoice_items %}
+                                {% set current_section = [None] %}
+                                {% for item_field in form.invoice_items %}
+                                {% set item_form = item_field.form %}
+
+                                {% if item_form.section.data and item_form.section.data != current_section[0] %}
+                                <div class="alert alert-secondary py-2 mb-2 fw-bold text-primary">
+                                    <i class="bi bi-calendar-event me-2"></i>{{ item_form.section.data }}
+                                </div>
+                                {% if current_section.append(item_form.section.data) or current_section.pop(0) %}{%
+                                endif %}
+                                {% endif %}
+
                                 <div class="invoice-item border rounded p-3 mb-3">
+                                    {{ item_form.section }}
                                     <div class="row">
                                         <div class="col-md-4">
                                             <div class="mb-3">
                                                 <label class="form-label">Description</label>
-                                                <input type="text" name="{{ item_form.description.name }}" 
-                                                       class="form-control" 
-                                                       value="{{ item_form.description.data or '' }}"
-                                                       placeholder="Description du produit/service"
-                                                       required>
+                                                {{ item_form.description(class="form-control", placeholder="Description
+                                                du produit/service", required=True) }}
+                                                {% if item_form.description.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in item_form.description.errors %}
+                                                    {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                                {% endif %}
                                             </div>
                                         </div>
                                         <div class="col-md-2">
                                             <div class="mb-3">
                                                 <label class="form-label">Quantité</label>
-                                                {{ item_form.quantity(class="form-control quantity-input" + (" is-invalid" if item_form.quantity.errors else ""), step="0.001") }}
+                                                {{ item_form.quantity(class="form-control quantity-input" + ("
+                                                is-invalid" if item_form.quantity.errors else ""), step="0.001") }}
                                                 {% if item_form.quantity.errors %}
-                                                    <div class="invalid-feedback">
-                                                        {% for error in item_form.quantity.errors %}
-                                                            {{ error }}
-                                                        {% endfor %}
-                                                    </div>
+                                                <div class="invalid-feedback">
+                                                    {% for error in item_form.quantity.errors %}
+                                                    {{ error }}
+                                                    {% endfor %}
+                                                </div>
                                                 {% endif %}
                                             </div>
                                         </div>
                                         <div class="col-md-2">
                                             <div class="mb-3">
                                                 <label class="form-label">Prix unitaire (DA)</label>
-                                                {{ item_form.unit_price(class="form-control price-input" + (" is-invalid" if item_form.unit_price.errors else ""), step="0.01") }}
+                                                {{ item_form.unit_price(class="form-control price-input" + ("
+                                                is-invalid" if item_form.unit_price.errors else ""), step="0.01") }}
                                                 {% if item_form.unit_price.errors %}
-                                                    <div class="invalid-feedback">
-                                                        {% for error in item_form.unit_price.errors %}
-                                                            {{ error }}
-                                                        {% endfor %}
-                                                    </div>
+                                                <div class="invalid-feedback">
+                                                    {% for error in item_form.unit_price.errors %}
+                                                    {{ error }}
+                                                    {% endfor %}
+                                                </div>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -150,7 +173,8 @@
                                         <div class="col-md-2">
                                             <div class="mb-3">
                                                 <label class="form-label">&nbsp;</label>
-                                                <button type="button" class="btn btn-danger btn-sm remove-item" style="display: {{ 'none' if loop.first else 'block' }}">
+                                                <button type="button" class="btn btn-danger btn-sm remove-item"
+                                                    style="display: {{ 'none' if loop.first else 'block' }}">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
@@ -167,13 +191,14 @@
                         <!-- Notes -->
                         <div class="mb-4">
                             {{ form.notes.label(class="form-label") }}
-                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3) }}
+                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3)
+                            }}
                             {% if form.notes.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.notes.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
+                            <div class="invalid-feedback">
+                                {% for error in form.notes.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
                             {% endif %}
                         </div>
 
@@ -206,101 +231,115 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('=== DEBUT DEBUG FACTURE ===');
-    console.log('DOM chargé, recherche des éléments...');
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('=== DEBUT DEBUG FACTURE ===');
+        console.log('DOM chargé, recherche des éléments...');
 
-    const clientSelect = document.querySelector('select[name="b2b_client_id"]');
-    const paymentTerms = document.getElementById('paymentTerms');
-    const addItemBtn = document.getElementById('addItem');
-    const invoiceItems = document.getElementById('invoiceItems');
-    const subtotalSpan = document.getElementById('subtotal');
-    const totalSpan = document.getElementById('invoiceTotal');
+        const clientSelect = document.querySelector('select[name="b2b_client_id"]');
+        const paymentTerms = document.getElementById('paymentTerms');
+        const addItemBtn = document.getElementById('addItem');
+        const invoiceItems = document.getElementById('invoiceItems');
+        const subtotalSpan = document.getElementById('subtotal');
+        const totalSpan = document.getElementById('invoiceTotal');
 
-    console.log('Elements trouvés:', {
-        clientSelect: !!clientSelect,
-        paymentTerms: !!paymentTerms,
-        addItemBtn: !!addItemBtn,
-        invoiceItems: !!invoiceItems,
-        subtotalSpan: !!subtotalSpan,
-        totalSpan: !!totalSpan
-    });
-
-    // Vérifier que les éléments essentiels existent
-    if (!addItemBtn) {
-        console.error('ERREUR: Bouton addItem non trouvé!');
-        return;
-    }
-    if (!invoiceItems) {
-        console.error('ERREUR: Container invoiceItems non trouvé!');
-        return;
-    }
-
-    // Définir les fonctions utilitaires d'abord
-    function updateItemTotal(item) {
-        const quantity = parseFloat(item.querySelector('.quantity-input').value) || 0;
-        const price = parseFloat(item.querySelector('.price-input').value) || 0;
-        const total = quantity * price;
-        item.querySelector('.item-total').textContent = total.toFixed(2);
-        return total;
-    }
-
-    function updateTotals() {
-        let subtotal = 0;
-        document.querySelectorAll('.invoice-item').forEach(item => {
-            subtotal += updateItemTotal(item);
+        console.log('Elements trouvés:', {
+            clientSelect: !!clientSelect,
+            paymentTerms: !!paymentTerms,
+            addItemBtn: !!addItemBtn,
+            invoiceItems: !!invoiceItems,
+            subtotalSpan: !!subtotalSpan,
+            totalSpan: !!totalSpan
         });
-        
-        if (subtotalSpan) subtotalSpan.textContent = subtotal.toFixed(2);
-        if (totalSpan) totalSpan.textContent = subtotal.toFixed(2);
-    }
 
-    // Données pré-chargées depuis une commande si disponibles
-    {% if order_items_for_form %}
-    try {
-        console.log('=== DONNEES PRE-CHARGEES DETECTEES ===');
-        const orderItemsData = {{ order_items_for_form | tojson }};
-        console.log('Données de commande à pré-charger:', orderItemsData);
-        
-        // Pré-remplir les champs avec les données de la commande
-        if (orderItemsData && orderItemsData.length > 0) {
-            console.log('Début du pré-remplissage...');
-            
-            // D'abord, s'assurer qu'on a assez d'articles dans le formulaire
-            console.log('Articles actuels:', invoiceItems.children.length);
-            console.log('Articles nécessaires:', orderItemsData.length);
-            
-            while (invoiceItems.children.length < orderItemsData.length) {
-                console.log('Ajout d\'un article...');
-                addItemBtn.click();
-            }
-            
-            // Remplir les champs
-            orderItemsData.forEach((itemData, index) => {
-                console.log(`Remplissage article ${index}:`, itemData);
-                const itemDiv = invoiceItems.children[index];
-                if (itemDiv) {
-                    const descInput = itemDiv.querySelector('input[name*="description"]');
-                    const quantityInput = itemDiv.querySelector('input[name*="quantity"]');
-                    const priceInput = itemDiv.querySelector('input[name*="unit_price"]');
-                    
-                    console.log('Champs trouvés:', {
-                        description: !!descInput,
-                        quantity: !!quantityInput,
-                        price: !!priceInput
-                    });
-                    
-                    if (descInput) descInput.value = itemData.description || '';
-                    if (quantityInput) quantityInput.value = itemData.quantity || '';
-                    if (priceInput) priceInput.value = itemData.unit_price || '';
-                }
-            });
-            
-            console.log('Mise à jour des totaux...');
-            // Mettre à jour les totaux
-            updateTotals();
-            console.log('Pré-remplissage terminé avec succès!');
+        // Vérifier que les éléments essentiels existent
+        if (!addItemBtn) {
+            console.error('ERREUR: Bouton addItem non trouvé!');
+            return;
         }
+        if (!invoiceItems) {
+            console.error('ERREUR: Container invoiceItems non trouvé!');
+            return;
+        }
+
+        // Définir les fonctions utilitaires d'abord
+        function updateItemTotal(item) {
+            const quantity = parseFloat(item.querySelector('.quantity-input').value) || 0;
+            const price = parseFloat(item.querySelector('.price-input').value) || 0;
+            const total = quantity * price;
+            item.querySelector('.item-total').textContent = total.toFixed(2);
+            return total;
+        }
+
+        function updateTotals() {
+            let subtotal = 0;
+            document.querySelectorAll('.invoice-item').forEach(item => {
+                subtotal += updateItemTotal(item);
+            });
+
+            if (subtotalSpan) subtotalSpan.textContent = subtotal.toFixed(2);
+            if (totalSpan) totalSpan.textContent = subtotal.toFixed(2);
+        }
+
+        {% if order_items_for_form %}
+        try {
+            console.log('=== DONNEES PRE-CHARGEES DETECTEES ===');
+            const orderItemsData = {{ order_items_for_form | tojson | safe
+        }};
+    console.log('Données de commande à pré-charger:', orderItemsData);
+
+    // Pré-remplir les champs avec les données de la commande
+    if (orderItemsData && orderItemsData.length > 0) {
+        console.log('Début du pré-remplissage...');
+
+        // D'abord, s'assurer qu'on a assez d'articles dans le formulaire
+        console.log('Articles actuels:', invoiceItems.children.length);
+        console.log('Articles nécessaires:', orderItemsData.length);
+
+        while (invoiceItems.querySelectorAll('.invoice-item').length < orderItemsData.length) {
+            console.log('Ajout d\'un article...');
+            addItemBtn.click();
+        }
+
+        // Remplir les champs
+        // Les items sont les divs avec la classe .invoice-item
+        const itemDivs = invoiceItems.querySelectorAll('.invoice-item');
+        orderItemsData.forEach((itemData, index) => {
+            console.log(`Remplissage article ${index}:`, itemData);
+            const itemDiv = itemDivs[index];
+            if (itemDiv) {
+                const descInput = itemDiv.querySelector('input[name*="description"]');
+                const quantityInput = itemDiv.querySelector('input[name*="quantity"]');
+                const priceInput = itemDiv.querySelector('input[name*="unit_price"]');
+
+                console.log('Champs trouvés:', {
+                    description: !!descInput,
+                    quantity: !!quantityInput,
+                    price: !!priceInput
+                });
+
+                if (descInput) descInput.value = itemData.description || '';
+                if (quantityInput) quantityInput.value = itemData.quantity || '';
+                if (priceInput) priceInput.value = itemData.unit_price || '';
+
+                // Gérer la section si elle existe
+                const sectionInput = itemDiv.querySelector('input[name*="section"]');
+                if (sectionInput) sectionInput.value = itemData.section || '';
+
+                // Ajouter un badge visuel si c'est le début d'une nouvelle section
+                if (itemData.section && (index === 0 || orderItemsData[index - 1].section !== itemData.section)) {
+                    const sectionHeader = document.createElement('div');
+                    sectionHeader.className = 'alert alert-secondary py-2 mb-2 fw-bold text-primary';
+                    sectionHeader.innerHTML = `<i class="bi bi-calendar-event me-2"></i>${itemData.section}`;
+                    invoiceItems.insertBefore(sectionHeader, itemDiv);
+                }
+            }
+        });
+
+        console.log('Mise à jour des totaux...');
+        // Mettre à jour les totaux
+        updateTotals();
+        console.log('Pré-remplissage terminé avec succès!');
+    }
     } catch (error) {
         console.error('Erreur lors du pré-remplissage:', error);
     }
@@ -311,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Mettre à jour les conditions de paiement selon le client
     if (clientSelect && paymentTerms) {
-        clientSelect.addEventListener('change', function() {
+        clientSelect.addEventListener('change', function () {
             const selectedOption = this.options[this.selectedIndex];
             if (selectedOption.dataset.paymentTerms) {
                 paymentTerms.textContent = selectedOption.dataset.paymentTerms + ' jours';
@@ -322,33 +361,35 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Ajouter un article
-    addItemBtn.addEventListener('click', function() {
+    addItemBtn.addEventListener('click', function () {
         const itemTemplate = invoiceItems.children[0].cloneNode(true);
-        
+
         // Réinitialiser les valeurs
         itemTemplate.querySelectorAll('input').forEach(input => {
             input.value = '';
         });
-        
+
         // Afficher le bouton supprimer
         itemTemplate.querySelector('.remove-item').style.display = 'block';
-        
+
         // Mettre à jour les noms des champs
-        const itemCount = invoiceItems.children.length;
-        itemTemplate.querySelectorAll('input').forEach(input => {
-            const name = input.name;
-            if (name) {
-                input.name = name.replace(/\[\d+\]/, `[${itemCount}]`);
-                input.id = input.id.replace(/_\d+_/, `_${itemCount}_`);
+        // Mettre à jour les noms des champs pour WTForms (format: items-0-xxx)
+        const itemCount = invoiceItems.querySelectorAll('.invoice-item').length;
+        itemTemplate.querySelectorAll('input, select, textarea').forEach(input => {
+            if (input.name) {
+                input.name = input.name.replace(/-\d+-/, `-${itemCount}-`);
+            }
+            if (input.id) {
+                input.id = input.id.replace(/-\d+-/, `-${itemCount}-`);
             }
         });
-        
+
         invoiceItems.appendChild(itemTemplate);
         updateTotals();
     });
 
     // Supprimer un article
-    invoiceItems.addEventListener('click', function(e) {
+    invoiceItems.addEventListener('click', function (e) {
         if (e.target.classList.contains('remove-item') || e.target.closest('.remove-item')) {
             const item = e.target.closest('.invoice-item');
             if (invoiceItems.children.length > 1) {
@@ -361,7 +402,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fonctions déjà définies plus haut
 
     // Écouter les changements de quantité et prix
-    invoiceItems.addEventListener('input', function(e) {
+    invoiceItems.addEventListener('input', function (e) {
         if (e.target.classList.contains('quantity-input') || e.target.classList.contains('price-input')) {
             updateTotals();
         }
@@ -371,4 +412,4 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTotals();
 });
 </script>
-{% endblock %} 
+{% endblock %}

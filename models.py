@@ -1316,6 +1316,10 @@ class B2BOrderItem(db.Model):
     
     # Description personnalisée
     description = db.Column(db.String(255))
+
+    # Composition (JSON) pour les produits composés (Lunch Box)
+    # Format: [{"product_id": 1, "quantity": 1, "name": "Salade"}, ...]
+    composition = db.Column(db.JSON, nullable=True)
     
     # Relations
     product = db.relationship('Product')
@@ -1376,11 +1380,18 @@ class Invoice(db.Model):
             self.invoice_number = f"FEE-{year}-{count:03d}"
     
     def calculate_amounts(self):
-        """Calculer les montants de la facture"""
+        # Convertir en Decimal pour les calculs précis et éviter l'erreur float * Decimal
         self.subtotal = sum(item.total_price for item in self.invoice_items)
-        # TVA 19% (à adapter selon vos besoins)
-        self.tax_amount = self.subtotal * Decimal('0.19')
-        self.total_amount = self.subtotal + self.tax_amount
+        # TVA 0% (Le client n'est pas assujetti à la TVA)
+        if hasattr(self.subtotal, 'quantize'):
+            # Déjà un Decimal
+            tax_base = self.subtotal
+        else:
+            # Conversion explicite
+            tax_base = Decimal(str(self.subtotal))
+            
+        self.tax_amount = tax_base * Decimal('0.00')
+        self.total_amount = Decimal(str(self.subtotal)) + self.tax_amount
         return self.total_amount
     
     def get_status_display(self):
@@ -1406,6 +1417,7 @@ class InvoiceItem(db.Model):
     quantity = db.Column(db.Numeric(10, 3), nullable=False)
     unit_price = db.Column(db.Numeric(10, 2), nullable=False)
     total_price = db.Column(db.Numeric(12, 2), nullable=False)
+    section = db.Column(db.String(100), nullable=True) # Pour le regroupement par date/commande
     
     # Relations
     product = db.relationship('Product')

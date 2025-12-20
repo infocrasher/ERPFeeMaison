@@ -3,8 +3,8 @@ Formulaires pour le module B2B
 """
 
 from flask_wtf import FlaskForm
-from wtforms import (StringField, TextAreaField, SelectField, DecimalField, 
-                     DateField, BooleanField, SubmitField, FieldList, FormField)
+from wtforms import (Form, StringField, TextAreaField, SelectField, DecimalField, 
+                     DateField, BooleanField, SubmitField, FieldList, FormField, HiddenField)
 from wtforms.validators import DataRequired, Length, NumberRange, Optional, ValidationError
 from datetime import date, datetime, timedelta
 from models import Product
@@ -78,6 +78,8 @@ class B2BOrderItemForm(FlaskForm):
         validators=[Optional(), Length(max=255)]
     )
 
+    composition = HiddenField('Composition')
+
 
 class B2BOrderForm(FlaskForm):
     """Formulaire pour créer/modifier une commande B2B"""
@@ -89,9 +91,6 @@ class B2BOrderForm(FlaskForm):
         DataRequired(message="La date de livraison est obligatoire")
     ])
     
-    is_multi_day = BooleanField('Commande sur plusieurs jours')
-    period_start = DateField('Début de période', validators=[Optional()])
-    period_end = DateField('Fin de période', validators=[Optional()])
     
     items = FieldList(FormField(B2BOrderItemForm), min_entries=0)
     
@@ -125,15 +124,6 @@ class B2BOrderForm(FlaskForm):
         if not super().validate(extra_validators):
             return False
 
-        # Validation de la période multi-jours
-        if self.is_multi_day.data:
-            if not self.period_start.data or not self.period_end.data:
-                self.period_start.errors.append("Les dates de période sont obligatoires pour une commande multi-jours")
-                return False
-            if self.period_start.data >= self.period_end.data:
-                self.period_end.errors.append("La date de fin doit être postérieure à la date de début")
-                return False
-
         # Validation des items (modifiée pour gérer les produits composés)
         if not self.items.data:
             self.items.errors.append("Au moins un produit doit être sélectionné")
@@ -159,10 +149,8 @@ class B2BOrderForm(FlaskForm):
         return True
 
 
-class InvoiceItemForm(FlaskForm):
+class InvoiceItemForm(Form):
     """Formulaire pour une ligne de facture"""
-    class Meta:
-        csrf = False
     
     description = StringField(
         'Description',
@@ -180,6 +168,8 @@ class InvoiceItemForm(FlaskForm):
         validators=[DataRequired("Le prix est requis."), NumberRange(min=0)],
         places=2
     )
+
+    section = HiddenField('Section')
 
 
 class InvoiceForm(FlaskForm):

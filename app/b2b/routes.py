@@ -8,6 +8,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 import io
 import csv
+import json
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -21,6 +22,7 @@ from . import b2b
 from .forms import B2BClientForm, B2BOrderForm, InvoiceForm, EmailTemplateForm
 from models import db, B2BClient, B2BOrder, B2BOrderItem, Invoice, InvoiceItem, Product, User
 from decorators import admin_required
+from .invoice_templates import get_fee_maison_template
 
 
 # ==================== CLIENTS B2B ====================
@@ -140,9 +142,9 @@ def new_order():
             user_id=current_user.id,
             order_date=date.today(),  # ✅ Ajouté
             delivery_date=form.delivery_date.data,
-            is_multi_day=form.is_multi_day.data,
-            period_start=form.period_start.data if form.is_multi_day.data else None,
-            period_end=form.period_end.data if form.is_multi_day.data else None,
+            is_multi_day=False,
+            period_start=None,
+            period_end=None,
             notes=form.notes.data
         )
         
@@ -155,6 +157,16 @@ def new_order():
         # Ajouter les items
         for item_data in form.items.data:
             product_value = item_data.get('product')
+            
+            # Gestion de la composition (JSON)
+            composition_data = None
+            if item_data.get('composition'):
+                try:
+                    composition_data = json.loads(item_data['composition'])
+                except Exception as e:
+                    current_app.logger.error(f"Erreur parsing composition: {e}")
+                    composition_data = None
+
             if product_value:
                 if product_value == 'composite':
                     # Produit composé - utiliser la description pour stocker les détails
@@ -163,7 +175,8 @@ def new_order():
                         product_id=None,  # Pas de produit spécifique pour un composé
                         quantity=item_data['quantity'],
                         unit_price=item_data['unit_price'],
-                        description=item_data.get('description', '')
+                        description=item_data.get('description', ''),
+                        composition=composition_data
                     )
                 else:
                     # Produit simple
@@ -172,7 +185,8 @@ def new_order():
                         product_id=int(product_value),
                         quantity=item_data['quantity'],
                         unit_price=item_data['unit_price'],
-                        description=item_data.get('description', '')
+                        description=item_data.get('description', ''),
+                        composition=composition_data
                     )
                 
                 db.session.add(item)
@@ -213,9 +227,9 @@ def edit_order(order_id):
     if form.validate_on_submit():
         order.b2b_client_id = form.b2b_client_id.data
         order.delivery_date = form.delivery_date.data
-        order.is_multi_day = form.is_multi_day.data
-        order.period_start = form.period_start.data if form.is_multi_day.data else None
-        order.period_end = form.period_end.data if form.is_multi_day.data else None
+        order.is_multi_day = False
+        order.period_start = None
+        order.period_end = None
         order.notes = form.notes.data
         
         # Supprimer les anciens items
@@ -225,6 +239,15 @@ def edit_order(order_id):
         for item_data in form.items.data:
             product_value = item_data.get('product')
             if product_value:
+                # Gestion de la composition (JSON)
+                composition_data = None
+                if item_data.get('composition'):
+                    try:
+                        composition_data = json.loads(item_data['composition'])
+                    except Exception as e:
+                        current_app.logger.error(f"Erreur parsing composition: {e}")
+                        composition_data = None
+
                 if product_value == 'composite':
                     # Produit composé - utiliser la description pour stocker les détails
                     item = B2BOrderItem(
@@ -232,7 +255,8 @@ def edit_order(order_id):
                         product_id=None,  # Pas de produit spécifique pour un composé
                         quantity=item_data['quantity'],
                         unit_price=item_data['unit_price'],
-                        description=item_data.get('description', '')
+                        description=item_data.get('description', ''),
+                        composition=composition_data
                     )
                 else:
                     # Produit simple
@@ -241,7 +265,8 @@ def edit_order(order_id):
                         product_id=int(product_value),
                         quantity=item_data['quantity'],
                         unit_price=item_data['unit_price'],
-                        description=item_data.get('description', '')
+                        description=item_data.get('description', ''),
+                        composition=composition_data
                     )
                 
                 db.session.add(item)
@@ -265,9 +290,48 @@ def change_order_status(order_id):
     new_status = request.form.get('status')
     
     if new_status in ['pending', 'in_production', 'ready_at_shop', 'delivered', 'completed', 'cancelled']:
+        old_status = order.status
         order.status = new_status
+        
+        # Gestion du stock lors de la livraison
+        if old_status != 'delivered' and new_status == 'delivered':
+            # Déstockage
+            try:
+                for item in order.items:
+                    # Traiter la composition si elle existe (Prioritaire)
+                    if item.composition:
+                        try:
+                            components = item.composition if isinstance(item.composition, list) else json.loads(item.composition)
+                            for comp in components:
+                                comp_id = comp.get('product_id')
+                                comp_qty = float(comp.get('quantity') or 0) * float(item.quantity) # Qty unitaire * Qty commande
+                                
+                                product = Product.query.get(comp_id)
+                                if product:
+                                    # Déterminer l'emplacement de stock (Logique simplifiée)
+                                    # Produits finis -> Comptoir, Ingrédients -> Magasin
+                                    location = 'stock_comptoir' if product.product_type == 'finished' else 'stock_ingredients_magasin'
+                                    product.update_stock_by_location(location, -comp_qty)
+                        except Exception as e:
+                            current_app.logger.error(f"Erreur déstockage composition item {item.id}: {e}")
+                    
+                    # Sinon traiter le produit simple (si pas de produit_id, c'est une box vide ou mal configurée)
+                    elif item.product_id:
+                        product = Product.query.get(item.product_id)
+                        if product:
+                            location = 'stock_comptoir' if product.product_type == 'finished' else 'stock_ingredients_magasin'
+                            product.update_stock_by_location(location, -float(item.quantity))
+                            
+                flash(f'Statut changé vers "Livrée" - Stock mis à jour', 'success')
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Erreur lors de la mise à jour du stock: {e}")
+                flash(f'Erreur lors du déstockage: {str(e)}', 'error')
+                return redirect(url_for('b2b.view_order', order_id=order.id))
+
         db.session.commit()
-        flash(f'Statut de la commande changé vers "{order.get_status_display()}"', 'success')
+        if new_status != 'delivered': # Si ce n'était pas une livraison (message générique)
+            flash(f'Statut de la commande changé vers "{order.get_status_display()}"', 'success')
     
     return redirect(url_for('b2b.view_order', order_id=order.id))
 
@@ -300,19 +364,80 @@ def list_invoices():
 @admin_required
 def new_invoice():
     """Créer une nouvelle facture"""
-    form = InvoiceForm()
+    order_items_for_form = []
     
-    # ✅ CORRECTION : Récupérer les paramètres client et order depuis l'URL
+    # Récupérer les paramètres client et order depuis l'URL
     client_id = request.args.get('client', type=int)
-    order_id = request.args.get('order', type=int)
+    order_ids = request.args.getlist('order', type=int)
     
-    # Pré-remplir le client si fourni
-    if request.method == 'GET' and client_id:
-        form.b2b_client_id.data = client_id
-        client = B2BClient.query.get(client_id)
-        if client and client.payment_terms > 0:
-            form.due_date.data = date.today() + timedelta(days=client.payment_terms)
+    initial_data = {}
     
+    # Pré-remplir les données (GET uniquement)
+    if request.method == 'GET':
+        if client_id:
+            initial_data['b2b_client_id'] = client_id
+            client = B2BClient.query.get(client_id)
+            if client and client.payment_terms > 0:
+                initial_data['due_date'] = date.today() + timedelta(days=client.payment_terms)
+        
+        if order_ids:
+            items_data = []
+            orders = B2BOrder.query.filter(B2BOrder.id.in_(order_ids)).all()
+            
+            # Trier les commandes par date de livraison pour que la facture soit chronologique
+            orders.sort(key=lambda x: x.delivery_date)
+            
+            for order in orders:
+                if not client_id or order.b2b_client_id == client_id:
+                    if 'b2b_client_id' not in initial_data:
+                        initial_data['b2b_client_id'] = order.b2b_client_id
+                        client_id = order.b2b_client_id  # Pour les prochaines commandes
+                        
+                    section_name = f"Livraison du {order.delivery_date.strftime('%d/%m/%Y')} ({order.order_number})"
+                    
+                    for item in order.items:
+                        # Construction de la description
+                        base_name = item.product.name if item.product else (item.description or "Produit composé")
+                            
+                        # Ajouter les détails de la composition si présents
+                        details = ""
+                        if item.composition:
+                            try:
+                                comps = item.composition if isinstance(item.composition, list) else json.loads(item.composition)
+                                comp_strs = []
+                                for c in comps:
+                                    qty = float(c.get('quantity', 0))
+                                    name = c.get('name', 'Inconnu')
+                                    if qty == 1:
+                                        comp_strs.append(name)
+                                    else:
+                                        comp_strs.append(f"{qty:g}x {name}")
+                                if comp_strs:
+                                    details = f" ({', '.join(comp_strs)})"
+                            except Exception as e:
+                                current_app.logger.error(f"Erreur formatage composition: {e}")
+                        
+                        manual_desc = f" - {item.description}" if item.description and item.description != base_name else ""
+                        desc = f"{base_name}{details}{manual_desc}"
+                        
+                        item_data = {
+                            'description': desc,
+                            'quantity': item.quantity,
+                            'unit_price': item.unit_price,
+                            'section': section_name
+                        }
+                        items_data.append(item_data)
+                
+            if items_data:
+                initial_data['invoice_items'] = items_data
+                order_items_for_form = items_data
+
+    # Initialiser le formulaire avec les données de la requête (POST) ou les données initiales (GET)
+    if request.method == 'POST':
+        form = InvoiceForm()
+    else:
+        form = InvoiceForm(data=initial_data)
+
     if form.validate_on_submit():
         # Créer la facture
         invoice = Invoice(
@@ -329,43 +454,38 @@ def new_invoice():
         db.session.add(invoice)
         db.session.flush()  # Pour obtenir l'ID de la facture
         
-        # ✅ CORRECTION : Si une commande est liée, l'ajouter automatiquement
-        if order_id:
-            order = B2BOrder.query.get(order_id)
-            if order and order.b2b_client_id == invoice.b2b_client_id:
-                # Ajouter la relation commande-facture
-                invoice.b2b_orders.append(order)
+        # Ajouter les items depuis le formulaire
+        for item_data in form.invoice_items.data:
+            quantity = item_data.get('quantity', 0)
+            unit_price = item_data.get('unit_price', 0)
+            
+            invoice_item = InvoiceItem(
+                invoice_id=invoice.id,
+                description=item_data.get('description', ''),
+                quantity=quantity,
+                unit_price=unit_price,
+                total_price=quantity * unit_price,
+                section=item_data.get('section')
+            )
+            db.session.add(invoice_item)
+
+        # Lier les commandes si présentes dans l'URL (pour traçabilité)
+        if order_ids:
+            orders = B2BOrder.query.filter(B2BOrder.id.in_(order_ids)).all()
+            for order in orders:
+                if order.b2b_client_id == invoice.b2b_client_id:
+                    if order not in invoice.b2b_orders:
+                        invoice.b2b_orders.append(order)
                 
-                # Créer les lignes de facture à partir de la commande
-                for item in order.items:
-                    # Gestion correcte des produits composés
-                    if item.product_id is None:
-                        # Produit composé
-                        item_description = item.description or "Produit composé (détails non spécifiés)"
-                    else:
-                        # Produit simple
-                        item_description = item.description or item.product.name
-                    
-                    invoice_item = InvoiceItem(
-                        invoice_id=invoice.id,
-                        product_id=item.product_id,
-                        description=item_description,
-                        quantity=item.quantity,
-                        unit_price=item.unit_price,
-                        total_price=item.subtotal
-                    )
-                    db.session.add(invoice_item)
-                
-                # Calculer les montants
-                invoice.calculate_amounts()
+        # Calculer les montants
+        invoice.calculate_amounts()
         
         db.session.commit()
         
         flash(f'Facture "{invoice.invoice_number}" créée avec succès !', 'success')
-        # ✅ CORRECTION : Rediriger vers la vue de la facture au lieu de l'édition
         return redirect(url_for('b2b.view_invoice', invoice_id=invoice.id))
     
-    return render_template('b2b/invoices/form.html', form=form, title="Nouvelle facture")
+    return render_template('b2b/invoices/form.html', form=form, title="Nouvelle facture", order_items_for_form=order_items_for_form)
 
 
 @b2b.route('/invoices/<int:invoice_id>')
@@ -431,13 +551,17 @@ def edit_invoice(invoice_id):
                     
                     if not existing_item:
                         # ✅ CORRECTION : Gestion correcte des produits composés
+                        # Déterminer la section (date de livraison)
+                        section_name = f"Livraison du {order.delivery_date.strftime('%d/%m/%Y')} ({order.order_number})"
+                        
                         invoice_item = InvoiceItem(
                             invoice_id=invoice.id,
                             product_id=item.product_id,
                             description=item_description,
                             quantity=item.quantity,
                             unit_price=item.unit_price,
-                            total_price=item.subtotal
+                            total_price=item.subtotal,
+                            section=section_name
                         )
                         db.session.add(invoice_item)
             
@@ -501,86 +625,11 @@ def export_invoice_pdf(invoice_id):
     """Exporter une facture en PDF"""
     invoice = Invoice.query.get_or_404(invoice_id)
     
-    # Créer le PDF
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    story = []
+    # Utiliser le template Fée Maison
+    template = get_fee_maison_template()
+    buffer = template.generate_pdf(invoice)
+    filename = template.get_filename(invoice)
     
-    # Styles
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=16,
-        spaceAfter=30,
-        alignment=1  # Centré
-    )
-    
-    # En-tête
-    story.append(Paragraph("FÉE MAISON", title_style))
-    story.append(Paragraph("Restaurant & Traiteur", styles['Normal']))
-    story.append(Spacer(1, 20))
-    
-    # Informations de la facture
-    if invoice.invoice_type == 'proforma':
-        story.append(Paragraph("FACTURE PROFORMA", styles['Heading2']))
-    else:
-        story.append(Paragraph("FACTURE", styles['Heading2']))
-    
-    story.append(Paragraph(f"Numéro: {invoice.invoice_number}", styles['Normal']))
-    story.append(Paragraph(f"Date: {invoice.invoice_date.strftime('%d/%m/%Y')}", styles['Normal']))
-    story.append(Paragraph(f"Échéance: {invoice.due_date.strftime('%d/%m/%Y')}", styles['Normal']))
-    story.append(Spacer(1, 20))
-    
-    # Informations client
-    story.append(Paragraph("CLIENT:", styles['Heading3']))
-    story.append(Paragraph(invoice.b2b_client.company_name, styles['Normal']))
-    if invoice.b2b_client.contact_person:
-        story.append(Paragraph(f"Contact: {invoice.b2b_client.contact_person}", styles['Normal']))
-    if invoice.b2b_client.address:
-        story.append(Paragraph(f"Adresse: {invoice.b2b_client.address}", styles['Normal']))
-    story.append(Spacer(1, 20))
-    
-    # Tableau des articles
-    data = [['Description', 'Quantité', 'Prix unitaire', 'Total']]
-    for item in invoice.invoice_items:
-        data.append([
-            item.description,
-            str(item.quantity),
-            f"{item.unit_price:.2f} DA",
-            f"{item.total_price:.2f} DA"
-        ])
-    
-    # Totaux
-    data.append(['', '', 'Sous-total:', f"{invoice.subtotal:.2f} DA"])
-    data.append(['', '', 'TVA (19%):', f"{invoice.tax_amount:.2f} DA"])
-    data.append(['', '', 'Total:', f"{invoice.total_amount:.2f} DA"])
-    
-    table = Table(data, colWidths=[200, 60, 80, 80])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, -3), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    story.append(table)
-    story.append(Spacer(1, 20))
-    
-    # Notes
-    if invoice.notes:
-        story.append(Paragraph("Notes:", styles['Heading3']))
-        story.append(Paragraph(invoice.notes, styles['Normal']))
-    
-    # Générer le PDF
-    doc.build(story)
-    buffer.seek(0)
-    
-    filename = f"facture_{invoice.invoice_number}.pdf"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
 
 

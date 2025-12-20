@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Réel - Fée Maison{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Dashboard Réel (Pilotage)</h1>
+            <p class="text-gray-600">Vision basée sur les livraisons effectuées et coûts réels du jour</p>
+        </div>
+        <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-mono">
+            {{ date_str }}
+        </div>
+    </div>
+
+    <!-- 1. CA & Marge (Top Level) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- CA Réalisé -->
+        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase">CA Réalisé (J)</h2>
+            <div class="mt-2 flex items-baseline">
+                <span class="text-4xl font-bold text-gray-900">{{ "{:,.0f}".format(data.revenue.total) }}</span>
+                <span class="ml-2 text-gray-500">DA</span>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <span class="block text-gray-500">POS (Vente)</span>
+                    <span class="font-medium text-green-600">+{{ "{:,.0f}".format(data.revenue.pos) }}</span>
+                </div>
+                <div>
+                    <span class="block text-gray-500">Shop (Livré)</span>
+                    <span class="font-medium text-blue-600">+{{ "{:,.0f}".format(data.revenue.shop) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- COGS (Coûts Directs) -->
+        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase">COGS (Coûts Directs)</h2>
+            <div class="mt-2 flex items-baseline">
+                <span class="text-4xl font-bold text-gray-900">{{ "{:,.0f}".format(data.cogs.total) }}</span>
+                <span class="ml-2 text-gray-500">DA</span>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <span class="block text-gray-500">Matière</span>
+                    <span class="font-medium text-red-600">{{ "{:,.0f}".format(data.cogs.ingredients) }}</span>
+                </div>
+                <div>
+                    <span class="block text-gray-500">Main d'Oeuvre</span>
+                    <span class="font-medium text-yellow-600">{{ "{:,.0f}".format(data.cogs.labor) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Marge Nette -->
+        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-indigo-500">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase">Marge Nette (J)</h2>
+            <div class="mt-2 flex items-baseline">
+                <span class="text-4xl font-bold text-gray-900">{{ "{:,.0f}".format(data.margin.net) }}</span>
+                <span class="ml-2 text-gray-500">DA</span>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-center">
+                    <div class="flex-1 bg-gray-200 rounded-full h-2">
+                        <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ data.margin.percent }}%"></div>
+                    </div>
+                    <span class="ml-3 text-sm font-medium text-indigo-600">{{ data.margin.percent }}%</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Objectif: > 30%</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Performance Commerciale -->
+    <h3 class="text-xl font-bold text-gray-800 mb-4">Performance Commerciale</h3>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Ventes POS -->
+        <div class="bg-white rounded-xl shadow-sm p-5">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-gray-500 text-sm font-medium">Ventes POS</h3>
+                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Comptoir</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-800">{{ data.counts.pos }}</p>
+            <div class="mt-2 text-sm text-gray-600">
+                Ticket Moyen: <span class="font-semibold">{{ "{:,.0f}".format(data.avg_ticket.pos) }} DA</span>
+            </div>
+        </div>
+
+        <!-- Commandes Shop -->
+        <div class="bg-white rounded-xl shadow-sm p-5">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-gray-500 text-sm font-medium">Commandes Livrées</h3>
+                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Shop</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-800">{{ data.counts.shop }}</p>
+            <div class="mt-2 text-sm text-gray-600">
+                Ticket Moyen: <span class="font-semibold">{{ "{:,.0f}".format(data.avg_ticket.shop) }} DA</span>
+            </div>
+        </div>
+
+        <!-- Sorties Caisse -->
+        <div class="bg-white rounded-xl shadow-sm p-5">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-gray-500 text-sm font-medium">Sorties Caisse</h3>
+                <i class="bi bi-arrow-down-circle text-red-500"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-800">{{ "{:,.0f}".format(data.cash.out) }} <span
+                    class="text-sm font-normal text-gray-500">DA</span></p>
+        </div>
+
+        <!-- Valeur Achats -->
+        <div class="bg-white rounded-xl shadow-sm p-5">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-gray-500 text-sm font-medium">Achats (Bons)</h3>
+                <i class="bi bi-cart text-purple-500"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-800">{{ "{:,.0f}".format(data.purchases.today) }} <span
+                    class="text-sm font-normal text-gray-500">DA</span></p>
+        </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="bi bi-info-circle text-yellow-600"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                    <span class="font-bold">Mode de Calcul :</span>
+                    Ce tableau de bord comptabilise les commandes Shop uniquement lorsqu'elles sont
+                    <strong>Livrées</strong>.
+                    Le coût main d'oeuvre est une estimation basée sur les heures pointées et le taux horaire (ou
+                    salaire fixe).
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

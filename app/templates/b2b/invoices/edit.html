@@ -20,17 +20,17 @@
             <div class="row">
                 <div class="col-md-6">
                     <p><strong>Client :</strong> {{ invoice.b2b_client.company_name }}</p>
-                    <p><strong>Type :</strong> 
+                    <p><strong>Type :</strong>
                         {% if invoice.invoice_type == 'proforma' %}
-                            <span class="badge bg-info">Facture Proforma</span>
+                        <span class="badge bg-info">Facture Proforma</span>
                         {% else %}
-                            <span class="badge bg-success">Facture Définitive</span>
+                        <span class="badge bg-success">Facture Définitive</span>
                         {% endif %}
                     </p>
                     <p><strong>Date facture :</strong> {{ invoice.invoice_date.strftime('%d/%m/%Y') }}</p>
                 </div>
                 <div class="col-md-6">
-                    <p><strong>Statut :</strong> 
+                    <p><strong>Statut :</strong>
                         <span class="badge bg-{{ 
                             'success' if invoice.status == 'paid' 
                             else 'warning' if invoice.status == 'sent' 
@@ -58,9 +58,10 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <p class="text-muted mb-3">
                     <i class="bi bi-info-circle me-2"></i>
-                    Sélectionnez les commandes à ajouter à cette facture. Seules les commandes terminées ou livrées qui n'ont pas encore été facturées sont affichées.
+                    Sélectionnez les commandes à ajouter à cette facture. Seules les commandes terminées ou livrées qui
+                    n'ont pas encore été facturées sont affichées.
                 </p>
-                
+
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -79,7 +80,8 @@
                             {% for order in available_orders %}
                             <tr>
                                 <td>
-                                    <input type="checkbox" name="order_ids" value="{{ order.id }}" class="form-check-input order-checkbox">
+                                    <input type="checkbox" name="order_ids" value="{{ order.id }}"
+                                        class="form-check-input order-checkbox">
                                 </td>
                                 <td>
                                     <strong>{{ order.order_number }}</strong>
@@ -115,7 +117,8 @@
     {% else %}
     <div class="alert alert-info">
         <i class="bi bi-info-circle me-2"></i>
-        Aucune commande disponible pour ce client. Toutes les commandes ont déjà été facturées ou sont en attente de finalisation.
+        Aucune commande disponible pour ce client. Toutes les commandes ont déjà été facturées ou sont en attente de
+        finalisation.
     </div>
     {% endif %}
 
@@ -137,12 +140,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in invoice.invoice_items %}
+                        {% set current_section = [None] %}
+                        {% for item in invoice.invoice_items | sort(attribute='section') %}
+                        {% if item.section and item.section != current_section[0] %}
+                        <tr class="table-light">
+                            <td colspan="4" class="fw-bold text-primary">
+                                <i class="bi bi-calendar-event me-2"></i>{{ item.section }}
+                            </td>
+                        </tr>
+                        {% if current_section.append(item.section) or current_section.pop(0) %}{% endif %}
+                        {% endif %}
                         <tr>
                             <td>
+                                {% if item.section %}&nbsp;&nbsp;&nbsp;{% endif %}
                                 {{ item.description }}
                                 {% if item.product %}
-                                    <br><small class="text-muted">Produit: {{ item.product.name }}</small>
+                                <br><small class="text-muted">{% if item.section %}&nbsp;&nbsp;&nbsp;{% endif %}Produit:
+                                    {{ item.product.name }}</small>
                                 {% endif %}
                             </td>
                             <td class="text-end">{{ item.quantity }}</td>
@@ -153,15 +167,7 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="3" class="text-end"><strong>Sous-total :</strong></td>
-                            <td class="text-end"><strong>{{ "{:,.2f}".format(invoice.subtotal) }} DA</strong></td>
-                        </tr>
-                        <tr>
-                            <td colspan="3" class="text-end"><strong>TVA (19%) :</strong></td>
-                            <td class="text-end"><strong>{{ "{:,.2f}".format(invoice.tax_amount) }} DA</strong></td>
-                        </tr>
-                        <tr class="table-primary">
-                            <td colspan="3" class="text-end"><strong>Total TTC :</strong></td>
+                            <td colspan="3" class="text-end"><strong>Total :</strong></td>
                             <td class="text-end"><strong>{{ "{:,.2f}".format(invoice.total_amount) }} DA</strong></td>
                         </tr>
                     </tfoot>
@@ -170,7 +176,8 @@
             {% else %}
             <div class="alert alert-warning">
                 <i class="bi bi-exclamation-triangle me-2"></i>
-                Cette facture ne contient aucune ligne pour le moment. Ajoutez des commandes pour générer les lignes de facture.
+                Cette facture ne contient aucune ligne pour le moment. Ajoutez des commandes pour générer les lignes de
+                facture.
             </div>
             {% endif %}
         </div>
@@ -178,33 +185,31 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Gestion du "Tout sélectionner"
-    const selectAll = document.getElementById('select-all');
-    const orderCheckboxes = document.querySelectorAll('.order-checkbox');
-    
-    if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            orderCheckboxes.forEach(checkbox => {
-                checkbox.checked = selectAll.checked;
+    document.addEventListener('DOMContentLoaded', function () {
+        // Gestion du "Tout sélectionner"
+        const selectAll = document.getElementById('select-all');
+        const orderCheckboxes = document.querySelectorAll('.order-checkbox');
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                orderCheckboxes.forEach(checkbox => {
+                    checkbox.checked = selectAll.checked;
+                });
+            });
+        }
+
+        // Décocher "Tout sélectionner" si une case est décochée
+        orderCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                if (!checkbox.checked) {
+                    selectAll.checked = false;
+                } else {
+                    // Vérifier si toutes les cases sont cochées
+                    const allChecked = Array.from(orderCheckboxes).every(cb => cb.checked);
+                    selectAll.checked = allChecked;
+                }
             });
         });
-    }
-    
-    // Décocher "Tout sélectionner" si une case est décochée
-    orderCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            if (!checkbox.checked) {
-                selectAll.checked = false;
-            } else {
-                // Vérifier si toutes les cases sont cochées
-                const allChecked = Array.from(orderCheckboxes).every(cb => cb.checked);
-                selectAll.checked = allChecked;
-            }
-        });
     });
-});
 </script>
 {% endblock %}
-
-

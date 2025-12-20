@@ -10,23 +10,12 @@
             {{ 'Devis' if invoice.invoice_type == 'proforma' else 'Facture' }} {{ invoice.invoice_number }}
         </h1>
         <div class="btn-group">
-                            <!-- Templates PDF Fée Maison -->
-                <div class="btn-group" role="group">
-                    <a href="{{ url_for('b2b.export_invoice_pdf_original', invoice_id=invoice.id) }}" class="btn btn-success">
-                        <i class="bi bi-file-pdf me-2"></i>Facture PDF
-                    </a>
-                    <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="visually-hidden">Toggle Dropdown</span>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('b2b.export_invoice_pdf_original', invoice_id=invoice.id) }}">
-                            <i class="bi bi-file-earmark me-2"></i>Facture Standard
-                        </a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('b2b.export_invoice_pdf_signed', invoice_id=invoice.id) }}">
-                            <i class="bi bi-award me-2"></i>Facture avec Cachet
-                        </a></li>
-                    </ul>
-                </div>
+            <!-- Templates PDF Fée Maison -->
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('b2b.export_invoice_pdf', invoice_id=invoice.id) }}" class="btn btn-primary">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>Télécharger PDF
+                </a>
+            </div>
             <a href="{{ url_for('b2b.send_invoice_email', invoice_id=invoice.id) }}" class="btn btn-info">
                 <i class="bi bi-envelope me-2"></i>Envoyer par email
             </a>
@@ -52,8 +41,9 @@
                     <div class="row">
                         <div class="col-md-6">
                             <p><strong>Numéro :</strong> {{ invoice.invoice_number }}</p>
-                            <p><strong>Type :</strong> 
-                                <span class="badge bg-{{ 'warning' if invoice.invoice_type == 'proforma' else 'primary' }}">
+                            <p><strong>Type :</strong>
+                                <span
+                                    class="badge bg-{{ 'warning' if invoice.invoice_type == 'proforma' else 'primary' }}">
                                     {{ 'Devis' if invoice.invoice_type == 'proforma' else 'Facture' }}
                                 </span>
                             </p>
@@ -61,7 +51,7 @@
                             <p><strong>Date :</strong> {{ invoice.invoice_date.strftime('%d/%m/%Y') }}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Statut :</strong> 
+                            <p><strong>Statut :</strong>
                                 <span class="badge bg-{{ 
                                     'success' if invoice.status == 'paid' 
                                     else 'warning' if invoice.status == 'sent'
@@ -75,7 +65,8 @@
                             {% if invoice.payment_date %}
                             <p><strong>Date de paiement :</strong> {{ invoice.payment_date.strftime('%d/%m/%Y') }}</p>
                             {% endif %}
-                            <p><strong>Montant total :</strong> <span class="fw-bold">{{ "{:,.0f}".format(invoice.total_amount) }} DA</span></p>
+                            <p><strong>Montant total :</strong> <span class="fw-bold">{{
+                                    "{:,.0f}".format(invoice.total_amount) }} DA</span></p>
                         </div>
                     </div>
                     {% if invoice.notes %}
@@ -104,9 +95,21 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for item in invoice.invoice_items %}
+                                {% set current_section = [None] %}
+                                {% for item in invoice.invoice_items | sort(attribute='section') %}
+                                {% if item.section and item.section != current_section[0] %}
+                                <tr class="table-light">
+                                    <td colspan="4" class="fw-bold text-primary">
+                                        <i class="bi bi-calendar-event me-2"></i>{{ item.section }}
+                                    </td>
+                                </tr>
+                                {% if current_section.append(item.section) or current_section.pop(0) %}{% endif %}
+                                {% endif %}
                                 <tr>
-                                    <td>{{ item.description }}</td>
+                                    <td>
+                                        {% if item.section %}&nbsp;&nbsp;&nbsp;{% endif %}
+                                        {{ item.description }}
+                                    </td>
                                     <td>{{ item.quantity }}</td>
                                     <td>{{ "{:,.2f}".format(item.unit_price) }} DA</td>
                                     <td>{{ "{:,.2f}".format(item.total_price) }} DA</td>
@@ -137,10 +140,10 @@
                         <div class="mb-3">
                             <label for="status" class="form-label">Nouveau statut</label>
                             <select name="status" id="status" class="form-select">
-                                <option value="draft" {{ 'selected' if invoice.status == 'draft' }}>Brouillon</option>
-                                <option value="sent" {{ 'selected' if invoice.status == 'sent' }}>Envoyée</option>
-                                <option value="paid" {{ 'selected' if invoice.status == 'paid' }}>Payée</option>
-                                <option value="overdue" {{ 'selected' if invoice.status == 'overdue' }}>En retard</option>
+                                <option value="draft" {{ 'selected' if invoice.status=='draft' }}>Brouillon</option>
+                                <option value="sent" {{ 'selected' if invoice.status=='sent' }}>Envoyée</option>
+                                <option value="paid" {{ 'selected' if invoice.status=='paid' }}>Payée</option>
+                                <option value="overdue" {{ 'selected' if invoice.status=='overdue' }}>En retard</option>
                             </select>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">
@@ -157,11 +160,13 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{{ url_for('b2b.view_client', client_id=invoice.b2b_client_id) }}" class="btn btn-outline-info">
+                        <a href="{{ url_for('b2b.view_client', client_id=invoice.b2b_client_id) }}"
+                            class="btn btn-outline-info">
                             <i class="bi bi-building me-2"></i>Voir le client
                         </a>
                         {% if invoice.invoice_type == 'proforma' %}
-                        <a href="{{ url_for('b2b.new_invoice') }}?client={{ invoice.b2b_client_id }}&type=final" class="btn btn-outline-success">
+                        <a href="{{ url_for('b2b.new_invoice') }}?client={{ invoice.b2b_client_id }}&type=final"
+                            class="btn btn-outline-success">
                             <i class="bi bi-receipt me-2"></i>Créer facture finale
                         </a>
                         {% endif %}
@@ -171,4 +176,4 @@
         </div>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}

@@ -209,4 +209,10 @@ cookies.txt
 
 # Fichiers temporaires
 *.tmp
+# Fichiers de facturation locaux
+Factures/
+/Factures/
+Factures/*
+reproduce_b2b_issue.py
+scripts/*.py
 *.temp
