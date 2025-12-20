@@ -371,6 +371,9 @@ def edit_customer_order(order_id):
             # Vérifier les stocks avant de modifier
             stock_is_sufficient = check_stock_availability(form.items.data)
             
+            # Stocker l'ancien montant payé pour calculer la différence
+            old_paid = Decimal(str(order.amount_paid or 0))
+            
             # Supprimer les anciens items
             for item in order.items:
                 db.session.delete(item)
@@ -410,6 +413,33 @@ def edit_customer_order(order_id):
             # Recalculer le total
             order.calculate_total_amount()
             
+            # ✅ GESTION DU PAIEMENT (Correction Persistence)
+            new_paid = Decimal(str(form.advance_payment.data or 0))
+            if new_paid < 0: new_paid = Decimal('0.00')
+            
+            if new_paid != old_paid:
+                diff = new_paid - old_paid
+                order.amount_paid = new_paid
+                order.update_payment_status()
+                
+                # Si versement supplémentaire, enregistrer le mouvement de caisse
+                if diff > 0:
+                    cash_session = CashRegisterSession.query.filter_by(is_open=True).first()
+                    if cash_session:
+                        movement = CashMovement(
+                            session_id=cash_session.id,
+                            created_at=datetime.utcnow(),
+                            type='entrée',
+                            amount=float(diff),
+                            reason=f'Versement complémentaire commande #{order.id}',
+                            notes=f'Enregistré via modification commande - {order.customer_name or "-"}',
+                            employee_id=current_user.id
+                        )
+                        db.session.add(movement)
+                        flash(f'Versement de {float(diff):.2f} DA enregistré en caisse.', 'success')
+                    else:
+                        flash(f'Acompte mis à jour mais non enregistré en caisse (aucune session ouverte).', 'warning')
+
             # Mettre à jour le statut si stock insuffisant
             if not stock_is_sufficient and order.status != 'pending':
                 order.status = 'pending'
@@ -434,6 +464,7 @@ def edit_customer_order(order_id):
         form.due_date.data = order.due_date
         form.delivery_cost.data = order.delivery_cost or Decimal('0.00')
         form.notes.data = order.notes
+        form.advance_payment.data = order.amount_paid or Decimal('0.00') # ✅ CHARGER L'ACOMPTE
         
         # Pré-remplir les items - IMPORTANT: vider d'abord puis reconstruire
         form.items.entries = []
