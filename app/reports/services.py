@@ -1760,22 +1760,39 @@ class DailyProfitabilityService:
         
         for order in old_orders_paid_today_query:
             total = float(order.total_amount or 0)
-            paid = float(order.amount_paid or 0)
             
-            # ⚠️ LIMITATION : On affiche le total de la commande
-            # car CashMovement n'a pas de lien direct avec order_id
-            # L'écart peut être gonflé si un acompte a été versé avant aujourd'hui
+            # 🔧 FIX RÉEL : Calculer le montant PAYÉ AUJOURD'HUI depuis CashMovement
+            # en parsant le champ 'reason' qui contient "commande #XXX"
+            import re
             
-            total_old_orders_amount += paid  # On compte ce qui est payé (pas le total)
+            # Chercher tous les CashMovement du jour qui mentionnent cette commande
+            movements_today = CashMovement.query.filter(
+                func.date(CashMovement.created_at) == target_date,
+                CashMovement.type.in_(['entrée', 'vente', 'acompte'])
+            ).all()
+            
+            payment_today = 0.0
+            for movement in movements_today:
+                reason = movement.reason or ''
+                # Parser "Vente commande #1318", "Acompte commande #1318", etc.
+                match = re.search(r'commande #(\d+)', reason, re.IGNORECASE)
+                if match and int(match.group(1)) == order.id:
+                    payment_today += float(movement.amount or 0)
+            
+            # Si aucun paiement trouvé via parsing, utiliser amount_paid comme fallback
+            if payment_today == 0.0:
+                payment_today = float(order.amount_paid or 0)
+            
+            total_old_orders_amount += payment_today
             
             old_orders_detail.append({
                 'id': order.id,
                 'created_date': order.created_at.strftime('%d/%m/%Y') if order.created_at else 'N/A',
                 'delivered_date': order.due_date.strftime('%d/%m/%Y') if order.due_date else 'N/A',
                 'customer': order.customer_name or 'Sans nom',
-                'amount': paid,  # Ce qui est payé TODAY (amount_paid)
-                'total_order': total,  # Total de la commande
-                'has_advance': (paid > 0 and paid < total)  # Y a-t-il eu un acompte ?
+                'amount': payment_today,  # 🔧 Montant RÉEL payé aujourd'hui
+                'total_order': total,
+                'has_advance': (payment_today > 0 and payment_today < total)
             })
         
         return {
