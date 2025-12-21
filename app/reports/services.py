@@ -1757,15 +1757,25 @@ class DailyProfitabilityService:
         
         old_orders_detail = []
         total_old_orders_amount = 0.0
+        
         for order in old_orders_paid_today_query:
-            amount = float(order.total_amount or 0)
-            total_old_orders_amount += amount
+            total = float(order.total_amount or 0)
+            paid = float(order.amount_paid or 0)
+            
+            # ⚠️ LIMITATION : On affiche le total de la commande
+            # car CashMovement n'a pas de lien direct avec order_id
+            # L'écart peut être gonflé si un acompte a été versé avant aujourd'hui
+            
+            total_old_orders_amount += paid  # On compte ce qui est payé (pas le total)
+            
             old_orders_detail.append({
                 'id': order.id,
                 'created_date': order.created_at.strftime('%d/%m/%Y') if order.created_at else 'N/A',
                 'delivered_date': order.due_date.strftime('%d/%m/%Y') if order.due_date else 'N/A',
                 'customer': order.customer_name or 'Sans nom',
-                'amount': amount
+                'amount': paid,  # Ce qui est payé TODAY (amount_paid)
+                'total_order': total,  # Total de la commande
+                'has_advance': (paid > 0 and paid < total)  # Y a-t-il eu un acompte ?
             })
         
         return {

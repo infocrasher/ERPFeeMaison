@@ -316,6 +316,8 @@ Analyse Performance vs Cash du {{ data.start_date.strftime('%d/%m/%Y') }} au {{ 
                                                     <h6 class="text-warning mt-3">⚠️ Paiements commandes anciennes : {{
                                                         "{:,.0f}".format(day.old_orders_total) }} DA - {{
                                                         day.old_orders_count }} commandes</h6>
+                                                    <p class="text-muted small">⚠️ Ces montants peuvent inclure des
+                                                        acomptes versés avant aujour d'hui</p>
                                                     {% if day.old_orders_paid_today %}
                                                     <table class="table table-sm table-striped">
                                                         <thead>
@@ -324,23 +326,37 @@ Analyse Performance vs Cash du {{ data.start_date.strftime('%d/%m/%Y') }} au {{ 
                                                                 <th>Créée le</th>
                                                                 <th>Livrée le</th>
                                                                 <th>Client</th>
-                                                                <th class="text-end">Montant</th>
+                                                                <th class="text-end">Montant Payé</th>
+                                                                <th class="text-end">Total Commande</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             {% for order in day.old_orders_paid_today %}
-                                                            <tr>
-                                                                <td><a href="/admin/orders/{{ order.id }}">#{{ order.id
-                                                                        }}</a></td>
+                                                            <tr {% if order.has_advance %}class="table-warning" {% endif
+                                                                %}>
+                                                                <td>
+                                                                    <a href="/admin/orders/{{ order.id }}">#{{ order.id
+                                                                        }}</a>
+                                                                    {% if order.has_advance %}
+                                                                    <i class="bi bi-coin text-warning"
+                                                                        title="Acompte versé avant"></i>
+                                                                    {% endif %}
+                                                                </td>
                                                                 <td>{{ order.created_date }}</td>
                                                                 <td>{{ order.delivered_date }}</td>
                                                                 <td>{{ order.customer }}</td>
-                                                                <td class="text-end fw-bold">{{
+                                                                <td class="text-end fw-bold text-success">{{
                                                                     "{:,.0f}".format(order.amount) }} DA</td>
+                                                                <td class="text-end"><small class="text-muted">{{
+                                                                        "{:,.0f}".format(order.total_order) }}
+                                                                        DA</small></td>
                                                             </tr>
                                                             {% endfor %}
                                                         </tbody>
                                                     </table>
+                                                    <p class="text-muted small"><em>💡 Lignes en jaune = acompte versé
+                                                            avant aujourd'hui. L'écart peut être gonflé si des acomptes
+                                                            sont inclus.</em></p>
                                                     {% else %}
                                                     <p class="text-muted">Aucune commande ancienne encaissée ce jour</p>
                                                     {% endif %}
