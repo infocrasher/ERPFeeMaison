@@ -215,10 +215,10 @@ class InvoiceForm(FlaskForm):
         if not super().validate(extra_validators):
             return False
         
-        # La date d'échéance doit être postérieure à la date de facture
+        # La date d'échéance doit être postérieure ou égale à la date de facture (paiement comptant autorisé)
         if self.invoice_date.data and self.due_date.data:
-            if self.due_date.data <= self.invoice_date.data:
-                self.due_date.errors.append("La date d'échéance doit être postérieure à la date de facture")
+            if self.due_date.data < self.invoice_date.data:
+                self.due_date.errors.append("La date d'échéance ne peut pas être antérieure à la date de facture")
                 return False
         
         return True

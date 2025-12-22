@@ -234,6 +234,7 @@ def edit_order(order_id):
         
         # Supprimer les anciens items
         order.items.delete()
+        db.session.flush()  # ✅ Synchroniser avant d'ajouter les nouveaux items
         
         # Ajouter les nouveaux items
         for item_data in form.items.data:
