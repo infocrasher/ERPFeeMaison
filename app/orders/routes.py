@@ -366,8 +366,24 @@ def edit_customer_order(order_id):
     
     form = CustomerOrderForm(obj=order)
     
+    # 🔍 DEBUG: Voir les données brutes POST
+    if request.method == 'POST':
+        current_app.logger.warning(f"🔍 === DEBUG POST edit_customer_order #{order_id} ===")
+        current_app.logger.warning(f"🔍 Clés dans request.form: {list(request.form.keys())}")
+        # Afficher tous les items-X-product et items-X-quantity
+        for key in sorted(request.form.keys()):
+            if key.startswith('items-'):
+                current_app.logger.warning(f"🔍 POST data: {key} = {request.form[key]}")
+    
     if form.validate_on_submit():
         try:
+            # 🔍 DEBUG: Voir ce que le formulaire reçoit
+            current_app.logger.warning(f"🔍 DEBUG edit_customer_order #{order_id}")
+            current_app.logger.warning(f"🔍 form.items.data = {form.items.data}")
+            current_app.logger.warning(f"🔍 Nombre d'items dans form.items: {len(form.items.entries)}")
+            for i, item_data in enumerate(form.items.data):
+                current_app.logger.warning(f"🔍 Item {i}: product={item_data.get('product')}, qty={item_data.get('quantity')}")
+            
             # Vérifier les stocks avant de modifier
             stock_is_sufficient = check_stock_availability(form.items.data)
             
@@ -410,8 +426,18 @@ def edit_customer_order(order_id):
                         )
                         db.session.add(order_item)
             
+            # ✅ FIX: Flush pour que order.items (lazy='dynamic') voie les nouveaux items
+            db.session.flush()
+            
+            # 🔍 DEBUG: Vérifier les items après flush
+            items_count_after_flush = order.items.count()
+            current_app.logger.warning(f"🔍 Items après flush: {items_count_after_flush}")
+            for item in order.items:
+                current_app.logger.warning(f"🔍 Item en DB: product_id={item.product_id}, qty={item.quantity}")
+            
             # Recalculer le total
             order.calculate_total_amount()
+            current_app.logger.warning(f"🔍 Total calculé: {order.total_amount}")
             
             # ✅ GESTION DU PAIEMENT (Correction Persistence)
             new_paid = Decimal(str(form.advance_payment.data or 0))
@@ -533,6 +559,9 @@ def edit_production_order(order_id):
                             unit_price=Decimal('0.00')
                         )
                         db.session.add(order_item)
+            
+            # ✅ FIX: Flush pour que order.items (lazy='dynamic') voie les nouveaux items
+            db.session.flush()
             
             # Mettre à jour le statut si stock insuffisant
             if not stock_is_sufficient and order.status != 'pending':
