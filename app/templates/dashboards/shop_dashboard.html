@@ -281,6 +281,29 @@
     html {
         scroll-behavior: smooth;
     }
+
+    /* 📅 CALENDRIER FLATPICKR AGRANDI */
+    .flatpickr-calendar {
+        transform: scale(1.3);
+        transform-origin: top left;
+        margin-top: 10px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+        z-index: 9999;
+    }
+
+    .flatpickr-day {
+        font-size: 16px;
+        height: 40px;
+        line-height: 40px;
+    }
+
+    .flatpickr-input {
+        background: white !important;
+        border-radius: 8px;
+        padding: 8px 12px;
+        min-width: 150px;
+        cursor: pointer;
+    }
 </style>
 {% endblock %}
 
@@ -302,14 +325,14 @@
                         class="btn btn-sm {{ 'btn-light' if not selected_date else 'btn-outline-light' }}">
                         <i class="bi bi-list-ul me-1"></i>Toutes
                     </a>
-                    <form method="GET" action="{{ url_for('dashboard.shop_dashboard') }}" class="d-inline-block">
+                    <form method="GET" action="{{ url_for('dashboard.shop_dashboard') }}" class="d-inline-block" id="dateFilterForm">
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-white">
                                 <i class="bi bi-calendar3"></i>
                             </span>
-                            <input type="date" name="date" class="form-control"
-                                value="{{ selected_date or today_date }}" onchange="this.form.submit()"
-                                style="min-width: 140px;">
+                            <input type="text" name="date" id="shopDatePicker" class="form-control flatpickr-input"
+                                value="{{ selected_date or today_date }}" readonly
+                                style="min-width: 150px; cursor: pointer;">
                         </div>
                     </form>
                 </div>
@@ -764,6 +787,11 @@
 
 {% block scripts %}
 {{ super() }}
+<!-- 📅 FLATPICKR POUR CALENDRIER AGRANDI -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/fr.js"></script>
+
 <script src="{{ url_for('static', filename='js/dashboards/shop.js') }}?v=2"></script>
 <script>
     // Horloge
@@ -776,6 +804,20 @@
     }
     updateClock();
     setInterval(updateClock, 1000);
+
+    // 📅 Initialisation Flatpickr (calendrier agrandi)
+    flatpickr("#shopDatePicker", {
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d/m/Y",
+        locale: "fr",
+        disableMobile: true,
+        onChange: function(selectedDates, dateStr) {
+            if (dateStr) {
+                document.getElementById('dateFilterForm').submit();
+            }
+        }
+    });
 
     // Auto-refresh 2min
     setTimeout(function () { window.location.reload(); }, 2 * 60 * 1000);
