@@ -37,7 +37,13 @@
                             </p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>NIF :</strong> {{ client.tax_number or 'Non renseigné' }}</p>
+                            <!-- Identifiants Fiscaux -->
+                            <p><strong>N° RC :</strong> {{ client.rc_number or 'Non renseigné' }}</p>
+                            <p><strong>N° NIF :</strong> {{ client.tax_number or 'Non renseigné' }}</p>
+                            <p><strong>N° NIS :</strong> {{ client.nis_number or 'Non renseigné' }}</p>
+                            <p><strong>N° AI :</strong> {{ client.ai_number or 'Non renseigné' }}</p>
+                            <hr>
+                            <!-- Conditions Commerciales -->
                             <p><strong>Conditions de paiement :</strong> 
                                 {% if client.payment_terms == 0 %}
                                 <span class="badge bg-success">Comptant</span>

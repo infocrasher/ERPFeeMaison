@@ -32,10 +32,24 @@ class B2BClientForm(FlaskForm):
         Optional(),
         Length(max=500, message="L'adresse ne peut pas dépasser 500 caractères")
     ])
-    tax_number = StringField('NIF', validators=[
+    # Identifiants fiscaux
+    rc_number = StringField('N° Registre du Commerce (RC)', validators=[
+        Optional(),
+        Length(max=50, message="Le N° RC ne peut pas dépasser 50 caractères")
+    ])
+    tax_number = StringField('N° Identification Fiscale (NIF)', validators=[
         Optional(),
         Length(max=50, message="Le NIF ne peut pas dépasser 50 caractères")
     ])
+    nis_number = StringField('N° Identification Statistique (NIS)', validators=[
+        Optional(),
+        Length(max=50, message="Le NIS ne peut pas dépasser 50 caractères")
+    ])
+    ai_number = StringField('N° Article d\'Imposition (AI)', validators=[
+        Optional(),
+        Length(max=50, message="Le N° AI ne peut pas dépasser 50 caractères")
+    ])
+    
     payment_terms = SelectField('Conditions de paiement', choices=[
         (30, '30 jours'),
         (45, '45 jours'),

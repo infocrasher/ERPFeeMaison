@@ -50,7 +50,12 @@ def new_client():
             email=form.email.data,
             phone=form.phone.data,
             address=form.address.data,
+            # Identifiants fiscaux
+            rc_number=form.rc_number.data,
             tax_number=form.tax_number.data,
+            nis_number=form.nis_number.data,
+            ai_number=form.ai_number.data,
+            # Conditions commerciales
             payment_terms=form.payment_terms.data,
             credit_limit=form.credit_limit.data or 0.0,
             is_active=form.is_active.data
@@ -79,7 +84,12 @@ def edit_client(client_id):
         client.email = form.email.data
         client.phone = form.phone.data
         client.address = form.address.data
+        # Identifiants fiscaux
+        client.rc_number = form.rc_number.data
         client.tax_number = form.tax_number.data
+        client.nis_number = form.nis_number.data
+        client.ai_number = form.ai_number.data
+        # Conditions commerciales
         client.payment_terms = form.payment_terms.data
         client.credit_limit = form.credit_limit.data or 0.0
         client.is_active = form.is_active.data

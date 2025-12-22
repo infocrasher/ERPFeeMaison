@@ -1212,8 +1212,13 @@ class B2BClient(db.Model):
     phone = db.Column(db.String(20))
     address = db.Column(db.Text)
     
-    # Informations de facturation
-    tax_number = db.Column(db.String(50))  # NIF
+    # Informations de facturation (identifiants fiscaux)
+    tax_number = db.Column(db.String(50))  # NIF - Numéro d'Identification Fiscale
+    rc_number = db.Column(db.String(50))   # RC - Registre du Commerce
+    nis_number = db.Column(db.String(50))  # NIS - Numéro d'Identification Statistique
+    ai_number = db.Column(db.String(50))   # AI - Article d'Imposition
+    
+    # Conditions commerciales
     payment_terms = db.Column(db.Integer, default=30)  # Jours de paiement
     credit_limit = db.Column(db.Numeric(12, 2), default=0.0)
     

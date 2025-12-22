@@ -260,8 +260,24 @@ class InvoiceTemplate:
         client_lines = [Paragraph("<b>Facturé à:</b>", self.info_style)]
         if client:
             client_lines.append(Paragraph(client.company_name or "", self.info_style))
-            if client.tax_number: client_lines.append(Paragraph(f"NIF/RC : {client.tax_number}", self.info_style))
-            if client.address: client_lines.append(Paragraph(client.address, self.info_style))
+            
+            # Identifiants fiscaux (afficher uniquement ceux qui sont renseignés)
+            fiscal_ids = []
+            if client.rc_number:
+                fiscal_ids.append(f"RC: {client.rc_number}")
+            if client.tax_number:
+                fiscal_ids.append(f"NIF: {client.tax_number}")
+            if client.nis_number:
+                fiscal_ids.append(f"NIS: {client.nis_number}")
+            if client.ai_number:
+                fiscal_ids.append(f"AI: {client.ai_number}")
+            
+            # Afficher les identifiants sur des lignes séparées pour plus de clarté
+            for fiscal_id in fiscal_ids:
+                client_lines.append(Paragraph(fiscal_id, self.info_style))
+            
+            if client.address:
+                client_lines.append(Paragraph(client.address, self.info_style))
         
         # Traduction des modes de paiement
         payment_mapping = {
