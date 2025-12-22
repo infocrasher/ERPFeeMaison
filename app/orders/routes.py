@@ -153,10 +153,41 @@ def new_customer_order():
 
             db.session.commit()
 
+            # ✅ IMPRESSION TICKET + OUVERTURE TIROIR SI VERSEMENT
+            if advance_payment > Decimal('0.00'):
+                try:
+                    from app.services.printer_service import get_printer_service
+                    printer_service = get_printer_service()
+                    
+                    # Préparer les données pour le ticket
+                    items_data = []
+                    for item in order.items:
+                        items_data.append({
+                            'product_name': item.product.name if item.product else 'Article',
+                            'quantity': float(item.quantity),
+                            'unit_price': float(item.unit_price or 0)
+                        })
+                    
+                    # Imprimer le ticket avec les infos de versement
+                    printer_service.print_ticket(
+                        order.id,
+                        priority=1,
+                        employee_name=current_user.name if hasattr(current_user, 'name') else current_user.username,
+                        amount_received=float(advance_payment),
+                        change_amount=0  # Pas de monnaie à rendre pour un versement
+                    )
+                    # Ouvrir le tiroir pour que la vendeuse dépose le versement
+                    printer_service.open_cash_drawer(priority=1)
+                    
+                    current_app.logger.info(f"🖨️ Ticket versement + tiroir ouvert pour commande #{order.id} (Acompte: {advance_payment} DA)")
+                except Exception as e:
+                    current_app.logger.warning(f"⚠️ Erreur impression ticket versement: {e}")
+                    # Ne pas faire échouer la création de commande si l'impression échoue
+
             if not stock_is_sufficient:
                 flash('Commande créée mais mise en attente en raison d\'un stock insuffisant.', 'warning')
             else:
-                 flash('Commande créée et mise en production. Stock suffisant.', 'success')
+                flash('Commande créée et mise en production. Stock suffisant.', 'success')
 
             return redirect(url_for('orders.view_order', order_id=order.id))
 
