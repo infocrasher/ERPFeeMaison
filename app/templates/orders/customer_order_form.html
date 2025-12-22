@@ -363,13 +363,13 @@
                                 <div class="item-row border-bottom pb-3 mb-3" data-index="{{ loop.index0 }}">
                                     <div class="row">
                                         <div class="col-md-5 mb-3">
-                                            {{ subform.product.label(class="form-label fw-bold") }}
+                                            <label class="form-label fw-bold" for="items-{{ loop.index0 }}-product">Produit</label>
                                             <span class="field-required">*</span>
                                             {{ subform.product(class="form-select form-control product-select",
                                             id="items-" + loop.index0|string + "-product") }}
                                         </div>
                                         <div class="col-md-2 mb-3">
-                                            {{ subform.quantity.label(class="form-label fw-bold") }}
+                                            <label class="form-label fw-bold" for="items-{{ loop.index0 }}-quantity">Quantité</label>
                                             <span class="field-required">*</span>
                                             <div class="input-group">
                                                 {{ subform.quantity(class="form-control quantity-input", min="0.01",

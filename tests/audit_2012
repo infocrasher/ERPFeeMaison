@@ -1,0 +1,523 @@
+Date: 20/12/2025
+📊 Total commandes créées: 81
+
+📋 Détail complet:
+------------------------------------------------------------------------------------------------------------------------
+ID     Type                      Statut               Montant         Créée à              Due Date             Payé            Client                        
+------------------------------------------------------------------------------------------------------------------------
+1240   Ordre de Production       completed            0.00 DA         20/12/2025 06:45     20/12/2025 10:00     0.00 DA         Sans nom                      
+1241   Commande Client           delivered            2,800.00 DA     20/12/2025 08:33     20/12/2025 11:30     2,100.00 DA     Mme Naima                     
+1242   Ordre de Production       completed            0.00 DA         20/12/2025 08:46     20/12/2025 10:00     0.00 DA         Sans nom                      
+1243   Commande Client           delivered            420.00 DA       20/12/2025 08:56     20/12/2025 12:00     420.00 DA       Mme wafa                      
+1244   Commande Client           delivered            2,000.00 DA     20/12/2025 09:07     20/12/2025 12:00     1,400.00 DA     Mme fatma                     
+1245   Commande Client           delivered            5,600.00 DA     20/12/2025 09:10     21/12/2025 15:00     5,600.00 DA     Mme ait belkacem              
+1246   Commande Client           delivered            4,500.00 DA     20/12/2025 09:13     21/12/2025 15:00     4,500.00 DA     Mr Boutahra                   
+1247   Commande Client           delivered            2,500.00 DA     20/12/2025 09:31     20/12/2025 13:00     2,500.00 DA     Mme bendjelloul souhila       
+1248   Ordre de Production       completed            0.00 DA         20/12/2025 09:45     20/12/2025 12:00     0.00 DA         Sans nom                      
+1249   Vente au Comptoir         completed            1,720.00 DA     20/12/2025 09:48     20/12/2025 09:48     1,720.00 DA     Sans nom                      
+1250   Vente au Comptoir         completed            200.00 DA       20/12/2025 10:04     20/12/2025 10:04     200.00 DA       Sans nom                      
+1251   Ordre de Production       completed            0.00 DA         20/12/2025 10:08     20/12/2025 12:00     0.00 DA         Sans nom                      
+1252   Commande Client           delivered_unpaid     1,100.00 DA     20/12/2025 10:10     20/12/2025 13:30     0.00 DA         Mme hamouda                   
+1253   Vente au Comptoir         completed            900.00 DA       20/12/2025 10:18     20/12/2025 10:18     900.00 DA       Sans nom                      
+1254   Vente au Comptoir         completed            100.00 DA       20/12/2025 10:25     20/12/2025 10:25     100.00 DA       Sans nom                      
+1255   Ordre de Production       completed            0.00 DA         20/12/2025 10:35     20/12/2025 12:00     0.00 DA         Sans nom                      
+1256   Vente au Comptoir         completed            500.00 DA       20/12/2025 10:35     20/12/2025 10:35     500.00 DA       Sans nom                      
+1257   Commande Client           delivered            2,250.00 DA     20/12/2025 10:42     20/12/2025 14:30     2,250.00 DA     Mme Khelaf                    
+1258   Vente au Comptoir         completed            100.00 DA       20/12/2025 10:44     20/12/2025 10:44     100.00 DA       Sans nom                      
+1259   Ordre de Production       completed            0.00 DA         20/12/2025 10:45     20/12/2025 14:00     0.00 DA         Sans nom                      
+1260   Commande Client           in_production        2,500.00 DA     20/12/2025 10:49     30/12/2025 12:00     0.00 DA         Mme cherif                    
+1261   Commande Client           delivered            750.00 DA       20/12/2025 10:50     20/12/2025 12:30     250.00 DA       Mme cherif                    
+1262   Ordre de Production       completed            0.00 DA         20/12/2025 10:57     20/12/2025 14:00     0.00 DA         Sans nom                      
+1263   Vente au Comptoir         completed            2,190.00 DA     20/12/2025 10:58     20/12/2025 10:58     2,190.00 DA     Sans nom                      
+1264   Vente au Comptoir         completed            150.00 DA       20/12/2025 11:00     20/12/2025 11:00     150.00 DA       Sans nom                      
+1265   Ordre de Production       completed            0.00 DA         20/12/2025 11:03     20/12/2025 15:00     0.00 DA         Sans nom                      
+1266   Vente au Comptoir         completed            840.00 DA       20/12/2025 11:05     20/12/2025 11:05     840.00 DA       Sans nom                      
+1267   Vente au Comptoir         completed            300.00 DA       20/12/2025 11:09     20/12/2025 11:09     300.00 DA       Sans nom                      
+1268   Commande Client           delivered            150.00 DA       20/12/2025 11:13     20/12/2025 15:00     150.00 DA       Mme Amine                     
+1269   Commande Client           delivered            1,900.00 DA     20/12/2025 11:15     20/12/2025 16:00     1,400.00 DA     Mme chikhi                    
+1270   Ordre de Production       completed            0.00 DA         20/12/2025 11:17     20/12/2025 14:00     0.00 DA         Sans nom                      
+1271   Vente au Comptoir         completed            280.00 DA       20/12/2025 11:18     20/12/2025 11:18     280.00 DA       Sans nom                      
+1272   Commande Client           delivered            1,850.00 DA     20/12/2025 11:34     20/12/2025 14:00     1,250.00 DA     Mme brikci                    
+1273   Commande Client           in_production        600.00 DA       20/12/2025 11:40     23/12/2025 12:00     0.00 DA         Mme yacef                     
+1274   Ordre de Production       completed            0.00 DA         20/12/2025 11:55     20/12/2025 15:00     0.00 DA         Sans nom                      
+1275   Vente au Comptoir         completed            2,060.00 DA     20/12/2025 11:57     20/12/2025 11:57     2,060.00 DA     Sans nom                      
+1276   Commande Client           delivered            4,600.00 DA     20/12/2025 12:03     20/12/2025 15:00     8,600.00 DA     Mme redjemi                   
+1277   Commande Client           delivered_unpaid     3,100.00 DA     20/12/2025 12:06     21/12/2025 11:00     0.00 DA         Mme redjemi                   
+1278   Vente au Comptoir         completed            3,240.00 DA     20/12/2025 12:08     20/12/2025 12:08     3,240.00 DA     Sans nom                      
+1279   Commande Client           delivered_unpaid     1,100.00 DA     20/12/2025 12:11     21/12/2025 11:00     0.00 DA         Mme redjemi                   
+1280   Vente au Comptoir         completed            480.00 DA       20/12/2025 12:13     20/12/2025 12:13     480.00 DA       Sans nom                      
+1281   Vente au Comptoir         completed            400.00 DA       20/12/2025 12:19     20/12/2025 12:19     400.00 DA       Sans nom                      
+1282   Vente au Comptoir         completed            100.00 DA       20/12/2025 12:23     20/12/2025 12:23     100.00 DA       Sans nom                      
+1283   Vente au Comptoir         completed            100.00 DA       20/12/2025 12:23     20/12/2025 12:23     100.00 DA       Sans nom                      
+1284   Commande Client           waiting_for_pickup   2,300.00 DA     20/12/2025 12:28     20/12/2025 15:00     2,300.00 DA     Mme ouameur amel              
+1285   Vente au Comptoir         completed            510.00 DA       20/12/2025 12:31     20/12/2025 12:31     510.00 DA       Sans nom                      
+1286   Vente au Comptoir         completed            640.00 DA       20/12/2025 12:38     20/12/2025 12:38     640.00 DA       Sans nom                      
+1287   Vente au Comptoir         completed            100.00 DA       20/12/2025 12:44     20/12/2025 12:44     100.00 DA       Sans nom                      
+1288   Vente au Comptoir         completed            100.00 DA       20/12/2025 12:50     20/12/2025 12:50     100.00 DA       Sans nom                      
+1289   Vente au Comptoir         completed            720.00 DA       20/12/2025 13:01     20/12/2025 13:01     720.00 DA       Sans nom                      
+1290   Ordre de Production       completed            0.00 DA         20/12/2025 13:08     20/12/2025 15:00     0.00 DA         Sans nom                      
+1291   Vente au Comptoir         completed            310.00 DA       20/12/2025 13:09     20/12/2025 13:09     310.00 DA       Sans nom                      
+1292   Vente au Comptoir         completed            460.00 DA       20/12/2025 13:14     20/12/2025 13:14     460.00 DA       Sans nom                      
+1293   Ordre de Production       completed            0.00 DA         20/12/2025 13:17     20/12/2025 15:00     0.00 DA         Sans nom                      
+1294   Vente au Comptoir         completed            250.00 DA       20/12/2025 13:17     20/12/2025 13:17     250.00 DA       Sans nom                      
+1295   Commande Client           in_production        2,400.00 DA     20/12/2025 13:19     22/12/2025 11:00     0.00 DA         Mme baba                      
+1296   Vente au Comptoir         completed            200.00 DA       20/12/2025 13:20     20/12/2025 13:20     200.00 DA       Sans nom                      
+1297   Vente au Comptoir         completed            2,850.00 DA     20/12/2025 13:26     20/12/2025 13:26     2,850.00 DA     Sans nom                      
+1298   Ordre de Production       completed            0.00 DA         20/12/2025 13:35     20/12/2025 15:00     0.00 DA         Sans nom                      
+1299   Vente au Comptoir         completed            940.00 DA       20/12/2025 13:37     20/12/2025 13:37     940.00 DA       Sans nom                      
+1301   Vente au Comptoir         completed            150.00 DA       20/12/2025 13:40     20/12/2025 13:40     150.00 DA       Sans nom                      
+1302   Commande Client           in_production        8,200.00 DA     20/12/2025 13:54     27/12/2025 12:30     10,000.00 DA    Mme boularaf                  
+1303   Ordre de Production       completed            0.00 DA         20/12/2025 13:59     20/12/2025 14:00     0.00 DA         Sans nom                      
+1304   Vente au Comptoir         completed            470.00 DA       20/12/2025 14:00     20/12/2025 14:00     470.00 DA       Sans nom                      
+1305   Ordre de Production       completed            0.00 DA         20/12/2025 14:10     20/12/2025 12:00     0.00 DA         Sans nom                      
+1306   Ordre de Production       completed            0.00 DA         20/12/2025 14:14     20/12/2025 16:00     0.00 DA         Sans nom                      
+1307   Ordre de Production       cancelled            0.00 DA         20/12/2025 14:30     20/12/2025 16:00     0.00 DA         Sans nom                      
+1308   Vente au Comptoir         completed            500.00 DA       20/12/2025 14:31     20/12/2025 14:31     500.00 DA       Sans nom                      
+1309   Ordre de Production       completed            0.00 DA         20/12/2025 14:32     20/12/2025 16:00     0.00 DA         Sans nom                      
+1310   Vente au Comptoir         completed            280.00 DA       20/12/2025 14:32     20/12/2025 14:32     280.00 DA       Sans nom                      
+1311   Vente au Comptoir         completed            750.00 DA       20/12/2025 14:38     20/12/2025 14:38     750.00 DA       Sans nom                      
+1312   Vente au Comptoir         completed            280.00 DA       20/12/2025 14:48     20/12/2025 14:48     280.00 DA       Sans nom                      
+1313   Commande Client           delivered            1,500.00 DA     20/12/2025 14:55     21/12/2025 13:00     1,500.00 DA     Mme keddar                    
+1314   Commande Client           delivered_unpaid     2,600.00 DA     20/12/2025 15:18     21/12/2025 11:00     0.00 DA         Mme redjemi                   
+1315   Vente au Comptoir         completed            640.00 DA       20/12/2025 15:20     20/12/2025 15:20     640.00 DA       Sans nom                      
+1316   Vente au Comptoir         completed            140.00 DA       20/12/2025 15:21     20/12/2025 15:21     140.00 DA       Sans nom                      
+1317   Commande Client           in_production        2,300.00 DA     20/12/2025 15:31     25/12/2025 11:30     2,300.00 DA     Mme Amine                     
+1318   Commande Client           delivered            10,400.00 DA    20/12/2025 16:03     21/12/2025 15:00     10,400.00 DA    Mr Boutahra                   
+1319   Vente au Comptoir         completed            510.00 DA       20/12/2025 16:07     20/12/2025 16:07     510.00 DA       Sans nom                      
+1320   Commande Client           delivered            3,800.00 DA     20/12/2025 16:22     21/12/2025 14:00     3,800.00 DA     Mme Derissi                   
+1321   Vente au Comptoir         completed            50.00 DA        20/12/2025 16:41     20/12/2025 16:41     50.00 DA        Sans nom                      
+
+📊 Répartition par type:
+  - Commande Client: 25 commandes, 71,220.00 DA
+  - Ordre de Production: 18 commandes, 0.00 DA
+  - Vente au Comptoir: 38 commandes, 24,510.00 DA
+
+📊 Répartition par statut:
+  - cancelled: 1 commandes, 0.00 DA
+  - completed: 55 commandes, 24,510.00 DA
+  - delivered: 15 commandes, 45,020.00 DA
+  - delivered_unpaid: 4 commandes, 7,900.00 DA
+  - in_production: 5 commandes, 16,000.00 DA
+  - waiting_for_pickup: 1 commandes, 2,300.00 DA
+
+================================================================================
+📊 AUDIT CA POS (Ventes au Comptoir)
+================================================================================
+
+📅 Date: 20/12/2025
+✅ Nombre de commandes POS: 38
+💰 CA POS calculé: 24,510.00 DA
+
+📋 Détail des commandes POS:
+----------------------------------------------------------------------------------------------------
+ID     Statut               Montant         Créée à              Client                         Type                
+----------------------------------------------------------------------------------------------------
+1249   completed            1,720.00 DA     20/12/2025 09:48     Sans nom                       Vente au Comptoir   
+1250   completed            200.00 DA       20/12/2025 10:04     Sans nom                       Vente au Comptoir   
+1253   completed            900.00 DA       20/12/2025 10:18     Sans nom                       Vente au Comptoir   
+1254   completed            100.00 DA       20/12/2025 10:25     Sans nom                       Vente au Comptoir   
+1256   completed            500.00 DA       20/12/2025 10:35     Sans nom                       Vente au Comptoir   
+1258   completed            100.00 DA       20/12/2025 10:44     Sans nom                       Vente au Comptoir   
+1263   completed            2,190.00 DA     20/12/2025 10:58     Sans nom                       Vente au Comptoir   
+1264   completed            150.00 DA       20/12/2025 11:00     Sans nom                       Vente au Comptoir   
+1266   completed            840.00 DA       20/12/2025 11:05     Sans nom                       Vente au Comptoir   
+1267   completed            300.00 DA       20/12/2025 11:09     Sans nom                       Vente au Comptoir   
+1271   completed            280.00 DA       20/12/2025 11:18     Sans nom                       Vente au Comptoir   
+1275   completed            2,060.00 DA     20/12/2025 11:57     Sans nom                       Vente au Comptoir   
+1278   completed            3,240.00 DA     20/12/2025 12:08     Sans nom                       Vente au Comptoir   
+1280   completed            480.00 DA       20/12/2025 12:13     Sans nom                       Vente au Comptoir   
+1281   completed            400.00 DA       20/12/2025 12:19     Sans nom                       Vente au Comptoir   
+1282   completed            100.00 DA       20/12/2025 12:23     Sans nom                       Vente au Comptoir   
+1283   completed            100.00 DA       20/12/2025 12:23     Sans nom                       Vente au Comptoir   
+1285   completed            510.00 DA       20/12/2025 12:31     Sans nom                       Vente au Comptoir   
+1286   completed            640.00 DA       20/12/2025 12:38     Sans nom                       Vente au Comptoir   
+1287   completed            100.00 DA       20/12/2025 12:44     Sans nom                       Vente au Comptoir   
+1288   completed            100.00 DA       20/12/2025 12:50     Sans nom                       Vente au Comptoir   
+1289   completed            720.00 DA       20/12/2025 13:01     Sans nom                       Vente au Comptoir   
+1291   completed            310.00 DA       20/12/2025 13:09     Sans nom                       Vente au Comptoir   
+1292   completed            460.00 DA       20/12/2025 13:14     Sans nom                       Vente au Comptoir   
+1294   completed            250.00 DA       20/12/2025 13:17     Sans nom                       Vente au Comptoir   
+1296   completed            200.00 DA       20/12/2025 13:20     Sans nom                       Vente au Comptoir   
+1297   completed            2,850.00 DA     20/12/2025 13:26     Sans nom                       Vente au Comptoir   
+1299   completed            940.00 DA       20/12/2025 13:37     Sans nom                       Vente au Comptoir   
+1301   completed            150.00 DA       20/12/2025 13:40     Sans nom                       Vente au Comptoir   
+1304   completed            470.00 DA       20/12/2025 14:00     Sans nom                       Vente au Comptoir   
+1308   completed            500.00 DA       20/12/2025 14:31     Sans nom                       Vente au Comptoir   
+1310   completed            280.00 DA       20/12/2025 14:32     Sans nom                       Vente au Comptoir   
+1311   completed            750.00 DA       20/12/2025 14:38     Sans nom                       Vente au Comptoir   
+1312   completed            280.00 DA       20/12/2025 14:48     Sans nom                       Vente au Comptoir   
+1315   completed            640.00 DA       20/12/2025 15:20     Sans nom                       Vente au Comptoir   
+1316   completed            140.00 DA       20/12/2025 15:21     Sans nom                       Vente au Comptoir   
+1319   completed            510.00 DA       20/12/2025 16:07     Sans nom                       Vente au Comptoir   
+1321   completed            50.00 DA        20/12/2025 16:41     Sans nom                       Vente au Comptoir   
+
+📊 Répartition par statut:
+  - completed: 38
+
+================================================================================
+🚚 AUDIT CA SHOP (Commandes Livrées)
+================================================================================
+
+📅 Date: 20/12/2025
+✅ Nombre de commandes livrées: 37
+💰 CA Shop calculé: 46,270.00 DA
+
+📋 Détail des commandes livrées:
+------------------------------------------------------------------------------------------------------------------------
+ID     Type                      Statut               Montant         Créée le     Due Date             Client                        
+------------------------------------------------------------------------------------------------------------------------
+1240   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 10:00     Sans nom                      
+1242   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 10:00     Sans nom                      
+1217   Commande Client           delivered            500.00 DA       19/12/2025   20/12/2025 10:30     Mme hassani                   
+1082   Commande Client           delivered            1,500.00 DA     17/12/2025   20/12/2025 11:30     Mme Amrouche                  
+1241   Commande Client           delivered            2,800.00 DA     20/12/2025   20/12/2025 11:30     Mme Naima                     
+1244   Commande Client           delivered            2,000.00 DA     20/12/2025   20/12/2025 12:00     Mme fatma                     
+1248   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 12:00     Sans nom                      
+1251   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 12:00     Sans nom                      
+1237   Commande Client           delivered            500.00 DA       19/12/2025   20/12/2025 12:00     Mme boularaf                  
+1243   Commande Client           delivered            420.00 DA       20/12/2025   20/12/2025 12:00     Mme wafa                      
+1233   Commande Client           delivered            2,100.00 DA     19/12/2025   20/12/2025 12:00     Mme okid                      
+1146   Commande Client           delivered            1,550.00 DA     18/12/2025   20/12/2025 12:00     Mme mezrouna                  
+1305   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 12:00     Sans nom                      
+1255   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 12:00     Sans nom                      
+1128   Commande Client           delivered            4,000.00 DA     18/12/2025   20/12/2025 12:00     Mme bahloul                   
+1261   Commande Client           delivered            750.00 DA       20/12/2025   20/12/2025 12:30     Mme cherif                    
+1247   Commande Client           delivered            2,500.00 DA     20/12/2025   20/12/2025 13:00     Mme bendjelloul souhila       
+1049   Commande Client           delivered            3,000.00 DA     17/12/2025   20/12/2025 13:00     Mme hadjnacer                 
+1028   Commande Client           delivered            11,000.00 DA    16/12/2025   20/12/2025 13:30     Mme Sabiha Bouchafa           
+1252   Commande Client           delivered_unpaid     1,100.00 DA     20/12/2025   20/12/2025 13:30     Mme hamouda                   
+1259   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 14:00     Sans nom                      
+1262   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 14:00     Sans nom                      
+1270   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 14:00     Sans nom                      
+1303   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 14:00     Sans nom                      
+1272   Commande Client           delivered            1,850.00 DA     20/12/2025   20/12/2025 14:00     Mme brikci                    
+1109   Commande Client           delivered            1,800.00 DA     17/12/2025   20/12/2025 14:00     Mme mahiou                    
+1257   Commande Client           delivered            2,250.00 DA     20/12/2025   20/12/2025 14:30     Mme Khelaf                    
+1265   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 15:00     Sans nom                      
+1276   Commande Client           delivered            4,600.00 DA     20/12/2025   20/12/2025 15:00     Mme redjemi                   
+1298   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 15:00     Sans nom                      
+1268   Commande Client           delivered            150.00 DA       20/12/2025   20/12/2025 15:00     Mme Amine                     
+1274   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 15:00     Sans nom                      
+1293   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 15:00     Sans nom                      
+1290   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 15:00     Sans nom                      
+1269   Commande Client           delivered            1,900.00 DA     20/12/2025   20/12/2025 16:00     Mme chikhi                    
+1306   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 16:00     Sans nom                      
+1309   Ordre de Production       completed            0.00 DA         20/12/2025   20/12/2025 16:00     Sans nom                      
+
+⚠️  ORDRES DE PRODUCTION INCLUS (ne devraient pas être dans le CA):
+   Nombre: 17
+   Montant total: 0.00 DA
+   ⚠️  Ces ordres ont montant=0, ils ne devraient pas être comptabilisés dans le CA
+
+✅ VRAIES COMMANDES CLIENT:
+   Nombre: 20
+   Montant total: 46,270.00 DA
+
+   ⚠️  20 commande(s) créée(s) AVANT le 20/12/2025 mais livrée(s) ce jour:
+      - Commande #1217: créée le 19/12/2025, livrée le 20/12/2025, montant: 500.00 DA
+      - Commande #1082: créée le 17/12/2025, livrée le 20/12/2025, montant: 1,500.00 DA
+      - Commande #1241: créée le 20/12/2025, livrée le 20/12/2025, montant: 2,800.00 DA
+      - Commande #1244: créée le 20/12/2025, livrée le 20/12/2025, montant: 2,000.00 DA
+      - Commande #1237: créée le 19/12/2025, livrée le 20/12/2025, montant: 500.00 DA
+      - Commande #1243: créée le 20/12/2025, livrée le 20/12/2025, montant: 420.00 DA
+      - Commande #1233: créée le 19/12/2025, livrée le 20/12/2025, montant: 2,100.00 DA
+      - Commande #1146: créée le 18/12/2025, livrée le 20/12/2025, montant: 1,550.00 DA
+      - Commande #1128: créée le 18/12/2025, livrée le 20/12/2025, montant: 4,000.00 DA
+      - Commande #1261: créée le 20/12/2025, livrée le 20/12/2025, montant: 750.00 DA
+      - Commande #1247: créée le 20/12/2025, livrée le 20/12/2025, montant: 2,500.00 DA
+      - Commande #1049: créée le 17/12/2025, livrée le 20/12/2025, montant: 3,000.00 DA
+      - Commande #1028: créée le 16/12/2025, livrée le 20/12/2025, montant: 11,000.00 DA
+      - Commande #1252: créée le 20/12/2025, livrée le 20/12/2025, montant: 1,100.00 DA
+      - Commande #1272: créée le 20/12/2025, livrée le 20/12/2025, montant: 1,850.00 DA
+      - Commande #1109: créée le 17/12/2025, livrée le 20/12/2025, montant: 1,800.00 DA
+      - Commande #1257: créée le 20/12/2025, livrée le 20/12/2025, montant: 2,250.00 DA
+      - Commande #1276: créée le 20/12/2025, livrée le 20/12/2025, montant: 4,600.00 DA
+      - Commande #1268: créée le 20/12/2025, livrée le 20/12/2025, montant: 150.00 DA
+      - Commande #1269: créée le 20/12/2025, livrée le 20/12/2025, montant: 1,900.00 DA
+
+📊 Répartition par type:
+  - Commande Client: 20 commandes, 46,270.00 DA
+  - Ordre de Production: 17 commandes, 0.00 DA
+
+================================================================================
+💳 AUDIT DETTE LIVREUR
+================================================================================
+
+📅 Date: 20/12/2025
+💰 Dette totale calculée: 5,000.00 DA
+📊 Nombre de commandes avec dette: 8
+
+📋 Détail des dettes:
+----------------------------------------------------------------------------------------------------
+ID     Statut               Montant Total   Payé            Dette           Due Date             Client                        
+----------------------------------------------------------------------------------------------------
+1252   delivered_unpaid     1,100.00 DA     0.00 DA         1,100.00 DA     20/12/2025 13:30     Mme hamouda                   
+1241   delivered            2,800.00 DA     2,100.00 DA     700.00 DA       20/12/2025 11:30     Mme Naima                     
+1244   delivered            2,000.00 DA     1,400.00 DA     600.00 DA       20/12/2025 12:00     Mme fatma                     
+1272   delivered            1,850.00 DA     1,250.00 DA     600.00 DA       20/12/2025 14:00     Mme brikci                    
+1082   delivered            1,500.00 DA     1,000.00 DA     500.00 DA       20/12/2025 11:30     Mme Amrouche                  
+1269   delivered            1,900.00 DA     1,400.00 DA     500.00 DA       20/12/2025 16:00     Mme chikhi                    
+1261   delivered            750.00 DA       250.00 DA       500.00 DA       20/12/2025 12:30     Mme cherif                    
+1028   delivered            11,000.00 DA    10,500.00 DA    500.00 DA       20/12/2025 13:30     Mme Sabiha Bouchafa           
+
+📋 Dettes enregistrées dans DeliveryDebt:
+----------------------------------------------------------------------------------------------------
+ID     Order ID   Montant         Payé            Créée à             
+----------------------------------------------------------------------------------------------------
+
+⚠️  Impossible de vérifier DeliveryDebt: 'DeliveryDebt' object has no attribute 'amount_paid'
+
+================================================================================
+💰 AUDIT MOUVEMENTS DE CAISSE (CashMovement)
+================================================================================
+
+📅 Date: 20/12/2025
+📊 Nombre de mouvements: 71
+
+📋 Détail des mouvements:
+--------------------------------------------------------------------------------------------------------------------------------------------
+ID     Heure      Type                 Montant         Raison                                   Notes                                   
+--------------------------------------------------------------------------------------------------------------------------------------------
+990    08:31      entrée               5,900.00 DA     Paiement dette commande #889 par livreur Encaissement dette livreur (commande #88 🟢 IN 
+991    08:31      entrée               840.00 DA       Paiement dette commande #1081 par livreu Encaissement dette livreur (commande #10 🟢 IN 
+992    08:31      entrée               2,000.00 DA     Paiement dette commande #1124 par livreu Encaissement dette livreur (commande #11 🟢 IN 
+993    08:31      entrée               2,000.00 DA     Paiement dette commande #1124 par livreu Encaissement dette livreur (commande #11 🟢 IN 
+994    08:32      sortie               10,740.00 DA    Dépôt en banque (Cashout)                Dépôt bancaire                           🔴 OUT
+995    09:48      entrée               1,720.00 DA     Vente commande #1249                     Commande client: 4.000x Mehadjeb Grande  🟢 IN 
+996    10:04      entrée               200.00 DA       Vente commande #1250                     Commande client: 2x Mehadjeb Grande Tail 🟢 IN 
+997    10:18      entrée               900.00 DA       Vente commande #1253                     Commande client: 4.000x Mehadjeb Grande  🟢 IN 
+998    10:25      entrée               100.00 DA       Vente commande #1254                     Commande client: 1x Galette Simple       🟢 IN 
+999    10:35      entrée               500.00 DA       Vente commande #1256                     Commande client: 4.000x Mehadjeb Grande  🟢 IN 
+1000   10:36      entrée               1,500.00 DA     Encaissement commande #1132              Paiement final - Mme bensalah djaouida   🟢 IN 
+1001   10:44      entrée               100.00 DA       Vente commande #1258                     Commande client: 1x Galette Simple       🟢 IN 
+1002   10:58      entrée               2,190.00 DA     Vente commande #1263                     Commande client: 6.000x Mini Tacos Poule 🟢 IN 
+1003   10:59      entrée               1,400.00 DA     Encaissement commande #1244 - Livraison  Livreur: Islem - Frais livraison: 600.00 🟢 IN 
+1004   10:59      entrée               2,100.00 DA     Encaissement commande #1241 - Livraison  Livreur: Islem - Frais livraison: 700.00 🟢 IN 
+1005   11:00      entrée               500.00 DA       Encaissement commande #1217              Paiement final - Mme hassani             🟢 IN 
+1006   11:00      entrée               150.00 DA       Vente commande #1264                     Commande client: 1x Quiches Thon         🟢 IN 
+1007   11:05      entrée               840.00 DA       Vente commande #1266                     Commande client: 2.000x Mini Sandwiche P 🟢 IN 
+1008   11:05      entrée               420.00 DA       Encaissement commande #1243              Paiement final - Mme wafa                🟢 IN 
+1009   11:09      entrée               2,100.00 DA     Encaissement commande #1233              Paiement final - Mme okid                🟢 IN 
+1010   11:09      entrée               300.00 DA       Vente commande #1267                     Commande client: 2x Metelou3             🟢 IN 
+1011   11:18      entrée               280.00 DA       Vente commande #1271                     Commande client: 1.000x Tcharak 3aryan S 🟢 IN 
+1012   11:41      entrée               250.00 DA       Encaissement commande #1261 - Livraison  Livreur: Idir - Frais livraison: 500.00  🟢 IN 
+1013   11:41      entrée               1,000.00 DA     Encaissement commande #1082 - Livraison  Livreur: Idir - Frais livraison: 500.00  🟢 IN 
+1014   11:48      entrée               1,250.00 DA     Encaissement commande #1272 - Livraison  Livreur: Sifou - Frais livraison: 600.00 🟢 IN 
+1015   11:57      entrée               2,060.00 DA     Vente commande #1275                     Commande client: 6.000x Mini Manchons ,  🟢 IN 
+1016   12:03      entrée               4,600.00 DA     Acompte commande #1276                   Acompte enregistré lors de la création - 🟢 IN 
+1017   12:08      entrée               3,240.00 DA     Vente commande #1278                     Commande client: 27x Ka3ek nakkach       🟢 IN 
+1018   12:13      entrée               480.00 DA       Vente commande #1280                     Commande client: 4x Quiches épinards     🟢 IN 
+1019   12:19      entrée               400.00 DA       Vente commande #1281                     Commande client: 4x Mehadjeb Grande Tail 🟢 IN 
+1020   12:23      entrée               100.00 DA       Vente commande #1282                     Commande client: 1x Mini Soufflés Poulet 🟢 IN 
+1021   12:23      entrée               100.00 DA       Vente commande #1283                     Commande client: 1x Mini Soufflés Poulet 🟢 IN 
+1022   12:23      entrée               4,000.00 DA     Encaissement commande #1128              Paiement final - Mme bahloul             🟢 IN 
+1023   12:28      entrée               2,300.00 DA     Acompte commande #1284                   Acompte enregistré lors de la création - 🟢 IN 
+1024   12:31      entrée               510.00 DA       Vente commande #1285                     Commande client: 3.000x Mini Sandwiche P 🟢 IN 
+1025   12:38      entrée               640.00 DA       Vente commande #1286                     Commande client: 2.000x Mini Manchons ,  🟢 IN 
+1026   12:44      entrée               3,000.00 DA     Encaissement commande #1049              Paiement final - Mme hadjnacer           🟢 IN 
+1027   12:44      entrée               100.00 DA       Vente commande #1287                     Commande client: 1x Mehadjeb Grande Tail 🟢 IN 
+1028   12:47      entrée               10,500.00 DA    Encaissement commande #1028 - Livraison  Livreur: Sifou - Frais livraison: 500.00 🟢 IN 
+1029   12:50      entrée               100.00 DA       Vente commande #1288                     Commande client: 1x Canette Izem Blanc   🟢 IN 
+1030   13:01      entrée               720.00 DA       Vente commande #1289                     Commande client: 1.000x Quiches épinards 🟢 IN 
+1031   13:08      entrée               1,550.00 DA     Encaissement commande #1146              Paiement final - Mme mezrouna            🟢 IN 
+1032   13:09      entrée               310.00 DA       Vente commande #1291                     Commande client: 1.000x Mini Pizza, 4x K 🟢 IN 
+1033   13:14      entrée               460.00 DA       Vente commande #1292                     Commande client: 1.000x Mini Sandwiche P 🟢 IN 
+1034   13:17      entrée               250.00 DA       Vente commande #1294                     Commande client: 5x Khefaf Petite Taille 🟢 IN 
+1035   13:20      entrée               200.00 DA       Vente commande #1296                     Commande client: 2x Mini Burger Poulet   🟢 IN 
+1036   13:26      entrée               2,850.00 DA     Vente commande #1297                     Commande client: 4.000x Mini Burger Poul 🟢 IN 
+1037   13:37      entrée               940.00 DA       Vente commande #1299                     Commande client: 1.000x Quiches épinards 🟢 IN 
+1038   13:37      entrée               500.00 DA       Encaissement commande #1237              Paiement final - Mme boularaf            🟢 IN 
+1039   13:40      entrée               150.00 DA       Vente commande #1301                     Commande client: 3x Baghrir Grand Taille 🟢 IN 
+1040   13:41      entrée               800.00 DA       Paiement dette commande #1252 par livreu Encaissement dette livreur (commande #12 🟢 IN 
+1041   13:45      entrée               2,250.00 DA     Encaissement commande #1257              Paiement final - Mme Khelaf              🟢 IN 
+1042   13:54      entrée               10,000.00 DA    Acompte commande #1302                   Acompte enregistré lors de la création - 🟢 IN 
+1043   14:00      entrée               470.00 DA       Vente commande #1304                     Commande client: 1.000x Quiches Viande H 🟢 IN 
+1044   14:12      entrée               1,400.00 DA     Encaissement commande #1269 - Livraison  Livreur: Islem - Frais livraison: 500.00 🟢 IN 
+1045   14:28      entrée               4,000.00 DA     Encaissement commande #1276 - Livraison  Livreur: Sifou - Frais livraison: 600.00 🟢 IN 
+1046   14:29      entrée               2,500.00 DA     Encaissement commande #1247              Paiement final - Mme bendjelloul souhila 🟢 IN 
+1047   14:31      entrée               500.00 DA       Vente commande #1308                     Commande client: 5x Mehadjeb Grande Tail 🟢 IN 
+1048   14:32      entrée               280.00 DA       Vente commande #1310                     Commande client: 4x Messemen Grande Tail 🟢 IN 
+1049   14:38      entrée               750.00 DA       Vente commande #1311                     Commande client: 5.000x Messemen Grande  🟢 IN 
+1050   14:38      entrée               1,800.00 DA     Encaissement commande #1109              Paiement final - Mme mahiou              🟢 IN 
+1051   14:48      entrée               280.00 DA       Vente commande #1312                     Commande client: 4x Messemen Grande Tail 🟢 IN 
+1052   15:20      entrée               640.00 DA       Vente commande #1315                     Commande client: 8x Bradj Taille Normale 🟢 IN 
+1053   15:21      entrée               140.00 DA       Vente commande #1316                     Commande client: 2x Messemen Grande Tail 🟢 IN 
+1054   15:27      entrée               150.00 DA       Encaissement commande #1268              Paiement final - Mme Amine               🟢 IN 
+1055   15:31      entrée               2,300.00 DA     Acompte commande #1317                   Acompte enregistré lors de la création - 🟢 IN 
+1056   16:03      entrée               10,000.00 DA    Acompte commande #1318                   Acompte enregistré lors de la création - 🟢 IN 
+1057   16:07      entrée               510.00 DA       Vente commande #1319                     Commande client: 2.000x Messemen Grande  🟢 IN 
+1058   16:28      sortie               82,000.00 DA    Dépôt en banque (Cashout)                Dépôt bancaire                           🔴 OUT
+1059   16:33      sortie               10,000.00 DA    Dépôt en banque (Cashout)                Dépôt bancaire                           🔴 OUT
+1060   16:41      entrée               50.00 DA        Vente commande #1321                     Commande client: 1x Canette Hamoud Cola  🟢 IN 
+
+📊 Résumé par type de mouvement:
+--------------------------------------------------------------------------------
+  🟢 entrée                   :  68 mouvement(s) = 107,420.00 DA
+  🔴 sortie                   :   3 mouvement(s) = 102,740.00 DA
+
+🏦 DÉPÔTS BANQUE IDENTIFIÉS:
+----------------------------------------------------------------------------------------------------
+  - ID 994: 08:32 | sortie | 10,740.00 DA | Dépôt en banque (Cashout) | Dépôt bancaire
+  - ID 1058: 16:28 | sortie | 82,000.00 DA | Dépôt en banque (Cashout) | Dépôt bancaire
+  - ID 1059: 16:33 | sortie | 10,000.00 DA | Dépôt en banque (Cashout) | Dépôt bancaire
+
+  💵 TOTAL DÉPÔTS BANQUE: 102,740.00 DA
+
+============================================================
+💵 RÉSUMÉ FLUX DE CAISSE:
+============================================================
+   🟢 Entrées (ventes, acomptes, etc.): +107,420.00 DA
+   🔴 Sorties (retraits, dépôts, etc.): -102,740.00 DA
+   📊 Flux Net: +4,680.00 DA
+
+📦 Sessions de caisse du jour:
+   - Session #38: 08:30 → 16:57 | Initial: 8,700.00 DA | Final: 12,080.00 DA | 🔴 Fermée
+
+================================================================================
+📊 COMPARAISON AVEC LE DASHBOARD (RealKpiService)
+================================================================================
+
+📅 Date: 20/12/2025
+
+💰 CA selon RealKpiService:
+   - Total: 44,830.00 DA
+   - POS: 24,510.00 DA
+   - Shop: 20,320.00 DA
+
+📊 Commandes selon RealKpiService:
+   - Total: 49
+   - POS: 38
+   - Shop: 11
+
+💳 Dette Livreur selon RealKpiService: 4,000.00 DA
+
+================================================================================
+🔍 IDENTIFICATION DES COMMANDES PROBLÉMATIQUES
+================================================================================
+
+🔍 Vérification des commandes POS:
+
+🔍 Vérification des commandes Shop:
+⚠️  37 commande(s) Shop problématique(s):
+----------------------------------------------------------------------------------------------------
+ID     Type                      Statut               Due Date             Montant         Raison                                  
+----------------------------------------------------------------------------------------------------
+1259   Ordre de Production       completed            20/12/2025 14:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1262   Ordre de Production       completed            20/12/2025 14:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1244   Commande Client           delivered            20/12/2025 12:00     2,000.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1217   Commande Client           delivered            20/12/2025 10:30     500.00 DA       due_date=20/12/2025 au lieu de 20/12/202
+1265   Ordre de Production       completed            20/12/2025 15:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1082   Commande Client           delivered            20/12/2025 11:30     1,500.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1269   Commande Client           delivered            20/12/2025 16:00     1,900.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1276   Commande Client           delivered            20/12/2025 15:00     4,600.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1247   Commande Client           delivered            20/12/2025 13:00     2,500.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1248   Ordre de Production       completed            20/12/2025 12:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1240   Ordre de Production       completed            20/12/2025 10:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1251   Ordre de Production       completed            20/12/2025 12:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1237   Commande Client           delivered            20/12/2025 12:00     500.00 DA       due_date=20/12/2025 au lieu de 20/12/202
+1257   Commande Client           delivered            20/12/2025 14:30     2,250.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1241   Commande Client           delivered            20/12/2025 11:30     2,800.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1243   Commande Client           delivered            20/12/2025 12:00     420.00 DA       due_date=20/12/2025 au lieu de 20/12/202
+1233   Commande Client           delivered            20/12/2025 12:00     2,100.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1146   Commande Client           delivered            20/12/2025 12:00     1,550.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1298   Ordre de Production       completed            20/12/2025 15:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1305   Ordre de Production       completed            20/12/2025 12:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1268   Commande Client           delivered            20/12/2025 15:00     150.00 DA       due_date=20/12/2025 au lieu de 20/12/202
+1242   Ordre de Production       completed            20/12/2025 10:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1255   Ordre de Production       completed            20/12/2025 12:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1270   Ordre de Production       completed            20/12/2025 14:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1261   Commande Client           delivered            20/12/2025 12:30     750.00 DA       due_date=20/12/2025 au lieu de 20/12/202
+1274   Ordre de Production       completed            20/12/2025 15:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1049   Commande Client           delivered            20/12/2025 13:00     3,000.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1303   Ordre de Production       completed            20/12/2025 14:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1028   Commande Client           delivered            20/12/2025 13:30     11,000.00 DA    due_date=20/12/2025 au lieu de 20/12/202
+1272   Commande Client           delivered            20/12/2025 14:00     1,850.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1128   Commande Client           delivered            20/12/2025 12:00     4,000.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1252   Commande Client           delivered_unpaid     20/12/2025 13:30     1,100.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+1293   Ordre de Production       completed            20/12/2025 15:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1290   Ordre de Production       completed            20/12/2025 15:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1306   Ordre de Production       completed            20/12/2025 16:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1309   Ordre de Production       completed            20/12/2025 16:00     0.00 DA         due_date=20/12/2025 au lieu de 20/12/202
+1109   Commande Client           delivered            20/12/2025 14:00     1,800.00 DA     due_date=20/12/2025 au lieu de 20/12/202
+
+❌ PROBLÈMES DÉTECTÉS:
+  - Nombre Shop: Calcul direct=37, Dashboard=11
+  - CA Shop: Calcul direct=46,270.00 DA, Dashboard=20,320.00 DA
+
+================================================================================
+📋 RÉSUMÉ DE L'AUDIT
+================================================================================
+
+💰 CA:
+   - Calcul direct (avec ordres prod): 70,780.00 DA
+   - Dashboard (RealKpiService): 44,830.00 DA
+   - CA RÉEL (sans ordres prod): 70,780.00 DA
+   ❌ ÉCART: 25,950.00 DA
+
+⚠️  PROBLÈME IDENTIFIÉ:
+   - 17 Ordre(s) de Production inclus dans le CA Shop
+   - Ces ordres ont montant=0 et ne devraient PAS être comptabilisés
+   - CA sans ordres prod: 70,780.00 DA
+   - Différence: 0.00 DA
+
+📅 COMMANDES CRÉÉES AVANT MAIS LIVRÉES AUJOURD'HUI:
+   - Nombre: 20
+   - Montant: 46,270.00 DA
+   - Selon la logique actuelle, ces commandes sont comptabilisées aujourd'hui (date de livraison)
+
+💳 DETTE LIVREUR:
+   - Calcul direct: 5,000.00 DA
+   - Dashboard (RealKpiService): 4,000.00 DA
+   ❌ ÉCART: 1,000.00 DA
+
+   📋 Détail des dettes:
+      - Commande #1244 (Mme fatma): 600.00 DA
+        Montant: 2,000.00 DA, Payé: 1,400.00 DA
+      - Commande #1082 (Mme Amrouche): 500.00 DA
+        Montant: 1,500.00 DA, Payé: 1,000.00 DA
+      - Commande #1269 (Mme chikhi): 500.00 DA
+        Montant: 1,900.00 DA, Payé: 1,400.00 DA
+      - Commande #1241 (Mme Naima): 700.00 DA
+        Montant: 2,800.00 DA, Payé: 2,100.00 DA
+      - Commande #1261 (Mme cherif): 500.00 DA
+        Montant: 750.00 DA, Payé: 250.00 DA
+      - Commande #1028 (Mme Sabiha Bouchafa): 500.00 DA
+        Montant: 11,000.00 DA, Payé: 10,500.00 DA
+      - Commande #1272 (Mme brikci): 600.00 DA
+        Montant: 1,850.00 DA, Payé: 1,250.00 DA
+      - Commande #1252 (Mme hamouda): 1,100.00 DA
+        Montant: 1,100.00 DA, Payé: 0.00 DA
+
+📊 COMMANDES:
+   - POS: 38 (Dashboard: 38)
+   - Shop: 37 (Dashboard: 11)
+     - Dont Ordres de Production: 17
+     - Dont Vraies commandes: 20
+   - Total créées ce jour: 81
+
+💵 FLUX DE CAISSE (CashMovement):
+   - Entrées (ventes, acomptes): +107,420.00 DA
+   - Sorties (retraits, dépôts): -102,740.00 DA
+   - Flux Net: +4,680.00 DA
+   - Nombre de mouvements: 71
+
+📊 COMPARAISON CA vs ENCAISSEMENTS:
+   - CA Dashboard (RealKpiService): 44,830.00 DA
+   - Encaissements (CashMovement): 107,420.00 DA
+   - Écart (Cash - CA): +62,590.00 DA
+   ℹ️  Les encaissements sont SUPÉRIEURS au CA (acomptes, paiements différés?)
+
+🎯 VÉRIFICATION GÉRANTE:
+   - Valeur attendue par la gérante: 35,145 DA (à confirmer)
+   - CA Dashboard: 44,830.00 DA
+   - Encaissements bruts: 107,420.00 DA
+   - Encaissements nets (après sorties): 4,680.00 DA
+
+🔍 HYPOTHÈSES D'ÉCART:
+   - Si dépôt banque déduit: Encaissements - Sorties = 107,420.00 DA - 102,740.00 DA = 4,680.00 DA
+
+⚠️  39 problème(s) détecté(s)
+   Voir les détails ci-dessus pour identifier les commandes problématiques
+
+================================================================================
+✅ AUDIT TERMINÉ
