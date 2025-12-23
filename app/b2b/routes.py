@@ -234,6 +234,42 @@ def edit_order(order_id):
     
     form = B2BOrderForm(obj=order)
     
+    # Pré-remplir les items existants (GET uniquement)
+    if request.method == 'GET':
+        # Vider les entrées existantes du formulaire
+        form.items.entries = []
+        form.items.last_index = -1  # ✅ Réinitialiser l'index du FieldList
+        
+        # Charger les produits pour les choix du select
+        from models import Product
+        products = Product.query.filter_by(product_type='finished').order_by(Product.name).all()
+        product_choices = [('', '-- Choisir un produit --'), ('composite', '🧩 Produit composé')]
+        for product in products:
+            price = product.price or 0.0
+            label = f"{product.name} ({price:.2f} DA / {product.unit})"
+            product_choices.append((str(product.id), label))
+        
+        # Ajouter chaque item existant au formulaire
+        for item in order.items.all():
+            form.items.append_entry()
+            entry = form.items.entries[-1]
+            entry.form.product.choices = product_choices
+            
+            if item.product_id:
+                # Produit simple
+                entry.form.product.data = str(item.product_id)
+            else:
+                # Produit composé
+                entry.form.product.data = 'composite'
+            
+            entry.form.quantity.data = item.quantity
+            entry.form.unit_price.data = item.unit_price
+            entry.form.description.data = item.description or ''
+            
+            # Sérialiser la composition en JSON si présente
+            if item.composition:
+                entry.form.composition.data = json.dumps(item.composition) if isinstance(item.composition, list) else item.composition
+    
     if form.validate_on_submit():
         order.b2b_client_id = form.b2b_client_id.data
         order.delivery_date = form.delivery_date.data
