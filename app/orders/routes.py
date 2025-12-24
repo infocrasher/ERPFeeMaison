@@ -652,6 +652,31 @@ def orders_calendar():
             events.append({'id': order.id, 'title': f"#{order.id} - {order.customer_name or 'Production'}", 'start': order.due_date.isoformat(), 'url': url_for('orders.view_order', order_id=order.id), 'backgroundColor': '#ffc107' if order.status == 'in_production' else '#6c757d'})
     return render_template('orders/orders_calendar.html', events=events, title="Calendrier des Commandes")
 
+
+@orders.route('/<int:order_id>/confirm-pickup', methods=['POST'])
+@login_required
+@admin_required
+def confirm_pickup(order_id):
+    """Confirmer le retrait d'une commande déjà payée"""
+    order = Order.query.get_or_404(order_id)
+    
+    # Vérifications
+    if order.status != 'waiting_for_pickup':
+        flash(f'Cette commande n\'est pas en attente de retrait (statut: {order.get_status_display()}).', 'warning')
+        return redirect(url_for('dashboard.shop_dashboard'))
+    
+    if order.balance_due > 0:
+        flash(f'Cette commande a un solde impayé de {order.balance_due:.2f} DA. Utilisez "Encaisser".', 'warning')
+        return redirect(url_for('dashboard.shop_dashboard'))
+    
+    # Changer le statut
+    order.status = 'delivered'
+    db.session.commit()
+    
+    flash(f'Commande #{order.id} retirée par {order.customer_name or "le client"} ! ✅', 'success')
+    return redirect(url_for('dashboard.shop_dashboard'))
+
+
 @orders.route('/<int:order_id>/pay', methods=['POST'])
 @login_required
 @admin_required

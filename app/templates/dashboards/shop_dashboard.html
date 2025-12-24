@@ -605,7 +605,16 @@
                     </div>
                 </div>
                 <div class="order-actions ms-3">
-                    {% if cash_session_open %}
+                    {% if order.balance_due_value <= 0 %}
+                    <!-- Commande déjà payée : bouton Confirmer retrait -->
+                    <form method="POST" action="{{ url_for('orders.confirm_pickup', order_id=order.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="action-btn btn-success" title="Commande déjà payée - Confirmer le retrait">
+                            <i class="bi bi-check-circle me-1"></i>Retrait OK
+                        </button>
+                    </form>
+                    {% elif cash_session_open %}
+                    <!-- Commande à encaisser -->
                     <form method="POST" action="{{ url_for('orders.pay_order', order_id=order.id) }}"
                         class="shop-pay-form" data-order-id="{{ order.id }}"
                         data-total="{{ '%.2f'|format(order.total_amount|float) if order.total_amount else '0.00' }}"
