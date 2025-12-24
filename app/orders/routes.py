@@ -838,19 +838,25 @@ def assign_deliveryman(order_id):
             # Pour les commandes customer_order, total_amount peut inclure les frais de livraison
             if order.order_type == 'in_store':
                 # Pour les commandes PDV, total_amount est déjà le montant produits seulement
-                products_amount = order.total_amount
+                products_amount = Decimal(order.total_amount or 0)
             else:
                 # Pour les commandes customer_order, soustraire les frais de livraison
-                products_amount = order.total_amount - (order.delivery_cost or 0)
+                products_amount = Decimal(order.total_amount or 0) - Decimal(order.delivery_cost or 0)
             
-            # Créer le mouvement de caisse si une session est ouverte
+            # ✅ FIX: Calculer le RESTANT à encaisser (déduire l'acompte déjà versé)
+            amount_already_paid = Decimal(order.amount_paid or 0)
+            remaining_to_collect = (products_amount - amount_already_paid).quantize(Decimal('0.01'))
+            if remaining_to_collect < Decimal('0.00'):
+                remaining_to_collect = Decimal('0.00')
+            
+            # Créer le mouvement de caisse si une session est ouverte ET s'il reste quelque chose à encaisser
             session = CashRegisterSession.query.filter_by(is_open=True).first()
-            if session:
+            if session and remaining_to_collect > Decimal('0.00'):
                 movement = CashMovement(
                     session_id=session.id,
                     created_at=datetime.utcnow(),
                     type='entrée',
-                    amount=float(products_amount),
+                    amount=float(remaining_to_collect),
                     reason=f'Encaissement commande #{order.id} - Livraison payée (hors frais livraison)',
                     notes=f'Livreur: {Deliveryman.query.get(deliveryman_id).name} - Frais livraison: {order.delivery_cost or 0:.2f} DA' + (f' - {notes}' if notes else ''),
                     employee_id=current_user.id
@@ -873,7 +879,7 @@ def assign_deliveryman(order_id):
                         order.id,
                         priority=1,
                         employee_name=current_user.name if hasattr(current_user, 'name') else current_user.username,
-                        amount_received=float(products_amount),
+                        amount_received=float(remaining_to_collect),
                         change_amount=change_amount,
                         customer_phone=order.customer_phone,
                         customer_address=order.customer_address,
@@ -885,13 +891,15 @@ def assign_deliveryman(order_id):
                 except Exception as e:
                     current_app.logger.error(f"Erreur impression/tiroir (assign_deliveryman): {e}")
                 
-                flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name} et encaissée ({products_amount:.2f} DA, frais livraison {order.delivery_cost or 0:.2f} DA pour le livreur).', 'success')
+                flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name} et encaissée ({float(remaining_to_collect):.2f} DA, frais livraison {order.delivery_cost or 0:.2f} DA pour le livreur).', 'success')
+            elif session and remaining_to_collect == Decimal('0.00'):
+                flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name}. Déjà payée intégralement (acompte: {float(amount_already_paid):.2f} DA).', 'success')
             else:
                 flash(f'Commande #{order.id} assignée et livrée, mais aucune session de caisse ouverte pour l\'encaissement.', 'warning')
 
             previous_payment_status = order.payment_status
-            incremental_payment = (order.total_amount - (order.delivery_cost or 0)) or Decimal('0.00')
-            order.amount_paid = (Decimal(order.amount_paid or 0) + Decimal(incremental_payment)).quantize(Decimal('0.01'))
+            # ✅ FIX: Incrémenter seulement du restant, pas du total
+            order.amount_paid = (amount_already_paid + remaining_to_collect).quantize(Decimal('0.01'))
             order.update_payment_status()
 
             if order.payment_status == 'paid' and previous_payment_status != 'paid':
@@ -938,18 +946,29 @@ def assign_deliveryman(order_id):
             # Pour les commandes customer_order, total_amount peut inclure les frais de livraison
             if order.order_type == 'in_store':
                 # Pour les commandes PDV, total_amount est déjà le montant produits seulement
-                products_amount = order.total_amount
+                products_amount = Decimal(order.total_amount or 0)
             else:
                 # Pour les commandes customer_order, soustraire les frais de livraison
-                products_amount = order.total_amount - (order.delivery_cost or 0)
+                products_amount = Decimal(order.total_amount or 0) - Decimal(order.delivery_cost or 0)
             
-            debt = DeliveryDebt(
-                order_id=order.id,
-                deliveryman_id=deliveryman_id,
-                amount=products_amount,
-                paid=False
-            )
-            db.session.add(debt)
+            # ✅ FIX: Calculer le RESTANT dû (déduire l'acompte déjà versé)
+            amount_already_paid = Decimal(order.amount_paid or 0)
+            remaining_debt = (products_amount - amount_already_paid).quantize(Decimal('0.01'))
+            if remaining_debt < Decimal('0.00'):
+                remaining_debt = Decimal('0.00')
+            
+            # Créer la dette seulement s'il reste quelque chose à payer
+            if remaining_debt > Decimal('0.00'):
+                debt = DeliveryDebt(
+                    order_id=order.id,
+                    deliveryman_id=deliveryman_id,
+                    amount=remaining_debt,
+                    paid=False
+                )
+                db.session.add(debt)
+                debt_message = f'Dette créée: {float(remaining_debt):.2f} DA'
+            else:
+                debt_message = 'Pas de dette (déjà payé intégralement)'
             
             # Impression ticket même si le livreur ne paie pas
             try:
@@ -977,7 +996,7 @@ def assign_deliveryman(order_id):
             except Exception as e:
                 current_app.logger.error(f"Erreur impression/tiroir (assign_deliveryman non payé): {e}")
             
-            flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name}. Dette créée: {products_amount:.2f} DA (hors frais livraison {order.delivery_cost or 0:.2f} DA).', 'info')
+            flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name}. {debt_message} (hors frais livraison {order.delivery_cost or 0:.2f} DA).', 'info')
         
         # Ajouter les notes à la commande si spécifiées
         if notes:
