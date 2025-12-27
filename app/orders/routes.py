@@ -862,40 +862,43 @@ def assign_deliveryman(order_id):
                     employee_id=current_user.id
                 )
                 db.session.add(movement)
-                
-                # ✅ CORRECTION : Impression ticket + ouverture tiroir-caisse
-                try:
-                    from app.services.printer_service import get_printer_service
-                    printer_service = get_printer_service()
-                    
-                    change_amount = 0.0  # Pas de monnaie à rendre pour livraison
-                    
-                    # Récupérer les informations du livreur
-                    deliveryman = Deliveryman.query.get(deliveryman_id)
-                    deliveryman_name = deliveryman.name if deliveryman else ''
-                    deliveryman_phone = deliveryman.phone if deliveryman and deliveryman.phone else ''
-                    
-                    printer_service.print_ticket(
-                        order.id,
-                        priority=1,
-                        employee_name=current_user.name if hasattr(current_user, 'name') else current_user.username,
-                        amount_received=float(remaining_to_collect),
-                        change_amount=change_amount,
-                        customer_phone=order.customer_phone,
-                        customer_address=order.customer_address,
-                        delivery_cost=float(order.delivery_cost) if order.delivery_cost else 0,
-                        deliveryman_name=deliveryman_name,
-                        deliveryman_phone=deliveryman_phone
-                    )
-                    printer_service.open_cash_drawer(priority=1)
-                except Exception as e:
-                    current_app.logger.error(f"Erreur impression/tiroir (assign_deliveryman): {e}")
-                
                 flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name} et encaissée ({float(remaining_to_collect):.2f} DA, frais livraison {order.delivery_cost or 0:.2f} DA pour le livreur).', 'success')
             elif session and remaining_to_collect == Decimal('0.00'):
                 flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name}. Déjà payée intégralement (acompte: {float(amount_already_paid):.2f} DA).', 'success')
+            elif not session and remaining_to_collect > Decimal('0.00'):
+                flash(f'Commande #{order.id} assignée et livrée, mais aucune session de caisse ouverte pour l\'encaissement de {float(remaining_to_collect):.2f} DA.', 'warning')
             else:
-                flash(f'Commande #{order.id} assignée et livrée, mais aucune session de caisse ouverte pour l\'encaissement.', 'warning')
+                flash(f'Commande #{order.id} assignée à {Deliveryman.query.get(deliveryman_id).name}.', 'success')
+
+            # ✅ SYSTÉMATIQUE : Impression ticket + ouverture tiroir (si encaissement)
+            try:
+                from app.services.printer_service import get_printer_service
+                printer_service = get_printer_service()
+                
+                # Récupérer les informations du livreur
+                deliveryman = Deliveryman.query.get(deliveryman_id)
+                deliveryman_name = deliveryman.name if deliveryman else ''
+                deliveryman_phone = deliveryman.phone if deliveryman and deliveryman.phone else ''
+                
+                printer_service.print_ticket(
+                    order.id,
+                    priority=1,
+                    employee_name=current_user.name if hasattr(current_user, 'name') else current_user.username,
+                    amount_received=float(remaining_to_collect),
+                    change_amount=0.0,
+                    customer_phone=order.customer_phone,
+                    customer_address=order.customer_address,
+                    delivery_cost=float(order.delivery_cost) if order.delivery_cost else 0,
+                    deliveryman_name=deliveryman_name,
+                    deliveryman_phone=deliveryman_phone
+                )
+                # Ouvrir le tiroir seulement s'il y a de l'argent à déposer
+                if remaining_to_collect > Decimal('0.00'):
+                    printer_service.open_cash_drawer(priority=1)
+                    
+                current_app.logger.info(f"🖨️ Ticket livraison généré pour commande #{order.id} (Payé: {remaining_to_collect} DA)")
+            except Exception as e:
+                current_app.logger.error(f"Erreur impression/tiroir (assign_deliveryman): {e}")
 
             previous_payment_status = order.payment_status
             # ✅ FIX: Incrémenter seulement du restant, pas du total
