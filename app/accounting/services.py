@@ -31,18 +31,23 @@ class AccountingIntegrationService:
             if not journal:
                 raise ValueError("Journal des ventes (VT) non trouvé ou inactif")
             
-            # Comptes comptables
-            if payment_method == 'cash':
+            # Comptes comptables (Mapping robuste pour B2B et ventes classiques)
+            bank_methods = ['bank', 'cheque', 'virement', 'traite']
+            cash_methods = ['cash', 'espece']
+            
+            if payment_method in cash_methods:
                 debit_account = Account.query.filter_by(code='530', is_active=True).first()  # Caisse
-            elif payment_method == 'bank':
+            elif payment_method in bank_methods:
                 debit_account = Account.query.filter_by(code='512', is_active=True).first()  # Banque
-            else:  # credit
+            else:  # credit ou client B2B en attente
                 debit_account = Account.query.filter_by(code='411', is_active=True).first()  # Clients
             
             credit_account = Account.query.filter_by(code='701', is_active=True).first()  # Ventes de marchandises
             
             if not debit_account:
-                raise ValueError(f"Compte comptable débit ({'530' if payment_method == 'cash' else '512' if payment_method == 'bank' else '411'}) non trouvé ou inactif")
+                # Fallback sur le code explicite pour le message d'erreur
+                msg_code = '530' if payment_method in cash_methods else '512' if payment_method in bank_methods else '411'
+                raise ValueError(f"Compte comptable débit ({msg_code}) non trouvé ou inactif pour le mode de paiement '{payment_method}'")
             if not credit_account:
                 raise ValueError("Compte comptable crédit (701 - Ventes) non trouvé ou inactif")
             

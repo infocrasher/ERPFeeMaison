@@ -36,15 +36,14 @@ class RealKpiService:
             ).scalar() or 0
 
         # B. Commandes Livrées/Terminées ce jour
-        # IMPORTANT: Ne comptabiliser que les commandes créées ET livrées le même jour
+        # IMPORTANT: CA Vente comptabilisé à la date de réception (approximée par due_date)
         # Exclure les ordres de production (counter_production_request) qui ont montant=0
         shop_revenue = db.session.query(func.sum(Order.total_amount))\
             .filter(
                 Order.order_type != 'in_store',
                 Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
-                func.date(Order.created_at) == target_date,  # Créée le jour J
-                func.date(Order.due_date) == target_date  # Livrée le jour J
+                func.date(Order.due_date) == target_date  # ✅ Réception = due_date (approximation)
             ).scalar() or 0.0
 
         shop_count = db.session.query(func.count(Order.id))\
@@ -52,8 +51,7 @@ class RealKpiService:
                 Order.order_type != 'in_store',
                 Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
-                func.date(Order.created_at) == target_date,  # Créée le jour J
-                func.date(Order.due_date) == target_date  # Livrée le jour J
+                func.date(Order.due_date) == target_date  # ✅ Réception = due_date (approximation)
             ).scalar() or 0
             
         total_revenue = float(pos_revenue) + float(shop_revenue)
@@ -71,13 +69,12 @@ class RealKpiService:
         ).all()
         pos_ids = [r[0] for r in pos_order_ids]
         
-        # Identifiants des commandes Shop créées ET livrées ce jour (exclure ordres de production)
+        # Identifiants des commandes Shop réceptionnées ce jour (approximation = due_date)
         shop_order_ids = db.session.query(Order.id).filter(
             Order.order_type != 'in_store',
             Order.order_type != 'counter_production_request',  # Exclure les ordres de production
             Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
-            func.date(Order.created_at) == target_date,  # Créée le jour J
-            func.date(Order.due_date) == target_date  # Livrée le jour J
+            func.date(Order.due_date) == target_date  # ✅ Réception = due_date (approximation)
         ).all()
         shop_ids = [r[0] for r in shop_order_ids]
         
@@ -146,8 +143,8 @@ class RealKpiService:
             .filter(func.date(Purchase.created_at) == target_date)\
             .scalar() or 0.0
 
-        # Dette Livreur du Jour (Reste à payer sur les commandes livrées ce jour)
-        # On prend les commandes Shop livrées ce jour (due_date) et on somme le reste à payer
+        # Dette Livreur du Jour (Reste à payer sur les commandes réceptionnées ce jour)
+        # On prend les commandes Shop réceptionnées ce jour (due_date) et on somme le reste à payer
         # (total_amount - amount_paid)
         delivery_debt = 0.0
         shop_orders_debt = db.session.query(Order.total_amount, Order.amount_paid)\
@@ -155,8 +152,7 @@ class RealKpiService:
                 Order.order_type != 'in_store',
                 Order.order_type != 'counter_production_request',  # Exclure les ordres de production
                 Order.status.in_(['delivered', 'completed', 'delivered_unpaid']),
-                func.date(Order.created_at) == target_date,  # Créée le jour J
-                func.date(Order.due_date) == target_date  # Livrée le jour J
+                func.date(Order.due_date) == target_date  # ✅ Réception = due_date (approximation)
             ).all()
             
         for o_total, o_paid in shop_orders_debt:
@@ -195,4 +191,38 @@ class RealKpiService:
                 'today': round(float(purchases_today), 2)
             },
             'delivery_debt': round(delivery_debt, 2)
+        }
+
+    @staticmethod
+    def get_ca_caisse(target_date=None):
+        """
+        Calcule le CA Caisse = Somme des encaissements du jour
+        (Mouvements de caisse de type 'entrée')
+        
+        Selon les règles métier :
+        - CA Caisse = Comptabilisé à la date d'ENCAISSEMENT
+        - Inclut : ventes POS, acomptes, soldes commandes, paiements dettes livreur
+        """
+        if target_date is None:
+            target_date = date.today()
+        
+        # Somme de tous les mouvements de caisse de type "entrée" du jour
+        cash_in = db.session.query(func.sum(CashMovement.amount))\
+            .filter(
+                func.lower(CashMovement.type).in_(['entrée', 'entree']),
+                func.date(CashMovement.created_at) == target_date
+            ).scalar() or 0.0
+        
+        # Somme de tous les mouvements de caisse de type "sortie" du jour
+        cash_out = db.session.query(func.sum(CashMovement.amount))\
+            .filter(
+                func.lower(CashMovement.type).in_(['sortie', 'retrait', 'paiement']),
+                func.date(CashMovement.created_at) == target_date
+            ).scalar() or 0.0
+        
+        return {
+            'total': round(float(cash_in), 2),
+            'entrees': round(float(cash_in), 2),
+            'sorties': round(float(cash_out), 2),
+            'net': round(float(cash_in) - float(cash_out), 2)
         }
