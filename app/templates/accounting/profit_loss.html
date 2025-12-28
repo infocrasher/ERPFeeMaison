@@ -13,11 +13,13 @@
     <!-- Résultat Net -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <div class="card {% if resultat_type == 'Bénéfice' %}bg-success{% elif resultat_type == 'Perte' %}bg-danger{% else %}bg-secondary{% endif %} text-white">
+            <div
+                class="card {% if resultat_type == 'Bénéfice' %}bg-success{% elif resultat_type == 'Perte' %}bg-danger{% else %}bg-secondary{% endif %} text-white">
                 <div class="card-body text-center">
                     <h2 class="card-title">{{ resultat_type }}</h2>
-                    <p class="card-text display-4 fw-bold">{{ "%.2f"|format(resultat_net) }} DZD</p>
-                    <p class="text-light">Formule : Produits - Charges = {{ "%.2f"|format(total_produits) }} - {{ "%.2f"|format(total_charges) }}</p>
+                    <p class="card-text display-4 fw-bold">{{ "{:,.2f}".format(resultat_net) }} DZD</p>
+                    <p class="text-light">Formule : Produits - Charges = {{ "{:,.2f}".format(total_produits) }} - {{
+                        "{:,.2f}".format(total_charges) }}</p>
                 </div>
             </div>
         </div>
@@ -31,7 +33,7 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-arrow-up"></i> PRODUITS (Classe 7)
-                        <span class="float-end">{{ "%.2f"|format(total_produits) }} DZD</span>
+                        <span class="float-end">{{ "{:,.2f}".format(total_produits) }} DZD</span>
                     </h5>
                 </div>
                 <div class="card-body">
@@ -50,14 +52,14 @@
                                 <tr>
                                     <td><code>{{ item.account.code }}</code></td>
                                     <td>{{ item.account.name }}</td>
-                                    <td class="text-end fw-bold text-success">{{ "%.2f"|format(item.balance) }}</td>
+                                    <td class="text-end fw-bold text-success">{{ "{:,.2f}".format(item.balance) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr class="table-info">
                                     <th colspan="2">TOTAL PRODUITS</th>
-                                    <th class="text-end">{{ "%.2f"|format(total_produits) }} DZD</th>
+                                    <th class="text-end">{{ "{:,.2f}".format(total_produits) }} DZD</th>
                                 </tr>
                             </tfoot>
                         </table>
@@ -77,7 +79,7 @@
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0">
                         <i class="fas fa-arrow-down"></i> CHARGES (Classe 6)
-                        <span class="float-end">{{ "%.2f"|format(total_charges) }} DZD</span>
+                        <span class="float-end">{{ "{:,.2f}".format(total_charges) }} DZD</span>
                     </h5>
                 </div>
                 <div class="card-body">
@@ -96,14 +98,14 @@
                                 <tr>
                                     <td><code>{{ item.account.code }}</code></td>
                                     <td>{{ item.account.name }}</td>
-                                    <td class="text-end fw-bold text-danger">{{ "%.2f"|format(item.balance) }}</td>
+                                    <td class="text-end fw-bold text-danger">{{ "{:,.2f}".format(item.balance) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr class="table-warning">
                                     <th colspan="2">TOTAL CHARGES</th>
-                                    <th class="text-end">{{ "%.2f"|format(total_charges) }} DZD</th>
+                                    <th class="text-end">{{ "{:,.2f}".format(total_charges) }} DZD</th>
                                 </tr>
                             </tfoot>
                         </table>
@@ -130,25 +132,25 @@
                         <div class="col-md-4">
                             <div class="text-center">
                                 <h6>Chiffre d'Affaires</h6>
-                                <p class="fs-5 fw-bold text-info">{{ "%.2f"|format(total_produits) }} DZD</p>
+                                <p class="fs-5 fw-bold text-info">{{ "{:,.2f}".format(total_produits) }} DZD</p>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="text-center">
                                 <h6>Total Charges</h6>
-                                <p class="fs-5 fw-bold text-warning">{{ "%.2f"|format(total_charges) }} DZD</p>
+                                <p class="fs-5 fw-bold text-warning">{{ "{:,.2f}".format(total_charges) }} DZD</p>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="text-center">
                                 <h6>Marge Bénéficiaire</h6>
                                 {% if total_produits > 0 %}
-                                    {% set marge = ((total_produits - total_charges) / total_produits * 100) %}
-                                    <p class="fs-5 fw-bold {% if marge >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                        {{ "%.1f"|format(marge) }}%
-                                    </p>
+                                {% set marge = ((total_produits - total_charges) / total_produits * 100) %}
+                                <p class="fs-5 fw-bold {% if marge >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(marge) }}%
+                                </p>
                                 {% else %}
-                                    <p class="fs-5 fw-bold text-muted">N/A</p>
+                                <p class="fs-5 fw-bold text-muted">N/A</p>
                                 {% endif %}
                             </div>
                         </div>
@@ -158,8 +160,91 @@
         </div>
     </div>
 
+    <!-- Partage des Bénéfices (Nouveauté) -->
+    {% if resultat_type == 'Bénéfice' and resultat_net > 0 %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card border-primary shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-primary"><i class="fas fa-coins me-2"></i>Partage des Bénéfices (33/66)</h5>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#distributeModal">
+                        <i class="fas fa-paper-plane me-1"></i>Effectuer le retrait bancaire
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 border-end">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Part Associé (66.67%) :</span>
+                                <span class="fw-bold">{{ "{:,.2f}".format(resultat_net|float * 0.6667) }} DZD</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Part Gérante (33.33%) :</span>
+                                <span class="fw-bold">{{ "{:,.2f}".format(resultat_net|float * 0.3333) }} DZD</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 ps-4">
+                            <p class="small text-muted mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Cette action générera une écriture dans le <strong>Journal de Banque (BQ)</strong>,
+                                diminuant le solde bancaire pour créditer les comptes courants d'associés (4551 et
+                                4552).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Distribution -->
+    <div class="modal fade" id="distributeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('accounting.distribute_profit') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ manual_csrf_token() }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Valider la distribution</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Attention : Cette opération est irréversible et impacte le solde bancaire réel.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Montant à distribuer (Total)</label>
+                            <input type="number" step="0.01" name="amount" class="form-control"
+                                value="{{ resultat_net }}" required>
+                            <div class="form-text">Par défaut, le bénéfice net total est proposé.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <input type="text" name="description" class="form-control"
+                                value="Distribution bénéfices mensuels - Split 33/66">
+                        </div>
+                        <div class="p-3 bg-light rounded">
+                            <p class="small mb-1"><strong>Répartition estimée :</strong></p>
+                            <ul class="small mb-0">
+                                <li>Associé Principal (66.67%) : <span id="split_assoc">{{
+                                        "{:,.2f}".format(resultat_net|float * 0.6667) }}</span> DZD</li>
+                                <li>Gérante (33.33%) : <span id="split_manager">{{ "{:,.2f}".format(resultat_net|float *
+                                        0.3333) }}</span> DZD</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Confirmer le retrait bancaire</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Notes -->
-    <div class="card mt-4">
+    <div class="card mt-4 mb-5">
         <div class="card-header">
             <h6 class="mb-0">Notes</h6>
         </div>
@@ -169,25 +254,42 @@
                 <li><strong>Charges :</strong> Tous les comptes de classe 6 (achats, charges diverses, etc.)</li>
                 <li><strong>Résultat Net :</strong> Différence entre les produits et les charges</li>
                 <li><strong>Marge :</strong> Pourcentage de bénéfice par rapport au chiffre d'affaires</li>
+                <li><strong>Prélèvements :</strong> Les distributions via le compte 455 diminuent la banque mais
+                    n'apparaissent pas comme des "charges" (Classe 6) pour ne pas fausser le résultat brut.</li>
             </ul>
         </div>
     </div>
 </div>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const amountInput = document.querySelector('input[name="amount"]');
+        if (amountInput) {
+            amountInput.addEventListener('input', function () {
+                const total = parseFloat(this.value) || 0;
+                document.getElementById('split_manager').textContent = (total * 0.3333).toLocaleString('fr-FR', { minimumFractionDigits: 2 });
+                document.getElementById('split_assoc').textContent = (total - (total * 0.3333)).toLocaleString('fr-FR', { minimumFractionDigits: 2 });
+            });
+        }
+    });
+</script>
+
 <style>
-@media print {
-    .btn-group, .card:last-child {
-        display: none !important;
+    @media print {
+
+        .btn-group,
+        .card:last-child {
+            display: none !important;
+        }
+
+        .container-fluid {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .table {
+            font-size: 12px;
+        }
     }
-    
-    .container-fluid {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    
-    .table {
-        font-size: 12px;
-    }
-}
 </style>
-{% endblock %} 
+{% endblock %}

@@ -1425,6 +1425,32 @@ def profit_loss():
                          resultat_type=resultat_type)
 
 
+@bp.route('/profit-loss/distribute', methods=['POST'])
+@login_required
+@admin_required
+def distribute_profit():
+    """Valider la distribution des bénéfices 33/66"""
+    amount = request.form.get('amount', type=float)
+    description = request.form.get('description')
+    
+    if not amount or amount <= 0:
+        flash("Le montant à distribuer doit être positif.", "error")
+        return redirect(url_for('accounting.profit_loss'))
+    
+    try:
+        from .services import AccountingIntegrationService
+        AccountingIntegrationService.create_profit_distribution_entry(
+            total_amount=amount,
+            description=description
+        )
+        flash(f"Distribution de {amount:,.2f} DA effectuée avec succès (Split 33/66).", "success")
+    except Exception as e:
+        current_app.logger.error(f"Erreur distribution bénéfices: {e}")
+        flash(f"Erreur lors de la distribution: {str(e)}", "error")
+        
+    return redirect(url_for('accounting.profit_loss'))
+
+
 # ==================== API ====================
 
 @bp.route('/api/accounts')
