@@ -632,6 +632,130 @@ class AccountingIntegrationService:
             db.session.rollback()
             raise e
 
+
+    @staticmethod
+    def create_profit_distribution_entry(total_amount, description=None):
+        """
+        Créer une écriture de partage de bénéfice (33/66)
+        
+        Args:
+            total_amount: Montant total à distribuer
+            description: Description personnalisée
+        """
+        try:
+            from decimal import Decimal
+            from datetime import date
+            from flask_login import current_user
+            from .models import Account, Journal, JournalEntry, JournalEntryLine, AccountType, AccountNature, JournalType
+            
+            # 1. Vérifier/Créer les comptes de Comptes Courants d'Associés (455)
+            # Compte Parent 455 s'il n'existe pas
+            parent_455 = Account.query.filter_by(code='455').first()
+            if not parent_455:
+                parent_455 = Account(
+                    code='455',
+                    name="Associés - Comptes courants",
+                    account_type=AccountType.CLASSE_4,
+                    account_nature=AccountNature.CREDIT,
+                    is_detail=False
+                )
+                db.session.add(parent_455)
+                db.session.flush()
+
+            # 4551: Part Associé (66.66%)
+            acc_associate = Account.query.filter_by(code='4551').first()
+            if not acc_associate:
+                acc_associate = Account(
+                    code='4551',
+                    name="Associé Principal (66.66%)",
+                    account_type=AccountType.CLASSE_4,
+                    account_nature=AccountNature.CREDIT,
+                    parent_id=parent_455.id,
+                    is_detail=True
+                )
+                db.session.add(acc_associate)
+
+            # 4552: Part Gérante (33.33%)
+            acc_manager = Account.query.filter_by(code='4552').first()
+            if not acc_manager:
+                acc_manager = Account(
+                    code='4552',
+                    name="Gérante (33.33%)",
+                    account_type=AccountType.CLASSE_4,
+                    account_nature=AccountNature.CREDIT,
+                    parent_id=parent_455.id,
+                    is_detail=True
+                )
+                db.session.add(acc_manager)
+
+            # 2. Récupérer les comptes Banque et Journal
+            bank_account = Account.query.filter_by(code='512', is_active=True).first()
+            bank_journal = Journal.query.filter_by(code='BQ', is_active=True).first()
+            
+            if not bank_account or not bank_journal:
+                raise ValueError("Compte Banque (512) ou Journal Banque (BQ) non disponible")
+
+            db.session.flush()
+
+            # 3. Calculer les parts
+            # Utilisation de Decimal pour la précision
+            total_dec = Decimal(str(total_amount))
+            part_manager = (total_dec * Decimal('33.33') / Decimal('100')).quantize(Decimal('0.01'))
+            part_associate = total_dec - part_manager # Le reste va à l'associé pour éviter les écarts d'arrondi
+
+            # 4. Créer l'écriture
+            entry = JournalEntry(
+                journal_id=bank_journal.id,
+                entry_date=date.today(),
+                description=description or f"Partage des bénéfices - Split 33/66",
+                reference=f"DIV-{date.today().strftime('%Y%m')}",
+                created_by_id=current_user.id if current_user and current_user.is_authenticated else 1,
+                is_validated=True
+            )
+            entry.generate_reference()
+            db.session.add(entry)
+            db.session.flush()
+
+            # Lignes d'écriture
+            # Crédit Banque (Sortie d'argent)
+            line_bank = JournalEntryLine(
+                entry_id=entry.id,
+                account_id=bank_account.id,
+                debit_amount=0,
+                credit_amount=total_dec,
+                description=f"Retrait bénéfices (Total)",
+                line_number=1
+            )
+            
+            # Débit Associé Principal (66.66%)
+            line_assoc = JournalEntryLine(
+                entry_id=entry.id,
+                account_id=acc_associate.id,
+                debit_amount=part_associate,
+                credit_amount=0,
+                description=f"Part Associé Principal (66.66%)",
+                line_number=2
+            )
+
+            # Débit Gérante (33.33%)
+            line_manager = JournalEntryLine(
+                entry_id=entry.id,
+                account_id=acc_manager.id,
+                debit_amount=part_manager,
+                credit_amount=0,
+                description=f"Part Gérante (33.33%)",
+                line_number=3
+            )
+
+            db.session.add_all([line_bank, line_assoc, line_manager])
+            db.session.commit()
+            
+            return entry
+
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
 class DashboardService:
     """Service pour calculer les KPIs du dashboard comptabilité"""
     
@@ -911,126 +1035,3 @@ class DashboardService:
         ratios['progression_seuil'] = (monthly_revenue / monthly_expenses * 100) if monthly_expenses > 0 else 0
         
         return ratios
-
-    @staticmethod
-    def create_profit_distribution_entry(total_amount, description=None):
-        """
-        Créer une écriture de partage de bénéfice (33/66)
-        
-        Args:
-            total_amount: Montant total à distribuer
-            description: Description personnalisée
-        """
-        try:
-            from decimal import Decimal
-            from datetime import date
-            from flask_login import current_user
-            from .models import Account, Journal, JournalEntry, JournalEntryLine, AccountType, AccountNature, JournalType
-            
-            # 1. Vérifier/Créer les comptes de Comptes Courants d'Associés (455)
-            # Compte Parent 455 s'il n'existe pas
-            parent_455 = Account.query.filter_by(code='455').first()
-            if not parent_455:
-                parent_455 = Account(
-                    code='455',
-                    name="Associés - Comptes courants",
-                    account_type=AccountType.CLASSE_4,
-                    account_nature=AccountNature.CREDIT,
-                    is_detail=False
-                )
-                db.session.add(parent_455)
-                db.session.flush()
-
-            # 4551: Part Associé (66.66%)
-            acc_associate = Account.query.filter_by(code='4551').first()
-            if not acc_associate:
-                acc_associate = Account(
-                    code='4551',
-                    name="Associé Principal (66.66%)",
-                    account_type=AccountType.CLASSE_4,
-                    account_nature=AccountNature.CREDIT,
-                    parent_id=parent_455.id,
-                    is_detail=True
-                )
-                db.session.add(acc_associate)
-
-            # 4552: Part Gérante (33.33%)
-            acc_manager = Account.query.filter_by(code='4552').first()
-            if not acc_manager:
-                acc_manager = Account(
-                    code='4552',
-                    name="Gérante (33.33%)",
-                    account_type=AccountType.CLASSE_4,
-                    account_nature=AccountNature.CREDIT,
-                    parent_id=parent_455.id,
-                    is_detail=True
-                )
-                db.session.add(acc_manager)
-
-            # 2. Récupérer les comptes Banque et Journal
-            bank_account = Account.query.filter_by(code='512', is_active=True).first()
-            bank_journal = Journal.query.filter_by(code='BQ', is_active=True).first()
-            
-            if not bank_account or not bank_journal:
-                raise ValueError("Compte Banque (512) ou Journal Banque (BQ) non disponible")
-
-            db.session.flush()
-
-            # 3. Calculer les parts
-            # Utilisation de Decimal pour la précision
-            total_dec = Decimal(str(total_amount))
-            part_manager = (total_dec * Decimal('33.33') / Decimal('100')).quantize(Decimal('0.01'))
-            part_associate = total_dec - part_manager # Le reste va à l'associé pour éviter les écarts d'arrondi
-
-            # 4. Créer l'écriture
-            entry = JournalEntry(
-                journal_id=bank_journal.id,
-                entry_date=date.today(),
-                description=description or f"Partage des bénéfices - Split 33/66",
-                reference=f"DIV-{date.today().strftime('%Y%m')}",
-                created_by_id=current_user.id if current_user and current_user.is_authenticated else 1,
-                is_validated=True
-            )
-            entry.generate_reference()
-            db.session.add(entry)
-            db.session.flush()
-
-            # Lignes d'écriture
-            # Crédit Banque (Sortie d'argent)
-            line_bank = JournalEntryLine(
-                entry_id=entry.id,
-                account_id=bank_account.id,
-                debit_amount=0,
-                credit_amount=total_dec,
-                description=f"Retrait bénéfices (Total)",
-                line_number=1
-            )
-            
-            # Débit Associé Principal (66.66%)
-            line_assoc = JournalEntryLine(
-                entry_id=entry.id,
-                account_id=acc_associate.id,
-                debit_amount=part_associate,
-                credit_amount=0,
-                description=f"Part Associé Principal (66.66%)",
-                line_number=2
-            )
-
-            # Débit Gérante (33.33%)
-            line_manager = JournalEntryLine(
-                entry_id=entry.id,
-                account_id=acc_manager.id,
-                debit_amount=part_manager,
-                credit_amount=0,
-                description=f"Part Gérante (33.33%)",
-                line_number=3
-            )
-
-            db.session.add_all([line_bank, line_assoc, line_manager])
-            db.session.commit()
-            
-            return entry
-
-        except Exception as e:
-            db.session.rollback()
-            raise e
