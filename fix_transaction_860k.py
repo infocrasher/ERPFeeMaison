@@ -27,8 +27,10 @@ with app.app_context():
         target_account = Account(
             code=target_code,
             name="Report à Nouveau (Ajustements)",
-            account_type=AccountType.CAPITAUX, # ou PASSIF/ACTIF selon votre modèle, mais CAPITAUX est mieux
-            account_nature=AccountNature.DEBIT, # Solde débiteur normal pour le 119
+            account_type=AccountType.CLASSE_1, # Type correct pour les capitaux (Classe 1)
+            account_nature=AccountNature.CREDIT, # Le report à nouveau créditeur (ou débiteur selon sens, ici on le veut Passif/Capitaux donc c'est une ressource) 
+            # Note: Le 119 est débiteur s'il est négatif, mais structurellement c'est un compte de passif.
+            # Pour simplifier, on le met en CREDIT comme les autres capitaux, le solde ajustera.
             is_active=True
         )
         db.session.add(target_account)
