@@ -634,6 +634,91 @@ class AccountingIntegrationService:
 
 
     @staticmethod
+    def calculate_closing_stats(year, month, actual_stock_value=0.0):
+        """
+        Calcule les statistiques pour la clôture mensuelle.
+        Formule : Bénéfice Distribuable = (CA - Charges) - (Cible Fonds Roulement - Valeur Stock)
+        Cible Fonds Roulement = 330,000 DZD
+        """
+        from datetime import date, timedelta
+        from sqlalchemy import func
+        from .models import Account, JournalEntryLine, JournalEntry
+        
+        # 1. Définir la période
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+            
+        # 2. Récupérer CA et Charges du mois
+        # CA (Classe 7)
+        revenue = db.session.query(func.sum(JournalEntryLine.credit_amount - JournalEntryLine.debit_amount))\
+            .join(JournalEntry)\
+            .join(Account)\
+            .filter(
+                JournalEntry.entry_date >= start_date,
+                JournalEntry.entry_date <= end_date,
+                Account.code.startswith('7'),
+                JournalEntry.is_validated == True
+            ).scalar() or 0.0
+            
+        # Charges (Classe 6)
+        expenses = db.session.query(func.sum(JournalEntryLine.debit_amount - JournalEntryLine.credit_amount))\
+            .join(JournalEntry)\
+            .join(Account)\
+            .filter(
+                JournalEntry.entry_date >= start_date,
+                JournalEntry.entry_date <= end_date,
+                Account.code.startswith('6'),
+                JournalEntry.is_validated == True
+            ).scalar() or 0.0
+            
+        accounting_result = float(revenue) - float(expenses)
+        
+        # 3. Calcul du Besoin en Fonds de Roulement
+        TARGET_WORKING_CAPITAL = 330000.0
+        stock_value = float(actual_stock_value)
+        
+        # Combien de cash il nous faut pour atteindre 330k (Sachant qu'on a déjà le stock)
+        # BFR = Target - Stock
+        required_cash_retention = max(0, TARGET_WORKING_CAPITAL - stock_value)
+        
+        # 4. Bénéfice Distribuable
+        # On ne peut distribuer que ce qui dépasse du besoin de BFR
+        distributable_profit = accounting_result - required_cash_retention
+        
+        # Si le résultat comptable ne suffit même pas à combler le trou de trésorerie, on ne distribue rien
+        if distributable_profit < 0:
+            distributable_profit = 0.0
+            
+        # 5. Répartition
+        sofiane_share = distributable_profit * (2/3)
+        amel_share = distributable_profit * (1/3)
+        
+        return {
+            'period': {
+                'start': start_date,
+                'end': end_date
+            },
+            'accounting': {
+                'revenue': float(revenue),
+                'expenses': float(expenses),
+                'result': accounting_result
+            },
+            'treasury': {
+                'target': TARGET_WORKING_CAPITAL,
+                'stock_value': stock_value,
+                'required_retention': required_cash_retention, # Ce qu'on doit garder en banque
+            },
+            'distribution': {
+                'distributable_amount': distributable_profit,
+                'sofiane': sofiane_share,
+                'amel': amel_share
+            }
+        }
+
+    @staticmethod
     def create_profit_distribution_entry(total_amount, description=None):
         """
         Créer une écriture de partage de bénéfice (33/66)
@@ -783,12 +868,24 @@ class DashboardService:
         return float(daily_sales)
     
     @staticmethod
-    def get_monthly_revenue(year=None, month=None):
-        """Calculer le CA du mois"""
+    def _get_month_date_range(year=None, month=None):
+        """Helper pour obtenir le premier et dernier jour du mois"""
         if year is None:
             year = date.today().year
         if month is None:
             month = date.today().month
+            
+        first_day = date(year, month, 1)
+        if month == 12:
+            last_day = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            last_day = date(year, month + 1, 1) - timedelta(days=1)
+        return first_day, last_day
+
+    @staticmethod
+    def get_monthly_revenue(year=None, month=None):
+        """Calculer le CA du mois"""
+        first_day, last_day = DashboardService._get_month_date_range(year, month)
         
         from .models import Account, JournalEntryLine, JournalEntry
         
@@ -796,13 +893,6 @@ class DashboardService:
         sales_account = Account.query.filter_by(code='701').first()
         if not sales_account:
             return 0
-        
-        # Premier et dernier jour du mois
-        first_day = date(year, month, 1)
-        if month == 12:
-            last_day = date(year + 1, 1, 1) - timedelta(days=1)
-        else:
-            last_day = date(year, month + 1, 1) - timedelta(days=1)
         
         # Calculer les ventes du mois
         monthly_sales = db.session.query(func.sum(JournalEntryLine.credit_amount))\
@@ -817,34 +907,28 @@ class DashboardService:
     @staticmethod
     def get_monthly_expenses(year=None, month=None):
         """Calculer les charges du mois"""
-        if year is None:
-            year = date.today().year
-        if month is None:
-            month = date.today().month
+        first_day, last_day = DashboardService._get_month_date_range(year, month)
         
         from .models import Account, JournalEntryLine, JournalEntry
-        
-        # Premier et dernier jour du mois
-        first_day = date(year, month, 1)
-        if month == 12:
-            last_day = date(year + 1, 1, 1) - timedelta(days=1)
-        else:
-            last_day = date(year, month + 1, 1) - timedelta(days=1)
         
         # Récupérer tous les comptes de charges (classe 6)
         expense_accounts = Account.query.filter(Account.code.startswith('6')).all()
         
         total_expenses = 0
-        for account in expense_accounts:
-            monthly_expense = db.session.query(func.sum(JournalEntryLine.debit_amount))\
-                .join(JournalEntry)\
-                .filter(JournalEntryLine.account_id == account.id)\
-                .filter(JournalEntry.entry_date >= first_day)\
-                .filter(JournalEntry.entry_date <= last_day)\
-                .scalar() or 0
-            total_expenses += float(monthly_expense)
+        expense_account_ids = [acc.id for acc in expense_accounts]
         
-        return total_expenses
+        if not expense_account_ids:
+            return 0
+            
+        # Optimisation : Une seule requête pour toutes les dépenses
+        total_expenses = db.session.query(func.sum(JournalEntryLine.debit_amount - JournalEntryLine.credit_amount))\
+            .join(JournalEntry)\
+            .filter(JournalEntryLine.account_id.in_(expense_account_ids))\
+            .filter(JournalEntry.entry_date >= first_day)\
+            .filter(JournalEntry.entry_date <= last_day)\
+            .scalar() or 0
+        
+        return float(total_expenses)
     
     @staticmethod
     def get_cash_balance():

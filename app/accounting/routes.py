@@ -24,15 +24,42 @@ def dashboard():
     from .services import DashboardService
     from datetime import date
     
-    # Calculer les KPIs principaux
+    # Gestion de la période (Mois/Année)
     today = date.today()
-    yesterday = today - timedelta(days=1)
     
-    # KPIs principaux
-    ca_jour = DashboardService.get_daily_revenue(today)
+    try:
+        selected_year = int(request.args.get('year', today.year))
+        selected_month = int(request.args.get('month', today.month))
+    except ValueError:
+        selected_year = today.year
+        selected_month = today.month
+        
+    # Validation basique
+    if selected_year < 2020 or selected_year > today.year + 1:
+        selected_year = today.year
+    if selected_month < 1 or selected_month > 12:
+        selected_month = today.month
+        
+    # Date cible (dernier jour du mois sélectionné pour CA jour, ou aujourd'hui si mois courant)
+    if selected_year == today.year and selected_month == today.month:
+        target_date = today
+    else:
+        # Si mois passé, on prend le dernier jour du mois pour les stats "Au jour"
+        import calendar
+        last_day = calendar.monthrange(selected_year, selected_month)[1]
+        target_date = date(selected_year, selected_month, last_day)
+
+    # Calculer les KPIs principaux
+    yesterday = target_date - timedelta(days=1)
+    
+    # KPIs principaux (filtrés par mois/année)
+    ca_jour = DashboardService.get_daily_revenue(target_date)
     ca_hier = DashboardService.get_daily_revenue(yesterday)
-    ca_mensuel = DashboardService.get_monthly_revenue()
-    charges_mensuelles = DashboardService.get_monthly_expenses()
+    
+    # Modifications ici : passage des arguments year/month
+    ca_mensuel = DashboardService.get_monthly_revenue(selected_year, selected_month)
+    charges_mensuelles = DashboardService.get_monthly_expenses(selected_year, selected_month)
+    
     benefice_net = ca_mensuel - charges_mensuelles
     solde_caisse = DashboardService.get_cash_balance()
     solde_banque = DashboardService.get_bank_balance()
@@ -44,19 +71,22 @@ def dashboard():
     else:
         ca_jour_tendance = 0 if ca_jour == 0 else 100
     
-    # Données pour les graphiques
-    revenue_trend = DashboardService.get_daily_revenue_trend(30)
-    expense_breakdown = DashboardService.get_expense_breakdown()
-    recent_transactions = DashboardService.get_recent_transactions(10)
+    # Génération du sélecteur de mois (12 derniers mois + prochain)
+    month_options = []
+    curr = today.replace(day=1) + timedelta(days=32) # Mois prochain
+    curr = curr.replace(day=1)
     
-    # Calcul des ratios
-    ratios = DashboardService.calculate_ratios(ca_mensuel, charges_mensuelles)
-    
-    # Statistiques générales (pour compatibilité)
-    total_accounts = Account.query.filter_by(is_active=True).count()
-    total_journals = Journal.query.filter_by(is_active=True).count()
-    total_entries = JournalEntry.query.count()
-    validated_entries = JournalEntry.query.filter_by(is_validated=True).count()
+    for _ in range(14): # 1 mois futur + courant + 12 passés
+        month_options.append({
+            'value': f"{curr.year}-{curr.month}",
+            'label': curr.strftime('%B %Y'), # Formatage simple
+            'year': curr.year,
+            'month': curr.month,
+            'selected': (curr.year == selected_year and curr.month == selected_month)
+        })
+        # Reculer d'un mois
+        curr = (curr.replace(day=1) - timedelta(days=1)).replace(day=1)
+
     
     # Exercice courant
     current_fiscal_year = FiscalYear.query.filter_by(is_current=True).first()
@@ -66,6 +96,21 @@ def dashboard():
     config = BusinessConfig.get_current()
     objectif_mensuel = float(config.monthly_objective)
     progression_objectif = (ca_mensuel / objectif_mensuel * 100) if objectif_mensuel > 0 else 0
+    
+    # Données pour les graphiques
+    # Note: Pour l'instant on garde 30 jours pour la tendance peu importe le filtre mois
+    revenue_trend = DashboardService.get_daily_revenue_trend(30)
+    expense_breakdown = DashboardService.get_expense_breakdown()
+    recent_transactions = DashboardService.get_recent_transactions(10)
+    
+    # Calcul des ratios
+    ratios = DashboardService.calculate_ratios(ca_mensuel, charges_mensuelles)
+
+    # Statistiques générales (pour compatibilité)
+    total_accounts = Account.query.filter_by(is_active=True).count()
+    total_journals = Journal.query.filter_by(is_active=True).count()
+    total_entries = JournalEntry.query.count()
+    validated_entries = JournalEntry.query.filter_by(is_validated=True).count()
     
     # Données pour le template
     dashboard_data = {
@@ -1386,30 +1431,85 @@ def trial_balance():
 @login_required
 @admin_required
 def profit_loss():
-    """Compte de résultat (Profit & Loss)"""
+    """Compte de résultat (Profit & Loss) avec filtre mensuel"""
+    from datetime import date
+    from sqlalchemy import func
+    from .models import Account, JournalEntryLine, JournalEntry
     
-    # Récupérer tous les comptes de produits (classe 7) et charges (classe 6)
+    # 1. Gestion de la période
+    today = date.today()
+    try:
+        selected_year = int(request.args.get('year', today.year))
+        selected_month = int(request.args.get('month', today.month))
+    except ValueError:
+        selected_year = today.year
+        selected_month = today.month
+        
+    start_date = date(selected_year, selected_month, 1)
+    if selected_month == 12:
+        end_date = date(selected_year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(selected_year, selected_month + 1, 1) - timedelta(days=1)
+    
+    # 2. Générer les options du sélecteur (12 mois glissants)
+    month_options = []
+    curr = today.replace(day=1) + timedelta(days=32) # Mois prochain
+    curr = curr.replace(day=1)
+    for _ in range(14):
+        month_options.append({
+            'value': f"{curr.year}-{curr.month}",
+            'label': curr.strftime('%B %Y'),
+            'year': curr.year,
+            'month': curr.month,
+            'selected': (curr.year == selected_year and curr.month == selected_month)
+        })
+        curr = (curr.replace(day=1) - timedelta(days=1)).replace(day=1)
+    
+    # 3. Récupérer les comptes et calculer les soldes POUR LA PÉRIODE
     accounts = Account.query.filter_by(is_detail=True, is_active=True).order_by(Account.code).all()
     
     produits_data = []
     charges_data = []
-    total_produits = 0
-    total_charges = 0
+    total_produits = 0.0
+    total_charges = 0.0
+    
+    # Pré-fetch des mouvements pour la période pour éviter N+1 requêtes
+    # On récupère (account_id, sum(debit), sum(credit)) grouper par account_id
+    moves = db.session.query(
+        JournalEntryLine.account_id,
+        func.sum(JournalEntryLine.debit_amount),
+        func.sum(JournalEntryLine.credit_amount)
+    ).join(JournalEntry).filter(
+        JournalEntry.entry_date >= start_date,
+        JournalEntry.entry_date <= end_date,
+        JournalEntry.is_validated == True
+    ).group_by(JournalEntryLine.account_id).all()
+    
+    # Créer un dictionnaire pour accès rapide
+    moves_map = {m[0]: {'debit': float(m[1] or 0), 'credit': float(m[2] or 0)} for m in moves}
     
     for account in accounts:
-        balance = account.balance
-        if balance is not None and balance != 0:
-            if account.code.startswith('7'):  # Comptes de produits
-                produits_data.append({
-                    'account': account,
-                    'balance': abs(balance)
-                })
+        # On ne s'intéresse qu'aux classes 6 et 7
+        if not (account.code.startswith('6') or account.code.startswith('7')):
+            continue
+            
+        account_moves = moves_map.get(account.id, {'debit': 0.0, 'credit': 0.0})
+        
+        # Calcul du solde selon la nature (Nature = Credit pour produits, Debit pour charges)
+        # Mais attention, Account.balance le fait automatiquement, ici on le fait manuellement
+        if account.account_nature.value == 'debit': # Charges
+            balance = account_moves['debit'] - account_moves['credit']
+        else: # Produits
+            balance = account_moves['credit'] - account_moves['debit']
+            
+        if abs(balance) > 0.001: # On affiche seulement si solde non nul
+            data = {'account': account, 'balance': abs(balance)}
+            
+            if account.code.startswith('7'):
+                produits_data.append(data)
                 total_produits += abs(balance)
-            elif account.code.startswith('6'):  # Comptes de charges
-                charges_data.append({
-                    'account': account,
-                    'balance': abs(balance)
-                })
+            elif account.code.startswith('6'):
+                charges_data.append(data)
                 total_charges += abs(balance)
     
     # Calcul du résultat net
@@ -1422,7 +1522,8 @@ def profit_loss():
                          total_produits=total_produits,
                          total_charges=total_charges,
                          resultat_net=abs(resultat_net),
-                         resultat_type=resultat_type)
+                         resultat_type=resultat_type,
+                         month_options=month_options)
 
 
 @bp.route('/profit-loss/distribute', methods=['POST'])
@@ -1449,6 +1550,71 @@ def distribute_profit():
         flash(f"Erreur lors de la distribution: {str(e)}", "error")
         
     return redirect(url_for('accounting.profit_loss'))
+
+
+# ==================== CLÔTURE MENSUELLE ====================
+
+@bp.route('/closing', methods=['GET'])
+@login_required
+@admin_required
+def closing_wizard():
+    """Assistant de clôture mensuelle"""
+    from .services import AccountingIntegrationService, DashboardService
+    
+    # Par défaut : Mois précédent (car on clôture le mois fini)
+    today = date.today()
+    if today.day <= 10: # Si on est début de mois, on propose de clôturer le mois d'avant
+        target_date = today.replace(day=1) - timedelta(days=1)
+    else:
+        target_date = today
+        
+    year = int(request.args.get('year', target_date.year))
+    month = int(request.args.get('month', target_date.month))
+    
+    # 1. Récupérer la valeur du stock actuel (Estimation)
+    # Pour l'instant on prend la valeur actuelle, idéalement il faudrait l'historique mais c'est complexe
+    # On suppose que la clôture se fait "maintenant"
+    current_stock_stats = DashboardService.get_stock_value()
+    current_stock_value = current_stock_stats.get('total_value', 0)
+    
+    # 2. Calculer les stats
+    stats = AccountingIntegrationService.calculate_closing_stats(year, month, current_stock_value)
+    
+    return render_template('accounting/closing.html',
+                         stats=stats,
+                         current_stock_value=current_stock_value)
+
+@bp.route('/closing/execute', methods=['POST'])
+@login_required
+@admin_required
+def execute_closing():
+    """Exécution de la clôture mensuelle"""
+    from .services import AccountingIntegrationService
+    
+    year = int(request.form.get('year'))
+    month = int(request.form.get('month'))
+    actual_stock = float(request.form.get('actual_stock', 0))
+    
+    # Recalculer avec le stock validé par l'utilisateur
+    stats = AccountingIntegrationService.calculate_closing_stats(year, month, actual_stock)
+    distributable = stats['distribution']['distributable_amount']
+    
+    if distributable > 0:
+        try:
+            # Créer l'écriture de distribution (Sortie de Banque)
+            # Utilisation directe de la méthode existante
+            AccountingIntegrationService.create_profit_distribution_entry(
+                distributable, 
+                description=f"Clôture {month}/{year} - Distribution Bénéfices"
+            )
+            flash(f"Clôture effectuée avec succès ! {distributable:,.2f} DZD distribués.", "success")
+        except Exception as e:
+            flash(f"Erreur lors de la clôture : {str(e)}", "error")
+            return redirect(url_for('accounting.closing_wizard', year=year, month=month))
+    else:
+        flash("Aucun bénéfice distribuable (Besoin en fonds de roulement non couvert).", "warning")
+        
+    return redirect(url_for('accounting.dashboard'))
 
 
 # ==================== API ====================

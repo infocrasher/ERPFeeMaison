@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block title %}Clôture Mensuelle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .step-card {
+        border-left: 4px solid #dee2e6;
+        transition: all 0.3s ease;
+    }
+
+    .step-card.active {
+        border-left-color: #0d6efd;
+        background-color: #f8f9fa;
+    }
+
+    .step-card.done {
+        border-left-color: #198754;
+    }
+
+    .kpi-box {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .kpi-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .kpi-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .math-operation {
+        font-size: 1.5rem;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-calendar-check text-primary me-2"></i>
+                Clôture Mensuelle
+            </h1>
+            <p class="text-muted">
+                Période : <strong>{{ stats.period.start.strftime('%d/%m/%Y') }} - {{
+                    stats.period.end.strftime('%d/%m/%Y') }}</strong>
+            </p>
+        </div>
+    </div>
+
+    <!-- Formulaire principal -->
+    <form method="POST" action="{{ url_for('accounting.execute_closing') }}" id="closingForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="year" value="{{ stats.period.start.year }}">
+        <input type="hidden" name="month" value="{{ stats.period.start.month }}">
+
+        <div class="row">
+            <!-- Étape 1 : Stock -->
+            <div class="col-md-4">
+                <div class="card step-card active h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">1. Valeur du Stock</h5>
+                        <p class="small text-muted">Ajustez la valeur si l'inventaire physique diffère.</p>
+
+                        <div class="mb-3">
+                            <label class="form-label">Valeur estimée (Logiciel)</label>
+                            <div class="h4 text-muted">{{ "{:,.0f}".format(current_stock_value) }} DZD</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="actual_stock" class="form-label fw-bold">Valeur Réelle (Inventaire)</label>
+                            <input type="number" step="0.01" class="form-control form-control-lg" id="actual_stock"
+                                name="actual_stock" value="{{ current_stock_value }}" required>
+                        </div>
+
+                        <div class="alert alert-info small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Cette valeur sera utilisée pour calculer le besoin en fonds de roulement.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Étape 2 : Calculs -->
+            <div class="col-md-8">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">2. Simulation de Clôture</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Résultat Comptable -->
+                        <h6 class="text-uppercase text-muted small fw-bold mb-3">Résultat Comptable</h6>
+                        <div class="row mb-4 g-2">
+                            <div class="col-md-3">
+                                <div class="kpi-box border-start border-primary border-4">
+                                    <div class="kpi-value text-primary">{{ "{:,.0f}".format(stats.accounting.revenue) }}
+                                    </div>
+                                    <div class="kpi-label">Chiffre d'Affaires</div>
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="math-operation">-</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="kpi-box border-start border-danger border-4">
+                                    <div class="kpi-value text-danger">{{ "{:,.0f}".format(stats.accounting.expenses) }}
+                                    </div>
+                                    <div class="kpi-label">Charges</div>
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="math-operation">=</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="kpi-box bg-light">
+                                    <div class="kpi-value" id="accountingResult">
+                                        {{ "{:,.0f}".format(stats.accounting.result) }}
+                                    </div>
+                                    <div class="kpi-label">Résultat Net</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Calcul Trésorerie -->
+                        <h6 class="text-uppercase text-muted small fw-bold mb-3">Besoin en Fonds de Roulement (Cible :
+                            330 000 DZD)</h6>
+                        <div class="alert alert-warning d-flex align-items-center">
+                            <i class="bi bi-bank me-3 fs-4"></i>
+                            <div>
+                                <strong>Rétention de Trésorerie requise :</strong>
+                                <span class="h5 mx-2" id="retentionAmount">0 DZD</span>
+                                <div class="small">
+                                    Calcul : 330 000 (Cible) - <span id="displayStockValue">0</span> (Stock)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Résultat Final -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body text-center py-4">
+                                        <h3 class="display-6 fw-bold mb-0" id="distributableAmount">0 DZD</h3>
+                                        <div>Bénéfice Distribuable</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Répartition -->
+                        <div class="row mt-3 text-center" id="participantsShare">
+                            <div class="col-6">
+                                <div class="p-3 border rounded bg-light">
+                                    <div class="h5 mb-0 text-dark" id="shareSofiane">0 DZD</div>
+                                    <small class="text-muted">Sofiane (2/3)</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 border rounded bg-light">
+                                    <div class="h5 mb-0 text-dark" id="shareAmel">0 DZD</div>
+                                    <small class="text-muted">Amel (1/3)</small>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="row mt-4">
+            <div class="col-12 text-end">
+                <a href="{{ url_for('accounting.dashboard') }}" class="btn btn-secondary me-2">Annuler</a>
+                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                    <i class="bi bi-check-circle me-2"></i>Valider et Clôturer
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const TARGET_WORKING_CAPITAL = 330000;
+    const ACCOUNTING_RESULT = {{ stats.accounting.result }};
+
+    const stockInput = document.getElementById('actual_stock');
+    const retentionDisplay = document.getElementById('retentionAmount');
+    const stockDisplay = document.getElementById('displayStockValue');
+    const distributableDisplay = document.getElementById('distributableAmount');
+
+    // Elements de partage
+    const shareSofiane = document.getElementById('shareSofiane');
+    const shareAmel = document.getElementById('shareAmel');
+
+    function updateCalculations() {
+        const stockValue = parseFloat(stockInput.value) || 0;
+
+        // 1. Calcul du besoin en retention
+        // Si Stock = 200k, Besoin = 330k - 200k = 110k
+        let retention = Math.max(0, TARGET_WORKING_CAPITAL - stockValue);
+
+        // 2. Calcul du distribuable
+        // Si Résultat = 800k, Distribuable = 800k - 110k = 690k
+        let distributable = Math.max(0, ACCOUNTING_RESULT - retention);
+
+        // Mise à jour Affichage
+        stockDisplay.textContent = new Intl.NumberFormat('fr-FR').format(stockValue);
+        retentionDisplay.textContent = new Intl.NumberFormat('fr-FR').format(retention) + " DZD";
+        distributableDisplay.textContent = new Intl.NumberFormat('fr-FR').format(distributable) + " DZD";
+
+        // Parts
+        shareSofiane.textContent = new Intl.NumberFormat('fr-FR').format(distributable * (2 / 3)) + " DZD";
+        shareAmel.textContent = new Intl.NumberFormat('fr-FR').format(distributable * (1 / 3)) + " DZD";
+
+        // Désactiver le bouton si rien à distribuer
+        const btn = document.getElementById('submitBtn');
+        if (distributable <= 0) {
+            btn.classList.add('btn-warning');
+            btn.classList.remove('btn-success');
+            btn.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Rien à distribuer (Renflouement requis)';
+        } else {
+            btn.classList.add('btn-success');
+            btn.classList.remove('btn-warning');
+            btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Valider et Clôturer';
+        }
+    }
+
+    stockInput.addEventListener('input', updateCalculations);
+
+    // Init
+    updateCalculations();
+</script>
+{% endblock %}

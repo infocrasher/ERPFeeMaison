@@ -7,43 +7,43 @@
     .kpi-card {
         border: none;
         border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         transition: transform 0.2s ease;
     }
-    
+
     .kpi-card:hover {
         transform: translateY(-2px);
     }
-    
+
     .kpi-value {
         font-size: 2.2rem;
         font-weight: 700;
         margin: 0;
     }
-    
+
     .kpi-label {
         font-size: 0.9rem;
         color: #6c757d;
         margin-bottom: 0.5rem;
     }
-    
+
     .trend-positive {
         color: #28a745;
     }
-    
+
     .trend-negative {
         color: #dc3545;
     }
-    
+
     .trend-neutral {
         color: #6c757d;
     }
-    
+
     .chart-container {
         height: 300px;
         position: relative;
     }
-    
+
     .ratio-gauge {
         text-align: center;
         padding: 1rem;
@@ -51,37 +51,37 @@
         background: #f8f9fa;
         margin-bottom: 1rem;
     }
-    
+
     .ratio-value {
         font-size: 2rem;
         font-weight: 600;
         margin: 0.5rem 0;
     }
-    
+
     .ratio-label {
         font-size: 0.85rem;
         color: #6c757d;
     }
-    
+
     .transaction-item {
         padding: 0.75rem;
         border-bottom: 1px solid #dee2e6;
     }
-    
+
     .transaction-item:last-child {
         border-bottom: none;
     }
-    
+
     .progress-thin {
         height: 8px;
     }
-    
+
     .alert-custom {
         border-radius: 8px;
         border: none;
         margin-bottom: 1rem;
     }
-    
+
     .btn-action {
         border-radius: 8px;
         padding: 0.75rem 1.5rem;
@@ -101,14 +101,36 @@
             </h1>
             <p class="text-muted">Vue d'ensemble de la santé financière</p>
         </div>
-        <div class="col-md-4 text-end">
+        <div class="col-md-5 text-end">
             <div class="d-flex justify-content-end align-items-center gap-2">
-                <div class="btn-group me-2">
-                    <button class="btn btn-outline-secondary btn-sm active" data-filter="current">Ce mois-ci</button>
-                    <button class="btn btn-outline-secondary btn-sm" data-filter="last">Mois dernier</button>
-                    <button class="btn btn-outline-secondary btn-sm" data-filter="custom">Personnalisé</button>
+                <!-- Sélecteur de Mois -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="monthDropdown"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-calendar-event me-1"></i>
+                        {% for opt in month_options %}
+                        {% if opt.selected %}{{ opt.label }}{% endif %}
+                        {% endfor %}
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="monthDropdown">
+                        {% for opt in month_options %}
+                        <li>
+                            <a class="dropdown-item {% if opt.selected %}active{% endif %}"
+                                href="{{ url_for('accounting.dashboard', year=opt.year, month=opt.month) }}">
+                                {{ opt.label }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
                 </div>
-                <a href="{{ url_for('accounting.new_expense') }}" class="btn btn-primary btn-sm">
+
+                <!-- Bouton Clôture -->
+                <a href="{{ url_for('accounting.closing_wizard', year=request.args.get('year'), month=request.args.get('month')) }}"
+                    class="btn btn-warning">
+                    <i class="bi bi-piggy-bank me-1"></i>Clôture
+                </a>
+
+                <a href="{{ url_for('accounting.new_expense') }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle me-1"></i>Nouvelle Charge
                 </a>
             </div>
@@ -129,19 +151,18 @@
                     </div>
                     <div class="small">
                         {% if kpis.ca_jour_tendance > 0 %}
-                            <span class="trend-positive">
-                                <i class="bi bi-arrow-up"></i> +{{ "{:.1f}".format(kpis.ca_jour_tendance) }}%
+                        <span class="trend-positive">
+                            <i class="bi bi-arrow-up"></i> +{{ "{:.1f}".format(kpis.ca_jour_tendance) }}%
+                        </span>
+                        {% elif kpis.ca_jour_tendance < 0 %} <span class="trend-negative">
+                            <i class="bi bi-arrow-down"></i> {{ "{:.1f}".format(kpis.ca_jour_tendance) }}%
                             </span>
-                        {% elif kpis.ca_jour_tendance < 0 %}
-                            <span class="trend-negative">
-                                <i class="bi bi-arrow-down"></i> {{ "{:.1f}".format(kpis.ca_jour_tendance) }}%
-                            </span>
-                        {% else %}
+                            {% else %}
                             <span class="trend-neutral">
                                 <i class="bi bi-dash"></i> Stable
                             </span>
-                        {% endif %}
-                        vs hier
+                            {% endif %}
+                            vs hier
                     </div>
                 </div>
             </div>
@@ -158,10 +179,8 @@
                         {{ "{:,.0f}".format(kpis.ca_mensuel) }} DZD
                     </div>
                     <div class="progress progress-thin mt-2">
-                        <div class="progress-bar" role="progressbar" 
-                             style="width: {{ kpis.progression_objectif }}%"
-                             aria-valuenow="{{ kpis.progression_objectif }}" 
-                             aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" role="progressbar" style="width: {{ kpis.progression_objectif }}%"
+                            aria-valuenow="{{ kpis.progression_objectif }}" aria-valuemin="0" aria-valuemax="100">
                         </div>
                     </div>
                     <div class="small text-muted mt-1">
@@ -178,17 +197,17 @@
                     <div class="kpi-label">
                         <i class="bi bi-trophy text-warning"></i> Bénéfice Net
                     </div>
-                    <div class="kpi-value {% if kpis.benefice_net > 0 %}text-success{% elif kpis.benefice_net < 0 %}text-danger{% else %}text-muted{% endif %}">
+                    <div
+                        class="kpi-value {% if kpis.benefice_net > 0 %}text-success{% elif kpis.benefice_net < 0 %}text-danger{% else %}text-muted{% endif %}">
                         {{ "{:,.0f}".format(kpis.benefice_net) }} DZD
                     </div>
                     <div class="small">
                         {% if kpis.benefice_net > 0 %}
-                            <span class="badge bg-success">Bénéfice</span>
-                        {% elif kpis.benefice_net < 0 %}
-                            <span class="badge bg-danger">Perte</span>
-                        {% else %}
+                        <span class="badge bg-success">Bénéfice</span>
+                        {% elif kpis.benefice_net < 0 %} <span class="badge bg-danger">Perte</span>
+                            {% else %}
                             <span class="badge bg-secondary">Équilibre</span>
-                        {% endif %}
+                            {% endif %}
                     </div>
                 </div>
             </div>
@@ -206,9 +225,9 @@
                     </div>
                     <div class="small text-muted">
                         {% if kpis.ca_mensuel > 0 %}
-                            {{ "{:.1f}".format((kpis.charges_mensuelles / kpis.ca_mensuel) * 100) }}% du CA
+                        {{ "{:.1f}".format((kpis.charges_mensuelles / kpis.ca_mensuel) * 100) }}% du CA
                         {% else %}
-                            0% du CA
+                        0% du CA
                         {% endif %}
                     </div>
                 </div>
@@ -282,7 +301,8 @@
                     <!-- Marge Brute -->
                     <div class="ratio-gauge">
                         <div class="ratio-label">Marge Brute</div>
-                        <div class="ratio-value {% if ratios.marge_brute > 30 %}text-success{% elif ratios.marge_brute > 15 %}text-warning{% else %}text-danger{% endif %}">
+                        <div
+                            class="ratio-value {% if ratios.marge_brute > 30 %}text-success{% elif ratios.marge_brute > 15 %}text-warning{% else %}text-danger{% endif %}">
                             {{ "{:.1f}".format(ratios.marge_brute) }}%
                         </div>
                     </div>
@@ -290,7 +310,8 @@
                     <!-- Ratio Charges -->
                     <div class="ratio-gauge">
                         <div class="ratio-label">Poids des Charges</div>
-                        <div class="ratio-value {% if ratios.ratio_charges < 70 %}text-success{% elif ratios.ratio_charges < 85 %}text-warning{% else %}text-danger{% endif %}">
+                        <div
+                            class="ratio-value {% if ratios.ratio_charges < 70 %}text-success{% elif ratios.ratio_charges < 85 %}text-warning{% else %}text-danger{% endif %}">
                             {{ "{:.1f}".format(ratios.ratio_charges) }}%
                         </div>
                     </div>
@@ -298,7 +319,8 @@
                     <!-- Seuil de Rentabilité -->
                     <div class="ratio-gauge">
                         <div class="ratio-label">Seuil de Rentabilité</div>
-                        <div class="ratio-value {% if ratios.progression_seuil >= 100 %}text-success{% elif ratios.progression_seuil >= 80 %}text-warning{% else %}text-danger{% endif %}">
+                        <div
+                            class="ratio-value {% if ratios.progression_seuil >= 100 %}text-success{% elif ratios.progression_seuil >= 80 %}text-warning{% else %}text-danger{% endif %}">
                             {{ "{:.1f}".format(ratios.progression_seuil) }}%
                         </div>
                         <div class="small text-muted">
@@ -346,19 +368,22 @@
                             </a>
                         </div>
                         <div class="col-12 mb-3">
-                            <a href="{{ url_for('accounting.set_initial_balances') }}" class="btn btn-primary btn-action w-100">
+                            <a href="{{ url_for('accounting.set_initial_balances') }}"
+                                class="btn btn-primary btn-action w-100">
                                 <i class="bi bi-gear me-2"></i>
                                 Soldes Initiaux
                             </a>
                         </div>
                         <div class="col-12 mb-3">
-                            <button type="button" class="btn btn-success btn-action w-100" data-bs-toggle="modal" data-bs-target="#adjustCashModal">
+                            <button type="button" class="btn btn-success btn-action w-100" data-bs-toggle="modal"
+                                data-bs-target="#adjustCashModal">
                                 <i class="bi bi-plus-circle me-2"></i>
                                 Ajuster Caisse
                             </button>
                         </div>
                         <div class="col-12">
-                            <button type="button" class="btn btn-info btn-action w-100" data-bs-toggle="modal" data-bs-target="#adjustBankModal">
+                            <button type="button" class="btn btn-info btn-action w-100" data-bs-toggle="modal"
+                                data-bs-target="#adjustBankModal">
                                 <i class="bi bi-bank me-2"></i>
                                 Ajuster Banque
                             </button>
@@ -376,15 +401,15 @@
                 <div class="card-header">
                     <ul class="nav nav-tabs card-header-tabs" id="detailTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="transactions-tab" data-bs-toggle="tab" 
-                                    data-bs-target="#transactions" type="button" role="tab">
+                            <button class="nav-link active" id="transactions-tab" data-bs-toggle="tab"
+                                data-bs-target="#transactions" type="button" role="tab">
                                 <i class="bi bi-list-ul me-2"></i>
                                 Dernières Opérations
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="stats-tab" data-bs-toggle="tab" 
-                                    data-bs-target="#stats" type="button" role="tab">
+                            <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats"
+                                type="button" role="tab">
                                 <i class="bi bi-bar-chart me-2"></i>
                                 Statistiques
                             </button>
@@ -396,45 +421,45 @@
                         <!-- Onglet Transactions -->
                         <div class="tab-pane fade show active" id="transactions" role="tabpanel">
                             {% if recent_transactions %}
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Date</th>
-                                                <th>Référence</th>
-                                                <th>Description</th>
-                                                <th>Type</th>
-                                                <th class="text-end">Montant</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for transaction in recent_transactions %}
-                                            <tr>
-                                                <td>{{ transaction.date.strftime('%d/%m/%Y') }}</td>
-                                                <td>
-                                                    <code>{{ transaction.reference }}</code>
-                                                </td>
-                                                <td>{{ transaction.description }}</td>
-                                                <td>
-                                                    {% if transaction.type == 'Crédit' %}
-                                                        <span class="badge bg-success">{{ transaction.type }}</span>
-                                                    {% else %}
-                                                        <span class="badge bg-primary">{{ transaction.type }}</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td class="text-end">
-                                                    <strong>{{ "{:,.0f}".format(transaction.amount) }} DZD</strong>
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Référence</th>
+                                            <th>Description</th>
+                                            <th>Type</th>
+                                            <th class="text-end">Montant</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for transaction in recent_transactions %}
+                                        <tr>
+                                            <td>{{ transaction.date.strftime('%d/%m/%Y') }}</td>
+                                            <td>
+                                                <code>{{ transaction.reference }}</code>
+                                            </td>
+                                            <td>{{ transaction.description }}</td>
+                                            <td>
+                                                {% if transaction.type == 'Crédit' %}
+                                                <span class="badge bg-success">{{ transaction.type }}</span>
+                                                {% else %}
+                                                <span class="badge bg-primary">{{ transaction.type }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <strong>{{ "{:,.0f}".format(transaction.amount) }} DZD</strong>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                             {% else %}
-                                <div class="text-center py-4">
-                                    <i class="bi bi-inbox display-1 text-muted"></i>
-                                    <p class="text-muted">Aucune transaction récente</p>
-                                </div>
+                            <div class="text-center py-4">
+                                <i class="bi bi-inbox display-1 text-muted"></i>
+                                <p class="text-muted">Aucune transaction récente</p>
+                            </div>
                             {% endif %}
                         </div>
 
@@ -466,7 +491,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {% if stats.current_fiscal_year %}
                             <hr>
                             <div class="row">
@@ -474,8 +499,8 @@
                                     <div class="alert alert-info">
                                         <i class="bi bi-calendar-event me-2"></i>
                                         <strong>Exercice Courant:</strong> {{ stats.current_fiscal_year.name }}
-                                        ({{ stats.current_fiscal_year.start_date.strftime('%d/%m/%Y') }} - 
-                                         {{ stats.current_fiscal_year.end_date.strftime('%d/%m/%Y') }})
+                                        ({{ stats.current_fiscal_year.start_date.strftime('%d/%m/%Y') }} -
+                                        {{ stats.current_fiscal_year.end_date.strftime('%d/%m/%Y') }})
                                     </div>
                                 </div>
                             </div>
@@ -527,7 +552,7 @@
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return new Intl.NumberFormat('fr-FR').format(value) + ' DZD';
                         }
                     }
@@ -569,7 +594,7 @@
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 const label = context.label || '';
                                 const value = new Intl.NumberFormat('fr-FR').format(context.parsed);
                                 const percentage = ((context.parsed / context.dataset.data.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
@@ -584,12 +609,12 @@
 
     // Gestion des filtres de période
     document.querySelectorAll('[data-filter]').forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             // Retirer la classe active de tous les boutons
             document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
             // Ajouter la classe active au bouton cliqué
             this.classList.add('active');
-            
+
             // TODO: Implémenter le filtrage des données
             const filter = this.dataset.filter;
             console.log('Filtre sélectionné:', filter);
@@ -623,7 +648,8 @@
                     </div>
                     <div class="mb-3">
                         <label for="cash_reason" class="form-label">Raison</label>
-                        <input type="text" class="form-control" id="cash_reason" name="reason" placeholder="Ex: Dépôt client, Retrait pour achat..." required>
+                        <input type="text" class="form-control" id="cash_reason" name="reason"
+                            placeholder="Ex: Dépôt client, Retrait pour achat..." required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -661,7 +687,8 @@
                     </div>
                     <div class="mb-3">
                         <label for="bank_reason" class="form-label">Raison</label>
-                        <input type="text" class="form-control" id="bank_reason" name="reason" placeholder="Ex: Virement reçu, Paiement fournisseur..." required>
+                        <input type="text" class="form-control" id="bank_reason" name="reason"
+                            placeholder="Ex: Virement reçu, Paiement fournisseur..." required>
                     </div>
                 </div>
                 <div class="modal-footer">

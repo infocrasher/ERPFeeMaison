@@ -4,9 +4,32 @@
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3">Compte de Résultat</h1>
-        <div class="btn-group">
-            <a href="{{ url_for('accounting.reports') }}" class="btn btn-secondary">Retour</a>
-            <button class="btn btn-primary" onclick="window.print()">Imprimer</button>
+        <div class="d-flex align-items-center gap-2">
+            <!-- Sélecteur de Mois -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="monthDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-calendar-alt me-1"></i>
+                    {% for opt in month_options %}
+                    {% if opt.selected %}{{ opt.label }}{% endif %}
+                    {% endfor %}
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="monthDropdown">
+                    {% for opt in month_options %}
+                    <li>
+                        <a class="dropdown-item {% if opt.selected %}active{% endif %}"
+                            href="{{ url_for('accounting.profit_loss', year=opt.year, month=opt.month) }}">
+                            {{ opt.label }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="btn-group">
+                <a href="{{ url_for('accounting.reports') }}" class="btn btn-secondary">Retour</a>
+                <button class="btn btn-primary" onclick="window.print()">Imprimer</button>
+            </div>
         </div>
     </div>
 
